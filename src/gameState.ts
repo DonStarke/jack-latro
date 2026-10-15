@@ -1,0 +1,313 @@
+﻿/* ==========================================================
+   gameState.ts - SINGLE SOURCE OF TRUTH
+   All mutable game state lives here. Other modules must use the
+   exported functions below; they must never hold their own copies
+   of score, hands, cash, interest-related values or jokers.
+   Compiled as a plain global script (no import/export).
+========================================================== */
+
+/* ---------- Shared types ---------- */
+type Suit = '♠' | '♥' | '♣' | '♦';
+type Rank = '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'J' | 'Q' | 'K' | 'A';
+type Enhancement = 'foil' | 'holo' | 'poly' | 'gold' | null;
+
+interface Card {
+  uid: number;
+  suit: Suit;
+  rank: Rank;
+  enhancement: Enhancement;
+}
+
+interface JokerDef {
+  id: string;
+  name: string;
+  cost: number;
+  isXMult: boolean;
+  desc: string;
+  bonusMult?: number;
+  bonusChips?: number;
+}
+
+/** A Joker the player owns or that sits in the shop. */
+interface JokerInstance extends JokerDef {
+  shopType?: 'joker';
+  bought?: boolean;
+}
+
+interface TarotDef {
+  id: string;
+  name: string;
+  cost: number;
+  desc: string;
+}
+
+interface VoucherDef {
+  id: string;
+  name: string;
+  cost: number;
+  desc: string;
+}
+
+interface BossBlindDef {
+  id: string;
+  name: string;
+  desc: string;
+}
+
+interface ShopTarot extends TarotDef { shopType: 'tarot'; bought: boolean; }
+interface ShopVoucher extends VoucherDef { shopType: 'voucher'; bought: boolean; }
+interface ShopCardOffer {
+  shopType: 'card';
+  name: string;
+  cost: number;
+  desc: string;
+  cardData: { rank: Rank; suit: Suit; enhancement: Enhancement };
+  bought: boolean;
+}
+type ShopJokerSlot = (JokerInstance & { shopType: 'joker'; bought: boolean }) | ShopTarot;
+type ShopExtraSlot = ShopCardOffer | ShopVoucher;
+
+interface PendingPayout {
+  blindReward: number;
+  handBonus: number;
+  interest: number;
+  totalEarned: number;
+}
+
+interface BalanceConfig {
+  startingDeals: number;
+  targetScalePct: number;
+  unusedDealCashCap: number;
+  pushRefundsDeal: boolean;
+  anteHandScaling: boolean;
+}
+
+interface GameState {
+  ante: number;
+  blindIndex: number;
+  bossBlind: BossBlindDef | null;
+  targetScore: number;
+  roundScore: number;
+  money: number;
+  maxHands: number;
+  handsLeft: number;
+  maxJokers: number;
+  maxConsumables: number;
+  baseWinChipBonus: number;
+  baseWinMultBonus: number;
+
+  deck: Card[];
+  shoe: Card[];
+  playerHand: Card[];
+  dealerHand: Card[];
+  dealerHoleRevealed: boolean;
+  inHand: boolean;
+  isDealing: boolean;
+  blindClearedReady: boolean;
+  blindFailedReady: boolean;
+  pendingPayout: PendingPayout | null;
+  inShop: boolean;
+  doubledDown: boolean;
+  tempBonusChips: number;
+
+  jokers: JokerInstance[];
+  consumables: (TarotDef | ShopTarot)[];
+  vouchersBought: string[];
+
+  rerollCost: number;
+  shopJokers: ShopJokerSlot[];
+  shopExtras: ShopExtraSlot[];
+}
+
+/** Run-start constants (shared with the simulator so it can't drift from the live game). */
+const STARTING_MONEY = 6;
+const STARTING_MAX_JOKERS = 5;
+
+/* ---------- Private state (not reachable outside the API) ---------- */
+const DEFAULT_BALANCE_CONFIG: BalanceConfig = {
+  startingDeals: 7,
+  targetScalePct: 100,
+  unusedDealCashCap: 6,
+  pushRefundsDeal: false,
+  anteHandScaling: false
+};
+
+let _balanceConfig: BalanceConfig = { ...DEFAULT_BALANCE_CONFIG };
+let _nextCardUid = 1;
+
+let _state: GameState = {
+  ante: 1,
+  blindIndex: 0,
+  bossBlind: null,
+  targetScore: 300,
+  roundScore: 0,
+  money: 6,
+  maxHands: 7,
+  handsLeft: 7,
+  maxJokers: 5,
+  maxConsumables: 2,
+  baseWinChipBonus: 0,
+  baseWinMultBonus: 0,
+
+  deck: [],
+  shoe: [],
+  playerHand: [],
+  dealerHand: [],
+  dealerHoleRevealed: false,
+  inHand: false,
+  isDealing: false,
+  blindClearedReady: false,
+  blindFailedReady: false,
+  pendingPayout: null,
+  inShop: false,
+  doubledDown: false,
+  tempBonusChips: 0,
+
+  jokers: [],
+  consumables: [],
+  vouchersBought: [],
+
+  rerollCost: 2,
+  shopJokers: [],
+  shopExtras: []
+};
+
+/* ---------- Read API ---------- */
+/** Read-only view of the whole state. Never mutate the returned object. */
+function getState(): Readonly<GameState> {
+  return _state;
+}
+
+function getBalanceConfig(): Readonly<BalanceConfig> {
+  return _balanceConfig;
+}
+
+function hasJoker(id: string): boolean {
+  return _state.jokers.some(j => j.id === id);
+}
+
+/* ---------- Write API ---------- */
+/** Shallow-patch scalar/flag fields (score, flags, targets, bonuses...). */
+function patchState(patch: Partial<GameState>): void {
+  Object.assign(_state, patch);
+}
+
+function patchBalanceConfig(patch: Partial<BalanceConfig>): void {
+  Object.assign(_balanceConfig, patch);
+}
+
+function addMoney(amount: number): void {
+  _state.money += amount;
+}
+
+/** Returns false (and changes nothing) if the player cannot afford it. */
+function spendMoney(amount: number): boolean {
+  if (_state.money < amount) return false;
+  _state.money -= amount;
+  return true;
+}
+
+function addRoundScore(amount: number): void {
+  _state.roundScore += amount;
+}
+
+/* Card uid + deck/shoe/hand zones */
+function takeNextCardUid(): number {
+  return _nextCardUid++;
+}
+
+function resetCardUid(): void {
+  _nextCardUid = 1;
+}
+
+function setDeck(deck: Card[]): void { _state.deck = deck; }
+function setShoe(shoe: Card[]): void { _state.shoe = shoe; }
+function popShoeCard(): Card | undefined { return _state.shoe.pop(); }
+function setPlayerHand(hand: Card[]): void { _state.playerHand = hand; }
+function setDealerHand(hand: Card[]): void { _state.dealerHand = hand; }
+function addCardToDeck(card: Card): void { _state.deck.push(card); }
+function addCardToPlayerHand(card: Card): void { _state.playerHand.push(card); }
+function addCardToDealerHand(card: Card): void { _state.dealerHand.push(card); }
+
+function setCardEnhancement(card: Card, enhancement: Enhancement): void {
+  card.enhancement = enhancement;
+}
+
+function setCardRank(card: Card, rank: Rank): void {
+  card.rank = rank;
+}
+
+function addCardToShoe(card: Card): void { _state.shoe.push(card); }
+
+function markShopItemBought(listName: 'shopJokers' | 'shopExtras', idx: number): void {
+  const item = _state[listName][idx];
+  if (item) item.bought = true;
+}
+
+/* Jokers */
+function addJoker(joker: JokerInstance): boolean {
+  if (_state.jokers.length >= _state.maxJokers) return false;
+  _state.jokers.push(joker);
+  return true;
+}
+
+function removeJokerAt(index: number): JokerInstance | null {
+  if (index < 0 || index >= _state.jokers.length) return null;
+  return _state.jokers.splice(index, 1)[0];
+}
+
+/** dir: -1 = left, +1 = right. */
+function moveJokerAt(index: number, dir: -1 | 1): void {
+  const target = index + dir;
+  if (index < 0 || index >= _state.jokers.length) return;
+  if (target < 0 || target >= _state.jokers.length) return;
+  const tmp = _state.jokers[index];
+  _state.jokers[index] = _state.jokers[target];
+  _state.jokers[target] = tmp;
+}
+
+/** For scaling jokers (Daredevil / Chip Stacker). */
+function patchJoker(id: string, patch: Partial<JokerInstance>): void {
+  for (const j of _state.jokers) {
+    if (j.id === id) Object.assign(j, patch);
+  }
+}
+
+/* Consumables, vouchers, shop */
+function addConsumable(item: TarotDef | ShopTarot): boolean {
+  if (_state.consumables.length >= _state.maxConsumables) return false;
+  _state.consumables.push(item);
+  return true;
+}
+
+function removeConsumableAt(index: number): TarotDef | ShopTarot | null {
+  if (index < 0 || index >= _state.consumables.length) return null;
+  return _state.consumables.splice(index, 1)[0];
+}
+
+function addVoucher(id: string): void {
+  if (!_state.vouchersBought.includes(id)) _state.vouchersBought.push(id);
+}
+
+function setShopStock(jokers: ShopJokerSlot[], extras: ShopExtraSlot[]): void {
+  _state.shopJokers = jokers;
+  _state.shopExtras = extras;
+}
+
+/* ---------- Lifecycle ---------- */
+/** Resets everything that belongs to a single run. The deck is supplied by deckEngine. */
+function resetRunState(freshDeck: Card[]): void {
+  _state.ante = 1;
+  _state.blindIndex = 0;
+  _state.money = STARTING_MONEY;
+  _state.maxHands = _balanceConfig.startingDeals;
+  _state.maxJokers = STARTING_MAX_JOKERS;
+  _state.baseWinChipBonus = 0;
+  _state.baseWinMultBonus = 0;
+  _state.jokers = [];
+  _state.consumables = [];
+  _state.vouchersBought = [];
+  _state.deck = freshDeck;
+  _state.inShop = false;
+  _state.isDealing = false;
+}

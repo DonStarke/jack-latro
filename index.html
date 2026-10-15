@@ -1,0 +1,293 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>JACK-LATRO // v1.7 Telemetry Edition</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<canvas id="confetti-canvas"></canvas>
+
+<div id="app">
+  <!-- 1. COMPACT TOP HUD -->
+  <header class="top-hud">
+    <div class="hud-row-top">
+      <div class="blind-info" onclick="toggleBlindModal(true)" title="Tap for full Blind details">
+        <div class="blind-tag-row">
+          <span class="blind-badge" id="ui-blind-tag">BLIND</span>
+          <span class="blind-name" id="ui-blind-name">Small Blind</span>
+          <span class="blind-tap-hint">ⓘ TAP</span>
+        </div>
+        <div class="blind-desc" id="ui-blind-desc">Standard Blackjack table rules.</div>
+      </div>
+
+      <div class="meta-right">
+        <div class="stat-pill stat-cash" id="ui-money">$6</div>
+        <div class="stat-pill stat-ante" id="ui-ante">Ante 1/8</div>
+        <button class="cog-btn" onclick="toggleCogModal(true)" title="Menu, Rules & Simulator">⚙️</button>
+      </div>
+    </div>
+
+    <div class="hud-row-bottom" id="ui-hud-bottom">
+      <div class="score-col">
+        <div class="score-numbers">
+          <span class="score-cur" id="ui-round-score-wrap">Score: <span id="ui-round-score">0</span></span>
+          <span class="score-tgt" id="ui-target-score-wrap">Target: <span id="ui-target-score">300</span></span>
+        </div>
+        <div class="progress-bar-bg" id="ui-score-bar-bg">
+          <div class="progress-bar-fill" id="ui-score-bar"></div>
+        </div>
+      </div>
+
+      <div class="eq-inline" id="ui-eq-box">
+        <div class="chips-pill" id="ui-chips">0</div>
+        <div class="eq-x">×</div>
+        <div class="mult-pill" id="ui-mult">0</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 2. COMPACT JOKERS & TAROTS STRIP -->
+  <section class="shelf-strip">
+    <div class="strip-box">
+      <div class="strip-label" id="ui-joker-slots">JOKERS 0/5</div>
+      <div class="slot-row" id="ui-joker-row"></div>
+    </div>
+    <div class="strip-box" style="min-width: 110px;">
+      <div class="strip-label" id="ui-consumable-slots">TAROT 0/2</div>
+      <div class="slot-row" id="ui-consumable-row"></div>
+    </div>
+  </section>
+
+  <!-- 3. FELT TABLE -->
+  <main class="table-felt" id="ui-table-felt">
+    <!-- DEALER ZONE + VISUAL DECK -->
+    <div class="dealer-area">
+      <div class="shoe-widget" onclick="toggleDeckModal(true)" title="Tap to view Deck">
+        <span class="shoe-count" id="ui-shoe-count">52/52</span>
+      </div>
+
+      <div class="hand-zone">
+        <div class="zone-header">
+          <span>DEALER</span>
+          <span class="total-badge" id="ui-dealer-total">?</span>
+        </div>
+        <div class="cards-row" id="ui-dealer-cards"></div>
+      </div>
+    </div>
+
+    <!-- CENTER STAGE: SHARED HEADLINE SPOT FOR "YOU WON!" AND "BUSTED OUT!" + STATUS BANNER -->
+    <div class="center-stage">
+      <div class="outcome-headline hidden" id="ui-outcome-headline">YOU WON!</div>
+      <div class="center-banner-wrap">
+        <div class="center-banner" id="ui-banner">Tap DEAL to start the round!</div>
+        <div class="scoring-breakdown" id="ui-breakdown">7 Deals per Blind — play out every hand!</div>
+      </div>
+    </div>
+
+    <!-- PLAYER ZONE -->
+    <div class="hand-zone">
+      <div class="cards-row" id="ui-player-cards"></div>
+      <div class="zone-header">
+        <span>PLAYER</span>
+        <span class="total-badge" id="ui-player-total">0</span>
+      </div>
+    </div>
+
+    <!-- 4. ACTION BUTTONS -->
+    <div class="controls-bar" id="ui-controls-bar">
+      <button class="btn btn-deal" id="btn-deal" onclick="handlePrimaryDealBtn()">DEAL (7)</button>
+      <button class="btn btn-hit" id="btn-hit" onclick="playerHit()" disabled>HIT</button>
+      <button class="btn btn-stand" id="btn-stand" onclick="playerStand()" disabled>STAND</button>
+      <button class="btn btn-double" id="btn-double" onclick="playerDouble()" disabled>DOUBLE ×2</button>
+    </div>
+
+    <!-- SHOP OVERLAY -->
+    <div class="overlay-panel hidden" id="ui-shop-overlay">
+      <div class="shop-header">
+        <div>
+          <div class="shop-title">PIT BOSS SHOP</div>
+          <div style="font-size:10px; color:#94a3b8;" id="ui-shop-payout-note">Prep for the upcoming Blind shown above!</div>
+        </div>
+        <div style="display:flex; gap:6px;">
+          <button class="btn btn-redeal" style="padding:7px 10px;" id="btn-reroll" onclick="uiRerollShop()">Reroll ($2)</button>
+          <button class="btn btn-deal" style="padding:7px 12px;" onclick="startNextBlindFromShop()">Play Blind ➔</button>
+        </div>
+      </div>
+
+      <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; font-weight:bold;">Jokers & Tarots</div>
+      <div class="shop-grid" id="ui-shop-jokers"></div>
+
+      <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; font-weight:bold;">Shoe Cards & Vouchers</div>
+      <div class="shop-grid" id="ui-shop-extras"></div>
+    </div>
+  </main>
+</div>
+
+<!-- BLIND INFO MODAL -->
+<div class="modal-backdrop hidden" id="ui-blind-modal" onclick="toggleBlindModal(false)">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <span class="blind-badge" id="ui-modal-blind-tag">CURRENT BLIND</span>
+      <button class="btn btn-secondary" onclick="toggleBlindModal(false)">Close</button>
+    </div>
+    <h2 style="color:var(--gold); font-size:20px;" id="ui-modal-blind-name">Small Blind</h2>
+    <div style="font-size:14px; color:#f8fafc; background:#0b0e14; padding:12px; border-radius:8px; border:1px solid #334155; line-height:1.45;" id="ui-modal-blind-desc"></div>
+    <div style="display:flex; justify-content:space-between; font-size:13px; color:#cbd5e1; padding-top:4px;">
+      <span>Target Score: <strong style="color:var(--mult)" id="ui-modal-blind-target">300</strong></span>
+      <span>Base Reward: <strong style="color:var(--gold)" id="ui-modal-blind-reward">$4</strong></span>
+    </div>
+  </div>
+</div>
+
+<!-- COG SETTINGS, RULES & SIMULATOR LAUNCHER MODAL -->
+<div class="modal-backdrop hidden" id="ui-cog-modal" onclick="toggleCogModal(false)">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h3 style="color:var(--gold);">SETTINGS & HAND TIERS</h3>
+      <button class="btn btn-secondary" onclick="toggleCogModal(false)">Close</button>
+    </div>
+
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+      <button class="btn btn-redeal" style="padding:10px;" onclick="toggleCogModal(false); startNewRun();">Start New Run</button>
+      <button class="btn btn-double" style="padding:10px;" onclick="toggleCogModal(false); toggleSimModal(true);">📊 Balance Simulator</button>
+    </div>
+
+    <p style="font-size:11px; color:#cbd5e1; line-height:1.35;">
+      You get <strong id="ui-rules-deals-count">7</strong> Deals per Blind. Every card in your final hand adds its Blackjack value to your <strong>Chips</strong> (2–10 = face value, J/Q/K = 10, Ace = 11), plus Enhancements and Jokers. Tap any Joker to reorder it!
+    </p>
+
+    <table class="rules-table">
+      <thead>
+        <tr>
+          <th>Hand Outcome</th>
+          <th>Base Chips × Mult</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>5-Card Charlie</strong> (5+ cards unbusted)</td><td><span style="color:var(--chips)">160c</span> × <span style="color:var(--mult)">5m</span></td></tr>
+        <tr><td><strong>Natural Blackjack</strong> (2-card 21)</td><td><span style="color:var(--chips)">120c</span> × <span style="color:var(--mult)">4m</span></td></tr>
+        <tr><td><strong>Exact 21</strong> (3+ cards)</td><td><span style="color:var(--chips)">75c</span> × <span style="color:var(--mult)">3m</span></td></tr>
+        <tr><td><strong>Beat Dealer / Dealer Bust</strong></td><td><span style="color:var(--chips)">40c</span> × <span style="color:var(--mult)">2m</span></td></tr>
+        <tr><td><strong>Push (Tie)</strong></td><td><span style="color:var(--chips)">25c</span> × <span style="color:var(--mult)">1m</span></td></tr>
+        <tr><td><strong>Loss / Bust</strong></td><td>0 (unless <em>Safety Net</em>)</td></tr>
+      </tbody>
+    </table>
+    <div style="font-size:10px; color:#94a3b8; line-height:1.4;">
+      • <strong>Double Down:</strong> Initial 2 cards only. Draw 1 card, Stand, and multiply final score by <strong>×2</strong>.<br>
+      • <strong>Economy:</strong> Clear a Blind to earn Base Cash + $1 per unused Deal + $1 interest per $5 held (max $5).
+    </div>
+  </div>
+</div>
+
+<!-- MONTE CARLO BALANCE SIMULATOR LAB MODAL -->
+<div class="modal-backdrop hidden" id="ui-sim-modal" onclick="toggleSimModal(false)">
+  <div class="modal-box wide-deck" onclick="event.stopPropagation()">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div>
+        <h3 style="color:var(--gold); font-size:16px;">📊 MONTE CARLO BALANCE LAB (v1.7)</h3>
+        <div style="font-size:10px; color:#94a3b8;">Simulate 3,000 to 20,000 runs and export a full telemetry .TXT file for analysis.</div>
+      </div>
+      <button class="btn btn-secondary" onclick="toggleSimModal(false)">Close</button>
+    </div>
+
+    <div class="sim-controls-grid">
+      <div class="sim-field">
+        <label><span>Runs to Simulate</span><span id="sim-lbl-runs">3000</span></label>
+        <select id="sim-runs" onchange="document.getElementById('sim-lbl-runs').textContent=this.value">
+          <option value="3000" selected>3,000 Runs</option>
+          <option value="5000">5,000 Runs</option>
+          <option value="20000">20,000 Runs (Deep Precision)</option>
+        </select>
+      </div>
+
+      <div class="sim-field">
+        <label><span>Bot Playstyle Strategy</span></label>
+        <select id="sim-bot">
+          <option value="synergy" selected>Smart Synergy AI (Adapts to Jokers)</option>
+          <option value="highroller">High-Roller 21 AI (Faces/Aces/Doubles)</option>
+          <option value="charlie">Low-Card Charlie AI (Hits Low Cards)</option>
+          <option value="basic">Strict Casino Basic Strategy AI (With Jokers)</option>
+          <option value="vanilla">No-Jokers Baseline (Vanilla Basic Strategy)</option>
+        </select>
+      </div>
+
+      <div class="sim-field">
+        <label><span>Starting Deals / Blind</span><span id="sim-lbl-deals">7</span></label>
+        <input type="range" id="sim-deals" min="4" max="10" step="1" value="7"
+          oninput="document.getElementById('sim-lbl-deals').textContent=this.value">
+      </div>
+
+      <div class="sim-field">
+        <label><span>Target Score Scaling</span><span id="sim-lbl-scale">100%</span></label>
+        <input type="range" id="sim-scale" min="50" max="130" step="5" value="100"
+          oninput="document.getElementById('sim-lbl-scale').textContent=this.value+'%'">
+      </div>
+
+      <div class="sim-field">
+        <label><span>Unused Deal Cash Cap</span><span id="sim-lbl-dealcap">$6</span></label>
+        <input type="range" id="sim-dealcap" min="2" max="10" step="1" value="6"
+          oninput="document.getElementById('sim-lbl-dealcap').textContent='$'+this.value">
+      </div>
+
+      <div class="sim-field">
+        <label><span>Experimental Rules</span></label>
+        <div style="display:flex; flex-direction:column; gap:3px; margin-top:2px;">
+          <label style="color:#e2e8f0; font-weight:normal; justify-content:flex-start; gap:6px; cursor:pointer;">
+            <input type="checkbox" id="sim-push-refund"> Pushes Refund Deal (+1 Deal back)
+          </label>
+          <label style="color:#e2e8f0; font-weight:normal; justify-content:flex-start; gap:6px; cursor:pointer;">
+            <input type="checkbox" id="sim-ante-leveling"> Hand Tiers Scale +15%/Ante
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="sim-btn-row">
+      <button class="btn btn-deal" style="flex:1; min-width:130px; padding:10px;" id="btn-run-sim" onclick="runMonteCarloSimulation()">▶ Run Simulation</button>
+      <button class="btn btn-hit" style="flex:1; min-width:140px; padding:10px;" id="btn-export-txt" onclick="downloadLastSimReport()" disabled>💾 Export Last Sim (.TXT)</button>
+      <button class="btn btn-stand" style="flex:1; min-width:160px; padding:10px;" id="btn-suite-txt" onclick="runAllBotsSuiteAndExport()">🚀 Run All 5 Bots & Export (.TXT)</button>
+      <button class="btn btn-secondary" style="padding:10px;" id="btn-copy-txt" onclick="copyLastSimReport()" disabled>📋 Copy</button>
+      <button class="btn btn-double" style="padding:10px;" onclick="applySimConfigToLiveGame()">✓ Apply to Game</button>
+    </div>
+
+    <!-- SIMULATION RESULTS CONTAINER -->
+    <div id="sim-results-area" style="display:flex; flex-direction:column; gap:10px;">
+      <div style="text-align:center; color:#64748b; font-size:12px; padding:16px;">
+        Click <strong>▶ Run Simulation</strong> (or <strong>🚀 Run All 5 Bots & Export (.TXT)</strong>) to generate telemetry.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ITEM INSPECTOR MODAL -->
+<div class="modal-backdrop hidden" id="ui-inspect-modal" onclick="closeInspector()">
+  <div class="modal-box" id="ui-inspect-content" onclick="event.stopPropagation()"></div>
+</div>
+
+<!-- FULL DECK VIEWER MODAL -->
+<div class="modal-backdrop hidden" id="ui-deck-modal" onclick="toggleDeckModal(false)">
+  <div class="modal-box wide-deck" onclick="event.stopPropagation()">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div>
+        <h3 style="color:var(--gold); font-size:15px;" id="ui-deck-modal-title">FULL DECK VIEW</h3>
+        <div style="font-size:10px; color:#94a3b8;">Ordered by Suit & Rank (Dimmed = Revealed face-up cards)</div>
+      </div>
+      <button class="btn btn-secondary" onclick="toggleDeckModal(false)">Close</button>
+    </div>
+    <div id="ui-deck-list" style="display:flex; flex-direction:column; gap:6px;"></div>
+  </div>
+</div>
+
+<!-- Compiled TypeScript (npx.cmd tsc: src/*.ts -> dist/*.js). Plain global scripts; order matters. -->
+<script src="dist/gameState.js"></script>
+<script src="dist/deckEngine.js"></script>
+<script src="dist/modifierEngine.js"></script>
+<script src="dist/shopEngine.js"></script>
+<script src="dist/simulator.js"></script>
+<script src="dist/uiFx.js"></script>
+<script src="dist/main.js"></script>
+</body>
+</html>

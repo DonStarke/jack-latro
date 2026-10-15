@@ -1,0 +1,3476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>JACK-LATRO // v1.7 Telemetry Edition</title>
+<style>
+  :root {
+    --bg-dark: #09130f;
+    --felt: #132a21;
+    --felt-light: #1b4332;
+    --panel: #141820;
+    --panel-border: #2c3545;
+    --chips: #009dff;
+    --mult: #ff4b4b;
+    --gold: #ffbe0b;
+    --purple: #9d4edd;
+    --green: #2ec4b6;
+    --text: #f0f4f8;
+    --card-bg: #fffdf9;
+  }
+
+  * {
+    box-sizing: border-box;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    margin: 0;
+    padding: 0;
+  }
+
+  html, body {
+    width: 100%;
+    height: 100dvh;
+    overflow: hidden;
+    background: var(--bg-dark);
+    color: var(--text);
+    font-family: 'Courier New', Courier, monospace;
+  }
+
+  body::after {
+    content: " ";
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.14) 50%);
+    background-size: 100% 4px;
+    z-index: 999;
+    pointer-events: none;
+  }
+
+  #confetti-canvas {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 900;
+  }
+
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 6px;
+    gap: 6px;
+  }
+
+  /* 1. TOP HUD BAR */
+  .top-hud {
+    background: var(--panel);
+    border: 2px solid var(--panel-border);
+    border-radius: 10px;
+    padding: 6px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .hud-row-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .blind-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 3px 7px;
+    border-radius: 6px;
+    transition: background 0.15s ease;
+  }
+
+  .blind-info:active {
+    background: rgba(255, 190, 11, 0.15);
+  }
+
+  .blind-tag-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .blind-badge {
+    font-size: 9px;
+    font-weight: 900;
+    padding: 2px 5px;
+    border-radius: 4px;
+    background: var(--gold);
+    color: #000;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .blind-name {
+    font-size: 13px;
+    font-weight: 900;
+    color: var(--gold);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .blind-tap-hint {
+    font-size: 9px;
+    color: #64748b;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  .blind-desc {
+    font-size: 10px;
+    color: #94a3b8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 1px;
+  }
+
+  .meta-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .stat-pill {
+    background: #1e2532;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .stat-cash { color: var(--gold); }
+  .stat-ante { color: var(--green); }
+
+  .cog-btn {
+    background: #1e2532;
+    border: 1px solid #475569;
+    color: #e2e8f0;
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  .hud-row-bottom {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: center;
+    background: #0b0e14;
+    padding: 5px 8px;
+    border-radius: 8px;
+    border: 1px solid #222938;
+  }
+
+  .hud-row-bottom.shop-mode {
+    grid-template-columns: 1fr;
+  }
+
+  .score-col {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .score-numbers {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 900;
+  }
+
+  .score-cur { color: #fff; }
+  .score-tgt { color: var(--mult); }
+
+  .progress-bar-bg {
+    width: 100%;
+    height: 7px;
+    background: #1e293b;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--chips), var(--green));
+    width: 0%;
+    transition: width 0.3s ease;
+  }
+
+  .eq-inline {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .chips-pill, .mult-pill {
+    min-width: 44px;
+    text-align: center;
+    padding: 3px 6px;
+    border-radius: 5px;
+    font-size: 14px;
+    font-weight: 900;
+    color: #fff;
+    transition: transform 0.12s ease;
+  }
+
+  .chips-pill { background: var(--chips); }
+  .mult-pill { background: var(--mult); }
+  .pill-pop { transform: scale(1.22); }
+  .eq-x { font-size: 13px; font-weight: 900; color: #64748b; }
+
+  /* 2. COMPACT JOKER & TAROT STRIP */
+  .shelf-strip {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .strip-box {
+    background: rgba(20, 24, 32, 0.9);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 4px 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 54px;
+    overflow-x: auto;
+  }
+
+  .strip-label {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    font-size: 9px;
+    font-weight: 900;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    flex-shrink: 0;
+  }
+
+  .slot-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex: 1;
+  }
+
+  .mini-card {
+    background: linear-gradient(145deg, #252b3b, #171b26);
+    border: 2px solid var(--gold);
+    border-radius: 6px;
+    padding: 4px 6px;
+    min-width: 92px;
+    max-width: 115px;
+    height: 44px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    cursor: pointer;
+    flex-shrink: 0;
+    position: relative;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .mini-card.active-pop {
+    transform: translateY(-4px) scale(1.08);
+    box-shadow: 0 0 12px var(--gold);
+    z-index: 10;
+  }
+
+  .mini-card.tarot {
+    border-color: var(--purple);
+    min-width: 74px;
+  }
+
+  .mini-card-name {
+    font-size: 10px;
+    font-weight: 900;
+    color: var(--gold);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mini-card.tarot .mini-card-name {
+    color: #d8b4fe;
+  }
+
+  .mini-card-sub {
+    font-size: 8px;
+    color: #cbd5e1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* 3. FELT TABLE AREA */
+  .table-felt {
+    flex: 1;
+    background: radial-gradient(circle at center, var(--felt-light) 0%, #0a1c15 100%);
+    border: 3px solid #2d4c3e;
+    border-radius: 12px;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+    box-shadow: inset 0 0 30px rgba(0,0,0,0.75);
+    min-height: 0;
+  }
+
+  .table-felt.shake-loss {
+    animation: lossShake 0.45s ease;
+  }
+
+  @keyframes lossShake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-7px); }
+    40% { transform: translateX(7px); }
+    60% { transform: translateX(-5px); }
+    80% { transform: translateX(5px); }
+  }
+
+  .dealer-area {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    min-height: 100px;
+  }
+
+  .shoe-widget {
+    position: absolute;
+    left: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 48px;
+    height: 68px;
+    background: repeating-linear-gradient(
+      45deg,
+      #1e3a8a,
+      #1e3a8a 6px,
+      #172554 6px,
+      #172554 12px
+    );
+    border: 2px solid #f8fafc;
+    border-radius: 6px;
+    box-shadow: -3px 3px 0 #cbd5e1, -6px 6px 0 #64748b, 0 6px 12px rgba(0,0,0,0.65);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 5;
+    transition: transform 0.12s ease;
+  }
+
+  .shoe-widget:active {
+    transform: translateY(-50%) scale(0.93);
+  }
+
+  .shoe-count {
+    font-size: 11px;
+    font-weight: 900;
+    background: rgba(0,0,0,0.85);
+    border: 1px solid rgba(255,255,255,0.25);
+    color: #fff;
+    padding: 2px 5px;
+    border-radius: 4px;
+  }
+
+  .hand-zone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    width: 100%;
+  }
+
+  .zone-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: bold;
+    color: #cbd5e1;
+    background: rgba(0,0,0,0.5);
+    padding: 2px 10px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.12);
+  }
+
+  .total-badge {
+    background: var(--gold);
+    color: #000;
+    padding: 1px 6px;
+    border-radius: 8px;
+    font-weight: 900;
+    font-size: 11px;
+  }
+
+  .cards-row {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    align-items: center;
+    min-height: 84px;
+    flex-wrap: wrap;
+  }
+
+  /* PLAYING CARDS */
+  .playing-card {
+    width: 60px;
+    height: 84px;
+    background: var(--card-bg);
+    border-radius: 6px;
+    border: 2px solid #cbd5e1;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.45);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 4px;
+    position: relative;
+    font-weight: 900;
+    animation: dealIn 0.16s ease-out;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .playing-card.scoring-pop {
+    transform: translateY(-10px) scale(1.08);
+    box-shadow: 0 10px 18px rgba(0,0,0,0.7), 0 0 12px var(--gold);
+    z-index: 15;
+  }
+
+  .card-float-pop {
+    position: absolute;
+    top: -18px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #0f172a;
+    border: 1.5px solid var(--gold);
+    color: var(--gold);
+    font-size: 10px;
+    font-weight: 900;
+    padding: 1px 5px;
+    border-radius: 6px;
+    white-space: nowrap;
+    z-index: 25;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.6);
+    animation: floatUp 0.25s ease-out;
+  }
+
+  @keyframes floatUp {
+    from { transform: translate(-50%, 6px) scale(0.7); opacity: 0; }
+    to { transform: translate(-50%, 0) scale(1); opacity: 1; }
+  }
+
+  @keyframes dealIn {
+    from { transform: translateY(-16px) scale(0.85); opacity: 0; }
+    to { transform: translateY(0) scale(1); opacity: 1; }
+  }
+
+  .playing-card.red { color: #dc2626; }
+  .playing-card.black { color: #0f172a; }
+
+  .playing-card.face-down {
+    background: repeating-linear-gradient(
+      45deg,
+      #1e3a8a,
+      #1e3a8a 6px,
+      #172554 6px,
+      #172554 12px
+    );
+    border: 2px solid #f8fafc;
+  }
+
+  .playing-card.enh-foil {
+    background: linear-gradient(135deg, #e0f2fe 0%, #7dd3fc 100%);
+    border-color: var(--chips);
+    box-shadow: 0 0 8px rgba(0, 157, 255, 0.7);
+  }
+  .playing-card.enh-holo {
+    background: linear-gradient(135deg, #ffe4e6 0%, #fda4af 100%);
+    border-color: var(--mult);
+    box-shadow: 0 0 8px rgba(255, 75, 75, 0.7);
+  }
+  .playing-card.enh-poly {
+    background: linear-gradient(135deg, #fef08a 0%, #f5d0fe 50%, #bae6fd 100%);
+    border-color: var(--purple);
+    box-shadow: 0 0 10px rgba(157, 78, 221, 0.85);
+  }
+  .playing-card.enh-gold {
+    background: linear-gradient(135deg, #fef9c3 0%, #eab308 100%);
+    border-color: #ca8a04;
+    box-shadow: 0 0 8px rgba(255, 190, 11, 0.75);
+  }
+
+  .card-corner-top {
+    font-size: 12px;
+    line-height: 1;
+    text-align: left;
+  }
+  .card-suit-center {
+    font-size: 22px;
+    text-align: center;
+    line-height: 1;
+  }
+  .card-corner-bottom {
+    font-size: 9px;
+    text-align: right;
+    color: #475569;
+  }
+  .card-enh-tag {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 7px;
+    padding: 1px 3px;
+    border-radius: 3px;
+    background: rgba(0,0,0,0.8);
+    color: #fff;
+    white-space: nowrap;
+  }
+
+  /* MINI CARDS FOR FULL DECK VIEWER */
+  .playing-card.deck-mini {
+    width: 42px;
+    height: 58px;
+    padding: 2px 3px;
+    border-radius: 4px;
+    animation: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+  }
+  .playing-card.deck-mini .card-corner-top { font-size: 9px; }
+  .playing-card.deck-mini .card-suit-center { font-size: 15px; }
+  .playing-card.deck-mini .card-corner-bottom { font-size: 7px; }
+  .playing-card.deck-mini .card-enh-tag {
+    bottom: 11px;
+    font-size: 6px;
+    padding: 0 2px;
+  }
+  .playing-card.deck-mini.dealt-out {
+    opacity: 0.22;
+    filter: grayscale(90%);
+    border-style: dashed;
+  }
+
+  .deck-suit-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 6px;
+    background: rgba(0,0,0,0.35);
+    border-radius: 6px;
+    border: 1px solid #1e293b;
+  }
+
+  /* CENTER STAGE */
+  .center-stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+  }
+
+  .outcome-headline {
+    font-size: 24px;
+    font-weight: 900;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 2px 16px;
+    border-radius: 8px;
+    text-align: center;
+    animation: headlinePop 0.35s cubic-bezier(0.18, 1.4, 0.4, 1);
+  }
+
+  .outcome-headline.win-style {
+    color: var(--gold);
+    background: rgba(0, 0, 0, 0.72);
+    border: 2px solid var(--gold);
+    text-shadow: 0 0 12px rgba(255, 190, 11, 0.9), 0 2px 0 #000;
+    box-shadow: 0 0 20px rgba(255, 190, 11, 0.45);
+  }
+
+  .outcome-headline.loss-style {
+    color: var(--mult);
+    background: rgba(0, 0, 0, 0.78);
+    border: 2px solid var(--mult);
+    text-shadow: 0 0 12px rgba(255, 75, 75, 0.9), 0 2px 0 #000;
+    box-shadow: 0 0 20px rgba(255, 75, 75, 0.45);
+  }
+
+  @keyframes headlinePop {
+    0% { transform: scale(0.4); opacity: 0; }
+    80% { transform: scale(1.08); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  .center-banner-wrap {
+    width: 100%;
+    background: rgba(0,0,0,0.58);
+    border-top: 1px solid rgba(255,255,255,0.12);
+    border-bottom: 1px solid rgba(255,255,255,0.12);
+    padding: 5px 8px;
+    text-align: center;
+  }
+
+  .center-banner {
+    font-size: 12px;
+    font-weight: 900;
+    color: var(--gold);
+  }
+
+  .scoring-breakdown {
+    font-size: 10px;
+    color: #cbd5e1;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* 4. BOTTOM ACTION CONTROLS */
+  .controls-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    padding-top: 4px;
+    flex-shrink: 0;
+  }
+
+  .btn {
+    padding: 11px 6px;
+    font-size: 12px;
+    font-weight: 900;
+    font-family: inherit;
+    text-transform: uppercase;
+    border: none;
+    border-radius: 7px;
+    cursor: pointer;
+    color: #fff;
+    text-align: center;
+    line-height: 1.15;
+    transition: transform 0.1s ease, filter 0.15s ease;
+  }
+
+  .btn:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+
+  .btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  .btn-deal { background: var(--green); box-shadow: 0 3px 0 #1b7a71; }
+  .btn-cashout {
+    background: var(--gold);
+    color: #000;
+    box-shadow: 0 3px 0 #b38600, 0 0 12px rgba(255, 190, 11, 0.8);
+    animation: pulseButton 1s infinite alternate;
+    grid-column: span 2;
+  }
+  .btn-newrun {
+    background: var(--mult);
+    color: #fff;
+    box-shadow: 0 3px 0 #991b1b, 0 0 12px rgba(255, 75, 75, 0.8);
+    animation: pulseButton 1s infinite alternate;
+    grid-column: span 2;
+  }
+
+  @keyframes pulseButton {
+    from { filter: brightness(1); }
+    to { filter: brightness(1.18); }
+  }
+
+  .btn-hit { background: var(--chips); box-shadow: 0 3px 0 #0066a6; }
+  .btn-stand { background: var(--gold); color: #0f172a; box-shadow: 0 3px 0 #b38600; }
+  .btn-double { background: var(--purple); box-shadow: 0 3px 0 #66269b; }
+  .btn-redeal { background: var(--mult); box-shadow: 0 3px 0 #a31c1c; }
+  .btn-secondary { background: #334155; box-shadow: 0 3px 0 #1e293b; padding: 8px 12px; font-size: 12px; }
+
+  /* SHOP OVERLAY */
+  .overlay-panel {
+    position: absolute;
+    inset: 0;
+    background: rgba(11, 22, 18, 0.98);
+    border-radius: 10px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 40;
+    overflow-y: auto;
+  }
+
+  .hidden { display: none !important; }
+
+  .shop-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--panel-border);
+    padding-bottom: 6px;
+  }
+
+  .shop-title {
+    font-size: 15px;
+    font-weight: 900;
+    color: var(--gold);
+  }
+
+  .shop-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+
+  .shop-item {
+    background: #1a212d;
+    border: 1.5px solid #334155;
+    border-radius: 8px;
+    padding: 7px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 5px;
+  }
+
+  .shop-item.type-joker { border-color: var(--gold); }
+  .shop-item.type-voucher { border-color: var(--green); }
+  .shop-item.type-tarot { border-color: var(--purple); }
+  .shop-item.type-card { border-color: var(--chips); }
+
+  .shop-item-title { font-size: 11px; font-weight: 900; color: #fff; }
+  .shop-item-sub { font-size: 8px; text-transform: uppercase; color: var(--gold); }
+  .shop-item-desc { font-size: 10px; color: #cbd5e1; line-height: 1.2; }
+
+  /* MODALS */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.86);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 10px;
+  }
+
+  .modal-box {
+    background: var(--panel);
+    border: 2px solid var(--gold);
+    border-radius: 12px;
+    max-width: 520px;
+    width: 100%;
+    max-height: 90dvh;
+    overflow-y: auto;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .modal-box.wide-deck {
+    max-width: 760px;
+    padding: 14px;
+  }
+
+  .rules-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+  }
+  .rules-table th, .rules-table td {
+    border: 1px solid #334155;
+    padding: 5px;
+    text-align: left;
+  }
+  .rules-table th {
+    background: #1e293b;
+    color: var(--gold);
+  }
+
+  /* SIMULATOR LAB STYLES */
+  .sim-controls-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 8px;
+    background: #0b0e14;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #283246;
+  }
+
+  .sim-field {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    font-size: 11px;
+    color: #cbd5e1;
+  }
+
+  .sim-field label {
+    font-weight: bold;
+    color: var(--gold);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .sim-field select, .sim-field input[type="range"] {
+    background: #1e2532;
+    color: #fff;
+    border: 1px solid #475569;
+    border-radius: 4px;
+    padding: 4px;
+    font-family: inherit;
+    font-size: 11px;
+  }
+
+  .sim-btn-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .sim-kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+
+  .sim-kpi {
+    background: #0f141d;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    padding: 6px;
+    text-align: center;
+  }
+
+  .sim-kpi-val {
+    font-size: 16px;
+    font-weight: 900;
+    color: var(--green);
+  }
+
+  .sim-kpi-lbl {
+    font-size: 9px;
+    color: #94a3b8;
+    text-transform: uppercase;
+  }
+
+  .funnel-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    margin-bottom: 4px;
+  }
+
+  .funnel-bar-bg {
+    flex: 1;
+    height: 12px;
+    background: #1e293b;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .funnel-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--chips), var(--green));
+  }
+</style>
+</head>
+<body>
+
+<canvas id="confetti-canvas"></canvas>
+
+<div id="app">
+  <!-- 1. COMPACT TOP HUD -->
+  <header class="top-hud">
+    <div class="hud-row-top">
+      <div class="blind-info" onclick="toggleBlindModal(true)" title="Tap for full Blind details">
+        <div class="blind-tag-row">
+          <span class="blind-badge" id="ui-blind-tag">BLIND</span>
+          <span class="blind-name" id="ui-blind-name">Small Blind</span>
+          <span class="blind-tap-hint">ⓘ TAP</span>
+        </div>
+        <div class="blind-desc" id="ui-blind-desc">Standard Blackjack table rules.</div>
+      </div>
+
+      <div class="meta-right">
+        <div class="stat-pill stat-cash" id="ui-money">$6</div>
+        <div class="stat-pill stat-ante" id="ui-ante">Ante 1/8</div>
+        <button class="cog-btn" onclick="toggleCogModal(true)" title="Menu, Rules & Simulator">⚙️</button>
+      </div>
+    </div>
+
+    <div class="hud-row-bottom" id="ui-hud-bottom">
+      <div class="score-col">
+        <div class="score-numbers">
+          <span class="score-cur" id="ui-round-score-wrap">Score: <span id="ui-round-score">0</span></span>
+          <span class="score-tgt" id="ui-target-score-wrap">Target: <span id="ui-target-score">300</span></span>
+        </div>
+        <div class="progress-bar-bg" id="ui-score-bar-bg">
+          <div class="progress-bar-fill" id="ui-score-bar"></div>
+        </div>
+      </div>
+
+      <div class="eq-inline" id="ui-eq-box">
+        <div class="chips-pill" id="ui-chips">0</div>
+        <div class="eq-x">×</div>
+        <div class="mult-pill" id="ui-mult">0</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 2. COMPACT JOKERS & TAROTS STRIP -->
+  <section class="shelf-strip">
+    <div class="strip-box">
+      <div class="strip-label" id="ui-joker-slots">JOKERS 0/5</div>
+      <div class="slot-row" id="ui-joker-row"></div>
+    </div>
+    <div class="strip-box" style="min-width: 110px;">
+      <div class="strip-label" id="ui-consumable-slots">TAROT 0/2</div>
+      <div class="slot-row" id="ui-consumable-row"></div>
+    </div>
+  </section>
+
+  <!-- 3. FELT TABLE -->
+  <main class="table-felt" id="ui-table-felt">
+    <!-- DEALER ZONE + VISUAL DECK -->
+    <div class="dealer-area">
+      <div class="shoe-widget" onclick="toggleDeckModal(true)" title="Tap to view Deck">
+        <span class="shoe-count" id="ui-shoe-count">52/52</span>
+      </div>
+
+      <div class="hand-zone">
+        <div class="zone-header">
+          <span>DEALER</span>
+          <span class="total-badge" id="ui-dealer-total">?</span>
+        </div>
+        <div class="cards-row" id="ui-dealer-cards"></div>
+      </div>
+    </div>
+
+    <!-- CENTER STAGE: SHARED HEADLINE SPOT FOR "YOU WON!" AND "BUSTED OUT!" + STATUS BANNER -->
+    <div class="center-stage">
+      <div class="outcome-headline hidden" id="ui-outcome-headline">YOU WON!</div>
+      <div class="center-banner-wrap">
+        <div class="center-banner" id="ui-banner">Tap DEAL to start the round!</div>
+        <div class="scoring-breakdown" id="ui-breakdown">7 Deals per Blind — play out every hand!</div>
+      </div>
+    </div>
+
+    <!-- PLAYER ZONE -->
+    <div class="hand-zone">
+      <div class="cards-row" id="ui-player-cards"></div>
+      <div class="zone-header">
+        <span>PLAYER</span>
+        <span class="total-badge" id="ui-player-total">0</span>
+      </div>
+    </div>
+
+    <!-- 4. ACTION BUTTONS -->
+    <div class="controls-bar" id="ui-controls-bar">
+      <button class="btn btn-deal" id="btn-deal" onclick="handlePrimaryDealBtn()">DEAL (7)</button>
+      <button class="btn btn-hit" id="btn-hit" onclick="playerHit()" disabled>HIT</button>
+      <button class="btn btn-stand" id="btn-stand" onclick="playerStand()" disabled>STAND</button>
+      <button class="btn btn-double" id="btn-double" onclick="playerDouble()" disabled>DOUBLE ×2</button>
+    </div>
+
+    <!-- SHOP OVERLAY -->
+    <div class="overlay-panel hidden" id="ui-shop-overlay">
+      <div class="shop-header">
+        <div>
+          <div class="shop-title">PIT BOSS SHOP</div>
+          <div style="font-size:10px; color:#94a3b8;" id="ui-shop-payout-note">Prep for the upcoming Blind shown above!</div>
+        </div>
+        <div style="display:flex; gap:6px;">
+          <button class="btn btn-redeal" style="padding:7px 10px;" id="btn-reroll" onclick="rerollShop()">Reroll ($2)</button>
+          <button class="btn btn-deal" style="padding:7px 12px;" onclick="startNextBlindFromShop()">Play Blind ➔</button>
+        </div>
+      </div>
+
+      <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; font-weight:bold;">Jokers & Tarots</div>
+      <div class="shop-grid" id="ui-shop-jokers"></div>
+
+      <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; font-weight:bold;">Shoe Cards & Vouchers</div>
+      <div class="shop-grid" id="ui-shop-extras"></div>
+    </div>
+  </main>
+</div>
+
+<!-- BLIND INFO MODAL -->
+<div class="modal-backdrop hidden" id="ui-blind-modal" onclick="toggleBlindModal(false)">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <span class="blind-badge" id="ui-modal-blind-tag">CURRENT BLIND</span>
+      <button class="btn btn-secondary" onclick="toggleBlindModal(false)">Close</button>
+    </div>
+    <h2 style="color:var(--gold); font-size:20px;" id="ui-modal-blind-name">Small Blind</h2>
+    <div style="font-size:14px; color:#f8fafc; background:#0b0e14; padding:12px; border-radius:8px; border:1px solid #334155; line-height:1.45;" id="ui-modal-blind-desc"></div>
+    <div style="display:flex; justify-content:space-between; font-size:13px; color:#cbd5e1; padding-top:4px;">
+      <span>Target Score: <strong style="color:var(--mult)" id="ui-modal-blind-target">300</strong></span>
+      <span>Base Reward: <strong style="color:var(--gold)" id="ui-modal-blind-reward">$4</strong></span>
+    </div>
+  </div>
+</div>
+
+<!-- COG SETTINGS, RULES & SIMULATOR LAUNCHER MODAL -->
+<div class="modal-backdrop hidden" id="ui-cog-modal" onclick="toggleCogModal(false)">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h3 style="color:var(--gold);">SETTINGS & HAND TIERS</h3>
+      <button class="btn btn-secondary" onclick="toggleCogModal(false)">Close</button>
+    </div>
+
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+      <button class="btn btn-redeal" style="padding:10px;" onclick="toggleCogModal(false); startNewRun();">Start New Run</button>
+      <button class="btn btn-double" style="padding:10px;" onclick="toggleCogModal(false); toggleSimModal(true);">📊 Balance Simulator</button>
+    </div>
+
+    <p style="font-size:11px; color:#cbd5e1; line-height:1.35;">
+      You get <strong id="ui-rules-deals-count">7</strong> Deals per Blind. Every card in your final hand adds its Blackjack value to your <strong>Chips</strong> (2–10 = face value, J/Q/K = 10, Ace = 11), plus Enhancements and Jokers. Tap any Joker to reorder it!
+    </p>
+
+    <table class="rules-table">
+      <thead>
+        <tr>
+          <th>Hand Outcome</th>
+          <th>Base Chips × Mult</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>5-Card Charlie</strong> (5+ cards unbusted)</td><td><span style="color:var(--chips)">160c</span> × <span style="color:var(--mult)">5m</span></td></tr>
+        <tr><td><strong>Natural Blackjack</strong> (2-card 21)</td><td><span style="color:var(--chips)">120c</span> × <span style="color:var(--mult)">4m</span></td></tr>
+        <tr><td><strong>Exact 21</strong> (3+ cards)</td><td><span style="color:var(--chips)">75c</span> × <span style="color:var(--mult)">3m</span></td></tr>
+        <tr><td><strong>Beat Dealer / Dealer Bust</strong></td><td><span style="color:var(--chips)">40c</span> × <span style="color:var(--mult)">2m</span></td></tr>
+        <tr><td><strong>Push (Tie)</strong></td><td><span style="color:var(--chips)">25c</span> × <span style="color:var(--mult)">1m</span></td></tr>
+        <tr><td><strong>Loss / Bust</strong></td><td>0 (unless <em>Safety Net</em>)</td></tr>
+      </tbody>
+    </table>
+    <div style="font-size:10px; color:#94a3b8; line-height:1.4;">
+      • <strong>Double Down:</strong> Initial 2 cards only. Draw 1 card, Stand, and multiply final score by <strong>×2</strong>.<br>
+      • <strong>Economy:</strong> Clear a Blind to earn Base Cash + $1 per unused Deal + $1 interest per $5 held (max $5).
+    </div>
+  </div>
+</div>
+
+<!-- MONTE CARLO BALANCE SIMULATOR LAB MODAL -->
+<div class="modal-backdrop hidden" id="ui-sim-modal" onclick="toggleSimModal(false)">
+  <div class="modal-box wide-deck" onclick="event.stopPropagation()">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div>
+        <h3 style="color:var(--gold); font-size:16px;">📊 MONTE CARLO BALANCE LAB (v1.7)</h3>
+        <div style="font-size:10px; color:#94a3b8;">Simulate 3,000 to 20,000 runs and export a full telemetry .TXT file for analysis.</div>
+      </div>
+      <button class="btn btn-secondary" onclick="toggleSimModal(false)">Close</button>
+    </div>
+
+    <div class="sim-controls-grid">
+      <div class="sim-field">
+        <label><span>Runs to Simulate</span><span id="sim-lbl-runs">3000</span></label>
+        <select id="sim-runs" onchange="document.getElementById('sim-lbl-runs').textContent=this.value">
+          <option value="3000" selected>3,000 Runs</option>
+          <option value="5000">5,000 Runs</option>
+          <option value="20000">20,000 Runs (Deep Precision)</option>
+        </select>
+      </div>
+
+      <div class="sim-field">
+        <label><span>Bot Playstyle Strategy</span></label>
+        <select id="sim-bot">
+          <option value="synergy" selected>Smart Synergy AI (Adapts to Jokers)</option>
+          <option value="highroller">High-Roller 21 AI (Faces/Aces/Doubles)</option>
+          <option value="charlie">Low-Card Charlie AI (Hits Low Cards)</option>
+          <option value="basic">Strict Casino Basic Strategy AI (With Jokers)</option>
+          <option value="vanilla">No-Jokers Baseline (Vanilla Basic Strategy)</option>
+        </select>
+      </div>
+
+      <div class="sim-field">
+        <label><span>Starting Deals / Blind</span><span id="sim-lbl-deals">7</span></label>
+        <input type="range" id="sim-deals" min="4" max="10" step="1" value="7"
+          oninput="document.getElementById('sim-lbl-deals').textContent=this.value">
+      </div>
+
+      <div class="sim-field">
+        <label><span>Target Score Scaling</span><span id="sim-lbl-scale">100%</span></label>
+        <input type="range" id="sim-scale" min="50" max="130" step="5" value="100"
+          oninput="document.getElementById('sim-lbl-scale').textContent=this.value+'%'">
+      </div>
+
+      <div class="sim-field">
+        <label><span>Unused Deal Cash Cap</span><span id="sim-lbl-dealcap">$6</span></label>
+        <input type="range" id="sim-dealcap" min="2" max="10" step="1" value="6"
+          oninput="document.getElementById('sim-lbl-dealcap').textContent='$'+this.value">
+      </div>
+
+      <div class="sim-field">
+        <label><span>Experimental Rules</span></label>
+        <div style="display:flex; flex-direction:column; gap:3px; margin-top:2px;">
+          <label style="color:#e2e8f0; font-weight:normal; justify-content:flex-start; gap:6px; cursor:pointer;">
+            <input type="checkbox" id="sim-push-refund"> Pushes Refund Deal (+1 Deal back)
+          </label>
+          <label style="color:#e2e8f0; font-weight:normal; justify-content:flex-start; gap:6px; cursor:pointer;">
+            <input type="checkbox" id="sim-ante-leveling"> Hand Tiers Scale +15%/Ante
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="sim-btn-row">
+      <button class="btn btn-deal" style="flex:1; min-width:130px; padding:10px;" id="btn-run-sim" onclick="runMonteCarloSimulation()">▶ Run Simulation</button>
+      <button class="btn btn-hit" style="flex:1; min-width:140px; padding:10px;" id="btn-export-txt" onclick="downloadLastSimReport()" disabled>💾 Export Last Sim (.TXT)</button>
+      <button class="btn btn-stand" style="flex:1; min-width:160px; padding:10px;" id="btn-suite-txt" onclick="runAllBotsSuiteAndExport()">🚀 Run All 5 Bots & Export (.TXT)</button>
+      <button class="btn btn-secondary" style="padding:10px;" id="btn-copy-txt" onclick="copyLastSimReport()" disabled>📋 Copy</button>
+      <button class="btn btn-double" style="padding:10px;" onclick="applySimConfigToLiveGame()">✓ Apply to Game</button>
+    </div>
+
+    <!-- SIMULATION RESULTS CONTAINER -->
+    <div id="sim-results-area" style="display:flex; flex-direction:column; gap:10px;">
+      <div style="text-align:center; color:#64748b; font-size:12px; padding:16px;">
+        Click <strong>▶ Run Simulation</strong> (or <strong>🚀 Run All 5 Bots & Export (.TXT)</strong>) to generate telemetry.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ITEM INSPECTOR MODAL -->
+<div class="modal-backdrop hidden" id="ui-inspect-modal" onclick="closeInspector()">
+  <div class="modal-box" id="ui-inspect-content" onclick="event.stopPropagation()"></div>
+</div>
+
+<!-- FULL DECK VIEWER MODAL -->
+<div class="modal-backdrop hidden" id="ui-deck-modal" onclick="toggleDeckModal(false)">
+  <div class="modal-box wide-deck" onclick="event.stopPropagation()">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div>
+        <h3 style="color:var(--gold); font-size:15px;" id="ui-deck-modal-title">FULL DECK VIEW</h3>
+        <div style="font-size:10px; color:#94a3b8;">Ordered by Suit & Rank (Dimmed = Revealed face-up cards)</div>
+      </div>
+      <button class="btn btn-secondary" onclick="toggleDeckModal(false)">Close</button>
+    </div>
+    <div id="ui-deck-list" style="display:flex; flex-direction:column; gap:6px;"></div>
+  </div>
+</div>
+
+<script>
+/* ==========================================================
+   LIVE BALANCE CONFIG (TUNABLE VIA SIMULATOR LAB)
+========================================================== */
+let balanceConfig = {
+  startingDeals: 7,
+  targetScalePct: 100,
+  unusedDealCashCap: 6,
+  pushRefundsDeal: false,
+  anteHandScaling: false
+};
+
+let lastSimReportText = '';
+let lastSimFilename = 'jack-latro-telemetry.txt';
+
+/* ==========================================================
+   CONFETTI CELEBRATION ENGINE
+========================================================== */
+const confettiCanvas = document.getElementById('confetti-canvas');
+const confettiCtx = confettiCanvas.getContext('2d');
+let confettiParticles = [];
+let confettiAnimId = null;
+
+function resizeConfetti() {
+  confettiCanvas.width = window.innerWidth;
+  confettiCanvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeConfetti);
+resizeConfetti();
+
+function launchConfetti() {
+  const colors = ['#ffbe0b', '#009dff', '#ff4b4b', '#2ec4b6', '#9d4edd', '#ffffff'];
+  for (let i = 0; i < 95; i++) {
+    confettiParticles.push({
+      x: confettiCanvas.width * (0.2 + Math.random() * 0.6),
+      y: confettiCanvas.height * 0.45,
+      vx: (Math.random() - 0.5) * 14,
+      vy: -(Math.random() * 12 + 5),
+      size: Math.random() * 7 + 5,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      rot: Math.random() * Math.PI * 2,
+      vRot: (Math.random() - 0.5) * 0.25,
+      life: 1.0
+    });
+  }
+  if (!confettiAnimId) animateConfetti();
+}
+
+function stopConfetti() {
+  confettiParticles = [];
+  if (confettiAnimId) {
+    cancelAnimationFrame(confettiAnimId);
+    confettiAnimId = null;
+  }
+  confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+}
+
+function animateConfetti() {
+  confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+  for (let i = confettiParticles.length - 1; i >= 0; i--) {
+    const p = confettiParticles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.34;
+    p.vx *= 0.99;
+    p.rot += p.vRot;
+    p.life -= 0.008;
+
+    if (p.y > confettiCanvas.height + 20 || p.life <= 0) {
+      confettiParticles.splice(i, 1);
+      continue;
+    }
+
+    confettiCtx.save();
+    confettiCtx.translate(p.x, p.y);
+    confettiCtx.rotate(p.rot);
+    confettiCtx.globalAlpha = Math.max(0, p.life);
+    confettiCtx.fillStyle = p.color;
+    confettiCtx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.65);
+    confettiCtx.restore();
+  }
+
+  if (confettiParticles.length > 0) {
+    confettiAnimId = requestAnimationFrame(animateConfetti);
+  } else {
+    confettiAnimId = null;
+  }
+}
+
+/* ==========================================================
+   SYNTHESIZED WEBAUDIO SOUND ENGINE
+========================================================== */
+let audioCtx = null;
+
+function getAudioCtx() {
+  if (!audioCtx) {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AudioContext();
+  }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+  return audioCtx;
+}
+
+function playCardDealSound() {
+  try {
+    const ctx = getAudioCtx();
+    const now = ctx.currentTime;
+    const bufferSize = ctx.sampleRate * 0.045;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.35));
+    }
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(1450, now);
+    filter.Q.setValueAtTime(1.8, now);
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.28, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.045);
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    noise.start(now);
+  } catch (e) {}
+}
+
+function playTone(freq, type, startTime, duration, peakGain = 0.14) {
+  const ctx = getAudioCtx();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, startTime);
+  gain.gain.setValueAtTime(0.001, startTime);
+  gain.gain.linearRampToValueAtTime(peakGain, startTime + 0.015);
+  gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(startTime);
+  osc.stop(startTime + duration);
+}
+
+function playScoreTickSound(stepIndex) {
+  try {
+    const ctx = getAudioCtx();
+    const freq = 370 * Math.pow(1.075, Math.min(stepIndex, 14));
+    playTone(freq, 'triangle', ctx.currentTime, 0.09, 0.14);
+  } catch (e) {}
+}
+
+function playOutcomeSound(kind) {
+  try {
+    const ctx = getAudioCtx();
+    const now = ctx.currentTime;
+    if (kind === 'WIN') {
+      playTone(523.25, 'triangle', now, 0.14, 0.16);
+      playTone(659.25, 'triangle', now + 0.08, 0.14, 0.16);
+      playTone(783.99, 'triangle', now + 0.16, 0.22, 0.18);
+      playTone(1046.50, 'sine', now + 0.24, 0.30, 0.15);
+    } else if (kind === 'BLIND_WIN') {
+      playTone(523.25, 'triangle', now, 0.12, 0.18);
+      playTone(659.25, 'triangle', now + 0.09, 0.12, 0.18);
+      playTone(783.99, 'triangle', now + 0.18, 0.12, 0.18);
+      playTone(1046.50, 'triangle', now + 0.27, 0.16, 0.20);
+      playTone(1318.51, 'sine', now + 0.38, 0.42, 0.20);
+    } else if (kind === 'PUSH') {
+      playTone(440.0, 'sine', now, 0.14, 0.13);
+      playTone(440.0, 'triangle', now + 0.14, 0.20, 0.13);
+    } else if (kind === 'LOSS') {
+      playTone(349.23, 'sawtooth', now, 0.18, 0.10);
+      playTone(277.18, 'sawtooth', now + 0.16, 0.30, 0.11);
+    } else if (kind === 'BUST') {
+      playTone(220.0, 'sawtooth', now, 0.16, 0.13);
+      playTone(164.81, 'sawtooth', now + 0.13, 0.18, 0.13);
+      playTone(123.47, 'sawtooth', now + 0.26, 0.34, 0.14);
+    }
+  } catch (e) {}
+}
+
+const sleep = (ms) => new Promise(res => setTimeout(res, ms));
+const DEAL_DELAY_MS = 170;
+
+/* ==========================================================
+   CATALOGS
+========================================================== */
+const JOKER_CATALOG = [
+  { id: 'bust_cushion', name: 'Bust Cushion', cost: 6, isXMult: false, desc: 'Rubber Table: You only bust on 23+ (a total of 22 is treated as a valid 21!).' },
+  { id: 'daredevil', name: 'Daredevil', cost: 5, isXMult: false, bonusMult: 0, desc: 'Permanently gains +3 Mult for the rest of the run every time you Hit on 14+ without busting.' },
+  { id: 'chip_stacker', name: 'Chip Stacker', cost: 5, isXMult: false, bonusChips: 0, desc: 'Permanently gains +15 Chips for the rest of the run every time you win with a Double Down.' },
+  { id: 'card_counter', name: 'Card Counter', cost: 4, isXMult: false, desc: '+25 Chips for each low card (2-6) in your hand.' },
+  { id: 'vip_high_roller', name: 'VIP High Roller', cost: 5, isXMult: false, desc: '+4 Mult for each Face Card (J, Q, K) in your hand.' },
+  { id: 'ace_up_sleeve', name: 'Ace Up Sleeve', cost: 6, isXMult: false, desc: '+40 Chips & +4 Mult if your hand contains an Ace.' },
+  { id: 'sweet_16', name: 'Sweet Sixteen', cost: 5, isXMult: false, desc: 'Standing on 16 or less grants +10 Mult.' },
+  { id: 'lucky_sevens', name: 'Lucky Sevens', cost: 6, isXMult: false, desc: 'Each 7 in your hand grants +77 Chips & +7 Mult.' },
+  { id: 'hit_me_baby', name: 'Hit Me Baby', cost: 5, isXMult: false, desc: '+4 Mult for every card in your hand beyond 2.' },
+  { id: 'golden_parachute', name: 'Gold Parachute', cost: 5, isXMult: false, desc: 'Earn +$3 whenever the Dealer busts.' },
+  { id: 'push_it_good', name: 'Push It Good', cost: 4, isXMult: false, desc: 'Ties (Pushes) count as Wins and grant +80 Chips & +5 Mult.' },
+  { id: 'blackjack_tycoon', name: 'BJ Tycoon', cost: 7, isXMult: true, desc: 'Scoring 21 or Natural BJ applies ×2 Mult and grants +$2.' },
+  { id: 'the_shark', name: 'The Shark', cost: 7, isXMult: true, desc: '×1.5 Mult if your final total beats the Dealer by 3 or more.' },
+  { id: 'safety_net', name: 'Safety Net', cost: 5, isXMult: false, desc: 'Busting still scores 50 Chips × 2 Mult instead of 0.' },
+  { id: 'even_steven', name: 'Even Steven', cost: 4, isXMult: false, desc: '+3 Mult for each even-numbered card (2,4,6,8,10) in hand.' },
+  { id: 'red_velvet', name: 'Red Velvet', cost: 5, isXMult: false, desc: '+20 Chips for each ♥ or ♦ in your hand.' },
+  { id: 'dark_knight', name: 'Dark Knight', cost: 5, isXMult: false, desc: '+3 Mult for each ♠ or ♣ in your hand.' },
+  { id: 'compound_edge', name: 'Compound Edge', cost: 6, isXMult: false, desc: '+20 Chips for every $5 you currently hold.' },
+  { id: 'minimalist', name: 'Minimalist', cost: 6, isXMult: true, desc: '×1.75 Mult if you Win with exactly 2 cards.' }
+];
+
+function getJokerFullDesc(j) {
+  if (j.id === 'daredevil') {
+    const cur = j.bonusMult || 0;
+    return `Permanently gains +3 Mult for the rest of the run every time you Hit on 14+ without busting. (Currently: +${cur} Mult)`;
+  }
+  if (j.id === 'chip_stacker') {
+    const cur = j.bonusChips || 0;
+    return `Permanently gains +15 Chips for the rest of the run every time you win with a Double Down. (Currently: +${cur} Chips)`;
+  }
+  return j.desc;
+}
+
+function getJokerMiniSubHTML(j) {
+  if (j.id === 'daredevil') {
+    const cur = j.bonusMult || 0;
+    return `<span style="color:var(--mult);font-weight:900;">+${cur}m</span> (+3m/Hit 14+)`;
+  }
+  if (j.id === 'chip_stacker') {
+    const cur = j.bonusChips || 0;
+    return `<span style="color:var(--chips);font-weight:900;">+${cur}c</span> (+15c/Dbl Win)`;
+  }
+  if (j.id === 'bust_cushion') {
+    return `22 = 21! (Bust 23+)`;
+  }
+  return j.desc;
+}
+
+const TAROT_CATALOG = [
+  { id: 'x_ray', name: 'X-Ray Specs', cost: 3, desc: 'Reveal Dealer hole card and gain +50 Chips this hand.' },
+  { id: 'loaded_ace', name: 'Loaded Ace', cost: 4, desc: 'Draw a Foil Ace of Spades directly into your hand.' },
+  { id: 'card_shave', name: 'Card Shave', cost: 3, desc: 'Reduce your highest non-Ace card rank by 3.' },
+  { id: 'midas_touch', name: 'Midas Touch', cost: 3, desc: 'Enhance rightmost card in hand to Gold (+$3 when scored).' }
+];
+
+const VOUCHER_CATALOG = [
+  { id: 'extra_hand', name: 'Extra Cushion', cost: 7, desc: '+1 Max Deal per Blind permanently.' },
+  { id: 'table_leverage', name: 'Table Leverage', cost: 6, desc: '+1 Base Mult on all Winning & Push hands permanently.' },
+  { id: 'joker_slot', name: 'VIP Lounge Pass', cost: 8, desc: '+1 Max Joker Slot permanently.' },
+  { id: 'base_boost', name: 'High Stakes Table', cost: 7, desc: '+30 Base Chips on all Winning & Push hands.' }
+];
+
+const BOSS_BLINDS = [
+  { id: 'the_house', name: 'The House', desc: 'Ties (Pushes) go to the Dealer unless you have Push It Good.' },
+  { id: 'the_pit_boss', name: 'The Pit Boss', desc: 'Face cards (J, Q, K) contribute 0 Chips when scored.' },
+  { id: 'the_cooler', name: 'The Cooler', desc: 'Start this Blind with -1 Deal.' },
+  { id: 'the_anchor', name: 'The Anchor', desc: 'Double Down is disabled during this Blind.' }
+];
+
+const ANTE_TARGETS = [300, 600, 1100, 1800, 2900, 4500, 7000, 10500];
+
+/* ==========================================================
+   STATE
+========================================================== */
+let nextCardUid = 1;
+
+let state = {
+  ante: 1,
+  blindIndex: 0,
+  bossBlind: null,
+  targetScore: 300,
+  roundScore: 0,
+  money: 6,
+  maxHands: 7,
+  handsLeft: 7,
+  maxJokers: 5,
+  maxConsumables: 2,
+  baseWinChipBonus: 0,
+  baseWinMultBonus: 0,
+
+  deck: [],
+  shoe: [],
+  playerHand: [],
+  dealerHand: [],
+  dealerHoleRevealed: false,
+  inHand: false,
+  isDealing: false,
+  blindClearedReady: false,
+  blindFailedReady: false,
+  pendingPayout: null,
+  inShop: false,
+  doubledDown: false,
+  tempBonusChips: 0,
+
+  jokers: [],
+  consumables: [],
+  vouchersBought: [],
+
+  rerollCost: 2,
+  shopJokers: [],
+  shopExtras: []
+};
+
+/* ==========================================================
+   SETUP & DECK CREATION
+========================================================== */
+function createStandardDeck() {
+  const suits = ['♠', '♥', '♣', '♦'];
+  const ranks = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+  const deck = [];
+  for (let s of suits) {
+    for (let r of ranks) {
+      deck.push({ uid: nextCardUid++, suit: s, rank: r, enhancement: null });
+    }
+  }
+  return deck;
+}
+
+function shuffle(array) {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function startNewRun() {
+  stopConfetti();
+  nextCardUid = 1;
+  state.ante = 1;
+  state.blindIndex = 0;
+  state.money = 6;
+  state.maxHands = balanceConfig.startingDeals;
+  state.maxJokers = 5;
+  state.baseWinChipBonus = 0;
+  state.baseWinMultBonus = 0;
+  state.jokers = [];
+  state.consumables = [];
+  state.vouchersBought = [];
+  state.deck = createStandardDeck();
+  state.inShop = false;
+  state.isDealing = false;
+
+  document.getElementById('ui-rules-deals-count').textContent = balanceConfig.startingDeals;
+  document.getElementById('ui-shop-overlay').classList.add('hidden');
+  configureBlindMetrics();
+  startBlindPlay();
+}
+
+function configureBlindMetrics() {
+  const rawBase = ANTE_TARGETS[Math.min(state.ante - 1, ANTE_TARGETS.length - 1)];
+  const base = Math.round(rawBase * (balanceConfig.targetScalePct / 100));
+  if (state.blindIndex === 0) {
+    state.targetScore = Math.round(base * 1.0);
+    state.bossBlind = null;
+  } else if (state.blindIndex === 1) {
+    state.targetScore = Math.round(base * 1.45);
+    state.bossBlind = null;
+  } else {
+    state.targetScore = Math.round(base * 2.0);
+    state.bossBlind = BOSS_BLINDS[(state.ante - 1) % BOSS_BLINDS.length];
+  }
+  state.roundScore = 0;
+}
+
+function hideOutcomeHeadline() {
+  const el = document.getElementById('ui-outcome-headline');
+  el.className = 'outcome-headline hidden';
+}
+
+function showOutcomeHeadline(text, styleType) {
+  const el = document.getElementById('ui-outcome-headline');
+  el.textContent = text;
+  el.className = `outcome-headline ${styleType === 'WIN' ? 'win-style' : 'loss-style'}`;
+}
+
+function startBlindPlay() {
+  stopConfetti();
+  hideOutcomeHeadline();
+  state.inShop = false;
+  state.isDealing = false;
+  state.blindClearedReady = false;
+  state.blindFailedReady = false;
+  state.pendingPayout = null;
+  state.handsLeft = state.maxHands;
+  if (state.bossBlind && state.bossBlind.id === 'the_cooler') {
+    state.handsLeft = Math.max(1, state.handsLeft - 1);
+  }
+  state.shoe = shuffle(state.deck.map(c => ({ ...c })));
+  state.playerHand = [];
+  state.dealerHand = [];
+  state.inHand = false;
+  state.dealerHoleRevealed = false;
+  state.doubledDown = false;
+  state.tempBonusChips = 0;
+
+  setEquationUI(0, 0);
+  setBanner('Tap DEAL to begin playing this Blind.', 'Tap the deck on the left to view your remaining cards.');
+  updateAllUI();
+}
+
+/* ==========================================================
+   BLACKJACK HELPERS (SUPPORTS BUST CUSHION 22 -> 21)
+========================================================== */
+function getCardChipValue(card, bossBlind = state.bossBlind) {
+  if (bossBlind && bossBlind.id === 'the_pit_boss' && ['J','Q','K'].includes(card.rank)) {
+    return 0;
+  }
+  if (['J','Q','K'].includes(card.rank)) return 10;
+  if (card.rank === 'A') return 11;
+  return parseInt(card.rank, 10);
+}
+
+function hasJoker(id) {
+  return state.jokers.some(j => j.id === id);
+}
+
+function evaluateBlackjackTotal(hand, allow22As21 = false) {
+  let total = 0;
+  let aces = 0;
+  for (let c of hand) {
+    if (c.rank === 'A') {
+      aces++;
+      total += 11;
+    } else if (['J','Q','K'].includes(c.rank)) {
+      total += 10;
+    } else {
+      total += parseInt(c.rank, 10);
+    }
+  }
+  const bustCeiling = allow22As21 ? 22 : 21;
+  while (total > bustCeiling && aces > 0) {
+    total -= 10;
+    aces--;
+  }
+  let cushioned = false;
+  if (allow22As21 && total === 22) {
+    total = 21;
+    cushioned = true;
+  }
+  return { total, isSoft: aces > 0, cushioned };
+}
+
+function evaluatePlayerHand(hand = state.playerHand) {
+  return evaluateBlackjackTotal(hand, hasJoker('bust_cushion'));
+}
+
+function drawFromShoe() {
+  if (state.shoe.length === 0) {
+    state.shoe = shuffle(state.deck.map(c => ({ ...c })));
+  }
+  return state.shoe.pop();
+}
+
+async function dealCardAnimated(targetHand) {
+  const card = drawFromShoe();
+  targetHand.push(card);
+  playCardDealSound();
+  updateAllUI();
+  await sleep(DEAL_DELAY_MS);
+}
+
+/* ==========================================================
+   PLAYER ACTIONS
+========================================================== */
+function handlePrimaryDealBtn() {
+  if (state.isDealing) return;
+  if (state.blindClearedReady) {
+    cashOutAndEnterShop();
+  } else if (state.blindFailedReady) {
+    startNewRun();
+  } else {
+    dealHand();
+  }
+}
+
+async function dealHand() {
+  if (state.inHand || state.isDealing || state.handsLeft <= 0 || state.blindClearedReady || state.blindFailedReady) return;
+
+  hideOutcomeHeadline();
+  state.handsLeft--;
+  state.inHand = true;
+  state.isDealing = true;
+  state.doubledDown = false;
+  state.dealerHoleRevealed = false;
+  state.tempBonusChips = 0;
+  state.playerHand = [];
+  state.dealerHand = [];
+
+  setEquationUI(0, 0);
+  setBanner('Dealing cards...', '');
+  updateAllUI();
+
+  await dealCardAnimated(state.playerHand);
+  await dealCardAnimated(state.dealerHand);
+  await dealCardAnimated(state.playerHand);
+  await dealCardAnimated(state.dealerHand);
+
+  state.isDealing = false;
+  setBanner('Your turn: Hit, Stand, or Double Down.', '');
+  updateAllUI();
+
+  if (evaluatePlayerHand().total === 21) {
+    await playerStand();
+  }
+}
+
+async function playerHit() {
+  if (!state.inHand || state.isDealing) return;
+  state.isDealing = true;
+
+  const preHitEval = evaluatePlayerHand();
+  updateAllUI();
+
+  await dealCardAnimated(state.playerHand);
+  const postHitEval = evaluatePlayerHand();
+
+  if (preHitEval.total >= 14 && postHitEval.total <= 21) {
+    let scaledAny = false;
+    state.jokers.forEach((j, idx) => {
+      if (j.id === 'daredevil') {
+        j.bonusMult = (j.bonusMult || 0) + 3;
+        scaledAny = true;
+        popJokerCard(idx);
+      }
+    });
+    if (scaledAny) {
+      playScoreTickSound(6);
+      setBanner('Daredevil scaled! (+3 Mult permanently added)', '');
+      updateAllUI();
+      await sleep(180);
+    }
+  }
+
+  state.isDealing = false;
+  updateAllUI();
+
+  if (postHitEval.total > 21) {
+    await resolveRound();
+  } else if (state.playerHand.length >= 5 || postHitEval.total === 21) {
+    await playerStand();
+  }
+}
+
+async function playerStand() {
+  if (!state.inHand || state.isDealing) return;
+  state.isDealing = true;
+  state.dealerHoleRevealed = true;
+  playCardDealSound();
+  updateAllUI();
+  await sleep(DEAL_DELAY_MS);
+
+  while (evaluateBlackjackTotal(state.dealerHand, false).total < 17) {
+    await dealCardAnimated(state.dealerHand);
+  }
+  state.isDealing = false;
+  await resolveRound();
+}
+
+async function playerDouble() {
+  if (!state.inHand || state.isDealing || state.playerHand.length !== 2) return;
+  if (state.bossBlind && state.bossBlind.id === 'the_anchor') return;
+
+  state.isDealing = true;
+  state.doubledDown = true;
+  updateAllUI();
+
+  await dealCardAnimated(state.playerHand);
+
+  state.dealerHoleRevealed = true;
+  playCardDealSound();
+  updateAllUI();
+  await sleep(DEAL_DELAY_MS);
+
+  const pEval = evaluatePlayerHand();
+  if (pEval.total <= 21) {
+    while (evaluateBlackjackTotal(state.dealerHand, false).total < 17) {
+      await dealCardAnimated(state.dealerHand);
+    }
+  }
+  state.isDealing = false;
+  await resolveRound();
+}
+
+/* ==========================================================
+   VISUAL SCORE POPUP HELPERS
+========================================================== */
+function popPlayerCard(cardIdx, text) {
+  const row = document.getElementById('ui-player-cards');
+  const cardEl = row.children[cardIdx];
+  if (!cardEl) return;
+  cardEl.classList.add('scoring-pop');
+  const pop = document.createElement('div');
+  pop.className = 'card-float-pop';
+  pop.textContent = text;
+  cardEl.appendChild(pop);
+  setTimeout(() => {
+    cardEl.classList.remove('scoring-pop');
+    if (pop.parentNode) pop.remove();
+  }, 360);
+}
+
+function popJokerCard(jokerIdx) {
+  const row = document.getElementById('ui-joker-row');
+  const jEl = row.children[jokerIdx];
+  if (!jEl) return;
+  jEl.classList.add('active-pop');
+  setTimeout(() => jEl.classList.remove('active-pop'), 320);
+}
+
+/* ==========================================================
+   SCORING RESOLUTION WITH SEQUENTIAL CASCADE
+========================================================== */
+async function resolveRound() {
+  state.inHand = false;
+  state.isDealing = true;
+  state.dealerHoleRevealed = true;
+  updateAllUI();
+
+  const pEval = evaluatePlayerHand();
+  const pTotal = pEval.total;
+  const dTotal = evaluateBlackjackTotal(state.dealerHand, false).total;
+  const pCount = state.playerHand.length;
+  const dBust = dTotal > 21;
+  const pBust = pTotal > 21;
+
+  let outcomeType = 'LOSS';
+  let outcomeLabel = 'DEALER WINS';
+  let baseChips = 0;
+  let baseMult = 0;
+
+  if (pBust) {
+    outcomeType = 'BUST';
+    outcomeLabel = `BUSTED (${pTotal})`;
+  } else if (pCount >= 5) {
+    outcomeType = 'CHARLIE';
+    outcomeLabel = '5-CARD CHARLIE!';
+    baseChips = 160; baseMult = 5;
+  } else if (pTotal === 21 && pCount === 2) {
+    if (dTotal === 21 && state.dealerHand.length === 2) {
+      outcomeType = 'PUSH';
+      outcomeLabel = 'BLACKJACK PUSH';
+      baseChips = 25; baseMult = 1;
+    } else {
+      outcomeType = 'NATURAL';
+      outcomeLabel = 'NATURAL BLACKJACK!';
+      baseChips = 120; baseMult = 4;
+    }
+  } else if (dBust || pTotal > dTotal) {
+    if (pTotal === 21) {
+      outcomeType = 'EXACT21';
+      outcomeLabel = pEval.cushioned ? 'CUSHIONED 21 WIN!' : 'EXACT 21 WIN!';
+      baseChips = 75; baseMult = 3;
+    } else {
+      outcomeType = 'WIN';
+      outcomeLabel = dBust ? 'DEALER BUSTS! WIN!' : 'BEAT DEALER!';
+      baseChips = 40; baseMult = 2;
+    }
+  } else if (pTotal === dTotal) {
+    if (state.bossBlind && state.bossBlind.id === 'the_house' && !hasJoker('push_it_good')) {
+      outcomeType = 'LOSS';
+      outcomeLabel = 'HOUSE WINS TIES';
+    } else {
+      outcomeType = 'PUSH';
+      outcomeLabel = 'PUSH (TIE)';
+      baseChips = 25; baseMult = 1;
+    }
+  } else {
+    outcomeType = 'LOSS';
+    outcomeLabel = `DEALER WINS (${dTotal} vs ${pTotal})`;
+  }
+
+  if (outcomeType === 'PUSH' && balanceConfig.pushRefundsDeal) {
+    state.handsLeft++;
+  }
+
+  let logs = [];
+  if (pEval.cushioned) {
+    logs.push('Bust Cushion (22➔21!)');
+  }
+
+  let isScoringHand = ['CHARLIE', 'NATURAL', 'EXACT21', 'WIN', 'PUSH'].includes(outcomeType);
+
+  if (outcomeType === 'BUST' && hasJoker('safety_net')) {
+    isScoringHand = true;
+    baseChips = 50; baseMult = 2;
+    outcomeLabel = 'SAVED BY SAFETY NET!';
+    logs.push('Safety Net (50×2)');
+  }
+
+  if (outcomeType === 'PUSH' && hasJoker('push_it_good')) {
+    outcomeType = 'WIN';
+    baseChips += 80; baseMult += 5;
+    outcomeLabel = 'PUSH IT GOOD WIN!';
+    logs.push('Push It Good (+80c, +5m)');
+  }
+
+  const isWinOutcome = ['CHARLIE', 'NATURAL', 'EXACT21', 'WIN'].includes(outcomeType);
+  if (state.doubledDown && isWinOutcome) {
+    state.jokers.forEach(j => {
+      if (j.id === 'chip_stacker') {
+        j.bonusChips = (j.bonusChips || 0) + 15;
+        logs.push(`Chip Stacker Scaled (+15c ➔ +${j.bonusChips}c)`);
+      }
+    });
+    updateAllUI();
+  }
+
+  if (isScoringHand && balanceConfig.anteHandScaling && state.ante > 1) {
+    const scaleFactor = 1 + (state.ante - 1) * 0.15;
+    baseChips = Math.round(baseChips * scaleFactor);
+    baseMult = Math.round(baseMult * scaleFactor * 10) / 10;
+  }
+
+  let chips = baseChips;
+  let mult = baseMult;
+  let tickStep = 0;
+
+  if (isScoringHand) {
+    chips += state.baseWinChipBonus + state.tempBonusChips;
+    mult += state.baseWinMultBonus;
+    setEquationUI(chips, mult, true);
+    setBanner(`${outcomeLabel} — Counting score...`, '');
+    playScoreTickSound(tickStep++);
+    await sleep(140);
+
+    for (let i = 0; i < state.playerHand.length; i++) {
+      const c = state.playerHand[i];
+      const cVal = getCardChipValue(c);
+      chips += cVal;
+      let popLabel = `+${cVal}c`;
+
+      if (c.enhancement === 'foil') { chips += 30; popLabel = `+${cVal + 30}c`; logs.push(`${c.rank}${c.suit} +30c`); }
+      if (c.enhancement === 'holo') { mult += 4; popLabel += ` +4m`; logs.push(`${c.rank}${c.suit} +4m`); }
+      if (c.enhancement === 'poly') { mult = Math.round(mult * 1.5 * 10) / 10; popLabel += ` ×1.5m`; logs.push(`${c.rank}${c.suit} ×1.5m`); }
+      if (c.enhancement === 'gold') { state.money += 3; popLabel += ` +$3`; logs.push(`${c.rank}${c.suit} +$3`); }
+
+      popPlayerCard(i, popLabel);
+      setEquationUI(Math.round(chips), Math.round(mult * 10) / 10, true);
+      playScoreTickSound(tickStep++);
+      await sleep(125);
+    }
+
+    for (let jIdx = 0; jIdx < state.jokers.length; jIdx++) {
+      const j = state.jokers[jIdx];
+      let triggered = false;
+      switch (j.id) {
+        case 'daredevil': {
+          const bm = j.bonusMult || 0;
+          if (bm > 0) { mult += bm; logs.push(`Daredevil +${bm}m`); triggered = true; }
+          break;
+        }
+        case 'chip_stacker': {
+          const bc = j.bonusChips || 0;
+          if (bc > 0) { chips += bc; logs.push(`Chip Stacker +${bc}c`); triggered = true; }
+          break;
+        }
+        case 'card_counter': {
+          const lows = state.playerHand.filter(c => ['2','3','4','5','6'].includes(c.rank)).length;
+          if (lows > 0) { chips += lows * 25; logs.push(`Counter +${lows * 25}c`); triggered = true; }
+          break;
+        }
+        case 'vip_high_roller': {
+          const faces = state.playerHand.filter(c => ['J','Q','K'].includes(c.rank)).length;
+          if (faces > 0) { mult += faces * 4; logs.push(`VIP +${faces * 4}m`); triggered = true; }
+          break;
+        }
+        case 'ace_up_sleeve': {
+          if (state.playerHand.some(c => c.rank === 'A')) {
+            chips += 40; mult += 4; logs.push(`Ace Sleeve +40c/+4m`); triggered = true;
+          }
+          break;
+        }
+        case 'sweet_16': {
+          if (pTotal <= 16 && !pBust) { mult += 10; logs.push(`Sweet 16 +10m`); triggered = true; }
+          break;
+        }
+        case 'lucky_sevens': {
+          const sevens = state.playerHand.filter(c => c.rank === '7').length;
+          if (sevens > 0) { chips += sevens * 77; mult += sevens * 7; logs.push(`7s +${sevens * 77}c/+${sevens * 7}m`); triggered = true; }
+          break;
+        }
+        case 'hit_me_baby': {
+          const extra = Math.max(0, state.playerHand.length - 2);
+          if (extra > 0) { mult += extra * 4; logs.push(`Hit Me +${extra * 4}m`); triggered = true; }
+          break;
+        }
+        case 'golden_parachute': {
+          if (dBust) { state.money += 3; logs.push(`Parachute +$3`); triggered = true; }
+          break;
+        }
+        case 'blackjack_tycoon': {
+          if (pTotal === 21) { mult *= 2; state.money += 2; logs.push(`Tycoon ×2m/+$2`); triggered = true; }
+          break;
+        }
+        case 'the_shark': {
+          if (!pBust && (dBust || (pTotal - dTotal >= 3))) {
+            mult = Math.round(mult * 1.5 * 10) / 10; logs.push(`Shark ×1.5m`); triggered = true;
+          }
+          break;
+        }
+        case 'even_steven': {
+          const evens = state.playerHand.filter(c => ['2','4','6','8','10'].includes(c.rank)).length;
+          if (evens > 0) { mult += evens * 3; logs.push(`Even +${evens * 3}m`); triggered = true; }
+          break;
+        }
+        case 'red_velvet': {
+          const reds = state.playerHand.filter(c => ['♥','♦'].includes(c.suit)).length;
+          if (reds > 0) { chips += reds * 20; logs.push(`Red +${reds * 20}c`); triggered = true; }
+          break;
+        }
+        case 'dark_knight': {
+          const blacks = state.playerHand.filter(c => ['♠','♣'].includes(c.suit)).length;
+          if (blacks > 0) { mult += blacks * 3; logs.push(`Dark +${blacks * 3}m`); triggered = true; }
+          break;
+        }
+        case 'compound_edge': {
+          const sets = Math.floor(state.money / 5);
+          if (sets > 0) { chips += sets * 20; logs.push(`Compound +${sets * 20}c`); triggered = true; }
+          break;
+        }
+        case 'minimalist': {
+          if (state.playerHand.length === 2 && outcomeType !== 'PUSH') {
+            mult = Math.round(mult * 1.75 * 10) / 10; logs.push(`Minimalist ×1.75m`); triggered = true;
+          }
+          break;
+        }
+      }
+
+      if (triggered) {
+        popJokerCard(jIdx);
+        setEquationUI(Math.round(chips), Math.round(mult * 10) / 10, true);
+        playScoreTickSound(tickStep++);
+        await sleep(130);
+      }
+    }
+
+    if (state.doubledDown) {
+      mult *= 2;
+      logs.push('Double Down ×2m');
+      setEquationUI(Math.round(chips), Math.round(mult * 10) / 10, true);
+      playScoreTickSound(tickStep++);
+      await sleep(120);
+    }
+  } else {
+    chips = 0; mult = 0;
+    setEquationUI(0, 0);
+  }
+
+  const handScore = Math.round(chips * mult);
+  state.roundScore += handScore;
+  state.isDealing = false;
+
+  if (state.roundScore >= state.targetScore) {
+    const blindReward = state.blindIndex === 0 ? 4 : state.blindIndex === 1 ? 5 : 6;
+    const handBonus = Math.min(balanceConfig.unusedDealCashCap, state.handsLeft);
+    const interest = Math.min(5, Math.floor(state.money / 5));
+    const totalEarned = blindReward + handBonus + interest;
+
+    state.blindClearedReady = true;
+    state.pendingPayout = { blindReward, handBonus, interest, totalEarned };
+
+    const winTitle = (state.ante >= 8 && state.blindIndex === 2) ? 'ANTE 8 CONQUERED!' : 'YOU WON!';
+    showOutcomeHeadline(winTitle, 'WIN');
+    launchConfetti();
+    playOutcomeSound('BLIND_WIN');
+
+    setBanner(
+      `${outcomeLabel} (+${handScore.toLocaleString()} pts) — BLIND CLEARED!`,
+      `Tap CASH OUT (+$${totalEarned}) below when you're ready to visit the Shop.`
+    );
+    updateAllUI();
+  } else if (state.handsLeft <= 0) {
+    state.blindFailedReady = true;
+    showOutcomeHeadline('BUSTED OUT!', 'LOSS');
+    playOutcomeSound('BUST');
+
+    const felt = document.getElementById('ui-table-felt');
+    felt.classList.remove('shake-loss');
+    void felt.offsetWidth;
+    felt.classList.add('shake-loss');
+
+    setBanner(
+      `${outcomeLabel} (+${handScore.toLocaleString()} pts) — Target Missed (${state.roundScore.toLocaleString()}/${state.targetScore.toLocaleString()})`,
+      `Out of Deals on Ante ${state.ante}. Tap NEW RUN below whenever you're ready.`
+    );
+    updateAllUI();
+  } else {
+    if (['CHARLIE', 'NATURAL', 'EXACT21', 'WIN'].includes(outcomeType)) {
+      playOutcomeSound('WIN');
+    } else if (outcomeType === 'PUSH') {
+      playOutcomeSound('PUSH');
+    } else if (outcomeType === 'BUST') {
+      playOutcomeSound('BUST');
+    } else {
+      playOutcomeSound('LOSS');
+    }
+
+    setBanner(
+      `${outcomeLabel} → +${handScore.toLocaleString()} pts`,
+      logs.length ? logs.join(' • ') : 'Tap DEAL for your next hand.'
+    );
+    updateAllUI();
+  }
+}
+
+/* ==========================================================
+   CASH OUT & SHOP
+========================================================== */
+function cashOutAndEnterShop() {
+  if (!state.blindClearedReady || !state.pendingPayout) return;
+
+  stopConfetti();
+  hideOutcomeHeadline();
+
+  const p = state.pendingPayout;
+  state.money += p.totalEarned;
+  state.blindClearedReady = false;
+
+  state.blindIndex++;
+  if (state.blindIndex > 2) {
+    state.blindIndex = 0;
+    state.ante++;
+  }
+  configureBlindMetrics();
+
+  state.inShop = true;
+  state.rerollCost = 2;
+  generateShopStock();
+
+  document.getElementById('ui-shop-payout-note').textContent =
+    `Earned +$${p.totalEarned} ($${p.blindReward} Blind + $${p.handBonus} Deals + $${p.interest} Interest).`;
+
+  renderShop();
+  document.getElementById('ui-shop-overlay').classList.remove('hidden');
+  updateAllUI();
+}
+
+function startNextBlindFromShop() {
+  document.getElementById('ui-shop-overlay').classList.add('hidden');
+  startBlindPlay();
+}
+
+/* ==========================================================
+   SHOP & INVENTORY MANAGEMENT
+========================================================== */
+function generateShopStock() {
+  const ownedIds = state.jokers.map(j => j.id);
+  const availableJokers = shuffle(JOKER_CATALOG.filter(j => !ownedIds.includes(j.id))).slice(0, 2);
+  const tarot = shuffle(TAROT_CATALOG)[0];
+
+  state.shopJokers = [
+    ...availableJokers.map(j => ({ ...j, bonusMult: 0, bonusChips: 0, shopType: 'joker', bought: false })),
+    { ...tarot, shopType: 'tarot', bought: false }
+  ];
+
+  const enhancements = [
+    { key: 'foil', label: 'Foil (+30c)', cost: 4 },
+    { key: 'holo', label: 'Holo (+4m)', cost: 4 },
+    { key: 'poly', label: 'Poly (×1.5m)', cost: 5 },
+    { key: 'gold', label: 'Gold (+$3)', cost: 4 }
+  ];
+  const highRanks = ['A','K','Q','J','10','7'];
+  const suits = ['♠','♥','♣','♦'];
+
+  const cardOffers = [0, 1].map(() => {
+    const enh = enhancements[Math.floor(Math.random() * enhancements.length)];
+    const r = highRanks[Math.floor(Math.random() * highRanks.length)];
+    const s = suits[Math.floor(Math.random() * suits.length)];
+    return {
+      shopType: 'card',
+      name: `${r}${s} [${enh.key.toUpperCase()}]`,
+      cost: enh.cost,
+      desc: `Add ${r}${s} with ${enh.label} to Deck.`,
+      cardData: { rank: r, suit: s, enhancement: enh.key },
+      bought: false
+    };
+  });
+
+  const availVouchers = VOUCHER_CATALOG.filter(v => !state.vouchersBought.includes(v.id));
+  const voucherOffer = availVouchers.length > 0
+    ? [{ ...shuffle(availVouchers)[0], shopType: 'voucher', bought: false }]
+    : [];
+
+  state.shopExtras = [...cardOffers, ...voucherOffer];
+}
+
+function rerollShop() {
+  if (state.money < state.rerollCost) return;
+  state.money -= state.rerollCost;
+  state.rerollCost += 1;
+  generateShopStock();
+  renderShop();
+  updateAllUI();
+}
+
+function buyShopItem(listName, idx) {
+  const item = state[listName][idx];
+  if (!item || item.bought || state.money < item.cost) return;
+
+  if (item.shopType === 'joker') {
+    if (state.jokers.length >= state.maxJokers) {
+      alert('Joker slots full! Tap an active Joker at the top to sell it.');
+      return;
+    }
+    state.money -= item.cost;
+    item.bought = true;
+    state.jokers.push({ ...item, bonusMult: item.bonusMult || 0, bonusChips: item.bonusChips || 0 });
+  } else if (item.shopType === 'tarot') {
+    if (state.consumables.length >= state.maxConsumables) {
+      alert('Tarot slots full!');
+      return;
+    }
+    state.money -= item.cost;
+    item.bought = true;
+    state.consumables.push({ ...item });
+  } else if (item.shopType === 'card') {
+    state.money -= item.cost;
+    item.bought = true;
+    const newCard = { uid: nextCardUid++, ...item.cardData };
+    state.deck.push(newCard);
+    state.shoe.push({ ...newCard });
+  } else if (item.shopType === 'voucher') {
+    state.money -= item.cost;
+    item.bought = true;
+    state.vouchersBought.push(item.id);
+    if (item.id === 'extra_hand') state.maxHands++;
+    if (item.id === 'table_leverage') state.baseWinMultBonus += 1;
+    if (item.id === 'joker_slot') state.maxJokers++;
+    if (item.id === 'base_boost') state.baseWinChipBonus += 30;
+  }
+
+  playCardDealSound();
+  renderShop();
+  updateAllUI();
+}
+
+function inspectJoker(index) {
+  const j = state.jokers[index];
+  if (!j) return;
+  const sellVal = Math.max(1, Math.floor(j.cost / 2));
+  const box = document.getElementById('ui-inspect-content');
+  box.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h3 style="color:var(--gold);">${j.name}</h3>
+      <button class="btn btn-secondary" onclick="closeInspector()">Close</button>
+    </div>
+    <div style="font-size:13px; color:#e2e8f0; line-height:1.4;">${getJokerFullDesc(j)}</div>
+    <div style="font-size:10px; color:#94a3b8;">Tip: Jokers trigger Left ➔ Right. Put +Mult Jokers to the left of ×Mult Jokers!</div>
+    <div style="display:flex; gap:6px;">
+      <button class="btn btn-secondary" style="flex:1;" onclick="moveJoker(${index}, -1)" ${index === 0 ? 'disabled' : ''}>◀ Move Left</button>
+      <button class="btn btn-secondary" style="flex:1;" onclick="moveJoker(${index}, 1)" ${index === state.jokers.length - 1 ? 'disabled' : ''}>Move Right ▶</button>
+    </div>
+    <button class="btn btn-redeal" style="padding:10px;" onclick="sellJoker(${index})">Sell Joker for $${sellVal}</button>
+  `;
+  document.getElementById('ui-inspect-modal').classList.remove('hidden');
+}
+
+function moveJoker(index, dir) {
+  const target = index + dir;
+  if (target < 0 || target >= state.jokers.length) return;
+  const temp = state.jokers[index];
+  state.jokers[index] = state.jokers[target];
+  state.jokers[target] = temp;
+  updateAllUI();
+  inspectJoker(target);
+}
+
+function sellJoker(index) {
+  const j = state.jokers[index];
+  if (!j) return;
+  state.money += Math.max(1, Math.floor(j.cost / 2));
+  state.jokers.splice(index, 1);
+  closeInspector();
+  updateAllUI();
+  if (state.inShop) renderShop();
+}
+
+function inspectConsumable(index) {
+  const c = state.consumables[index];
+  if (!c) return;
+  const box = document.getElementById('ui-inspect-content');
+  box.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h3 style="color:#d8b4fe;">${c.name}</h3>
+      <button class="btn btn-secondary" onclick="closeInspector()">Close</button>
+    </div>
+    <div style="font-size:13px; color:#e2e8f0;">${c.desc}</div>
+    <div style="display:flex; gap:8px;">
+      <button class="btn btn-double" style="flex:1; padding:10px;" onclick="useConsumable(${index})" ${!state.inHand || state.isDealing ? 'disabled' : ''}>
+        ${state.inHand ? 'Use Tarot Now' : 'Deal a Hand to Use'}
+      </button>
+      <button class="btn btn-redeal" style="padding:10px;" onclick="sellConsumable(${index})">Sell $1</button>
+    </div>
+  `;
+  document.getElementById('ui-inspect-modal').classList.remove('hidden');
+}
+
+function sellConsumable(index) {
+  state.money += 1;
+  state.consumables.splice(index, 1);
+  closeInspector();
+  updateAllUI();
+}
+
+function closeInspector() {
+  document.getElementById('ui-inspect-modal').classList.add('hidden');
+}
+
+function useConsumable(index) {
+  if (!state.inHand || state.isDealing) return;
+  const c = state.consumables[index];
+  if (!c) return;
+
+  if (c.id === 'x_ray') {
+    state.dealerHoleRevealed = true;
+    state.tempBonusChips += 50;
+    playCardDealSound();
+    setBanner('X-Ray Specs: Hole card revealed & +50 Chips!', '');
+  } else if (c.id === 'loaded_ace') {
+    state.playerHand.push({ uid: nextCardUid++, rank: 'A', suit: '♠', enhancement: 'foil' });
+    playCardDealSound();
+    setBanner('Loaded Ace drawn into hand!', '');
+  } else if (c.id === 'card_shave') {
+    let target = state.playerHand.find(card => !['A','2','3'].includes(card.rank));
+    if (target) {
+      const val = ['J','Q','K'].includes(target.rank) ? 10 : parseInt(target.rank, 10);
+      target.rank = String(Math.max(2, val - 3));
+      playCardDealSound();
+      setBanner(`Card Shave reduced rank to ${target.rank}!`, '');
+    } else {
+      alert('No high card available to shave!');
+      return;
+    }
+  } else if (c.id === 'midas_touch') {
+    const lastCard = state.playerHand[state.playerHand.length - 1];
+    if (lastCard) {
+      lastCard.enhancement = 'gold';
+      playCardDealSound();
+      setBanner(`${lastCard.rank}${lastCard.suit} turned Gold!`, '');
+    }
+  }
+
+  state.consumables.splice(index, 1);
+  closeInspector();
+  updateAllUI();
+}
+
+/* ==========================================================
+   UI RENDERING & MODALS
+========================================================== */
+function getBlindName() {
+  if (state.blindIndex === 0) return 'Small Blind';
+  if (state.blindIndex === 1) return 'Big Blind';
+  return `BOSS: ${state.bossBlind ? state.bossBlind.name : 'The House'}`;
+}
+
+function getBlindFullDescription() {
+  if (state.bossBlind) return state.bossBlind.desc;
+  if (state.blindIndex === 0) return 'Standard Blackjack table rules with no special restrictions.';
+  return 'Big Blind table rules with a higher score requirement.';
+}
+
+function getBlindReward() {
+  return state.blindIndex === 0 ? 4 : state.blindIndex === 1 ? 5 : 6;
+}
+
+function setEquationUI(chips, mult, pop = false) {
+  const cEl = document.getElementById('ui-chips');
+  const mEl = document.getElementById('ui-mult');
+  cEl.textContent = chips;
+  mEl.textContent = mult;
+  if (pop) {
+    cEl.classList.add('pill-pop');
+    mEl.classList.add('pill-pop');
+    setTimeout(() => {
+      cEl.classList.remove('pill-pop');
+      mEl.classList.remove('pill-pop');
+    }, 110);
+  }
+}
+
+function setBanner(msg, sub) {
+  document.getElementById('ui-banner').textContent = msg;
+  document.getElementById('ui-breakdown').textContent = sub || '';
+}
+
+function renderCardHTML(card, faceDown = false, extraClasses = '') {
+  if (faceDown) return `<div class="playing-card face-down ${extraClasses}"></div>`;
+  const isRed = ['♥', '♦'].includes(card.suit);
+  const enhClass = card.enhancement ? `enh-${card.enhancement}` : '';
+  const enhLabel = card.enhancement ? `<div class="card-enh-tag">${card.enhancement.toUpperCase()}</div>` : '';
+  const chipVal = getCardChipValue(card);
+
+  return `
+    <div class="playing-card ${isRed ? 'red' : 'black'} ${enhClass} ${extraClasses}">
+      <div class="card-corner-top">${card.rank}<br>${card.suit}</div>
+      <div class="card-suit-center">${card.suit}</div>
+      ${enhLabel}
+      <div class="card-corner-bottom">+${chipVal}c</div>
+    </div>
+  `;
+}
+
+function renderShop() {
+  const jGrid = document.getElementById('ui-shop-jokers');
+  const eGrid = document.getElementById('ui-shop-extras');
+  document.getElementById('btn-reroll').textContent = `Reroll ($${state.rerollCost})`;
+
+  jGrid.innerHTML = state.shopJokers.map((item, idx) => `
+    <div class="shop-item type-${item.shopType}">
+      <div>
+        <div class="shop-item-sub">${item.shopType}</div>
+        <div class="shop-item-title">${item.name}</div>
+        <div class="shop-item-desc">${item.shopType === 'joker' ? getJokerFullDesc(item) : item.desc}</div>
+      </div>
+      <button class="btn btn-deal" style="padding:6px; font-size:10px;"
+        onclick="buyShopItem('shopJokers', ${idx})"
+        ${item.bought || state.money < item.cost ? 'disabled' : ''}>
+        ${item.bought ? 'SOLD' : 'BUY $' + item.cost}
+      </button>
+    </div>
+  `).join('');
+
+  eGrid.innerHTML = state.shopExtras.map((item, idx) => `
+    <div class="shop-item type-${item.shopType}">
+      <div>
+        <div class="shop-item-sub">${item.shopType === 'card' ? 'Shoe Card' : 'Voucher'}</div>
+        <div class="shop-item-title">${item.name}</div>
+        <div class="shop-item-desc">${item.desc}</div>
+      </div>
+      <button class="btn btn-hit" style="padding:6px; font-size:10px;"
+        onclick="buyShopItem('shopExtras', ${idx})"
+        ${item.bought || state.money < item.cost ? 'disabled' : ''}>
+        ${item.bought ? 'SOLD' : 'BUY $' + item.cost}
+      </button>
+    </div>
+  `).join('');
+}
+
+function updateAllUI() {
+  const tagEl = document.getElementById('ui-blind-tag');
+  const hudBottom = document.getElementById('ui-hud-bottom');
+  const eqBox = document.getElementById('ui-eq-box');
+  const roundScoreWrap = document.getElementById('ui-round-score-wrap');
+  const scoreBarBg = document.getElementById('ui-score-bar-bg');
+
+  if (state.inShop) {
+    tagEl.textContent = 'UP NEXT';
+    tagEl.style.background = 'var(--green)';
+    hudBottom.classList.add('shop-mode');
+    eqBox.classList.add('hidden');
+    roundScoreWrap.textContent = 'Upcoming Blind Target';
+    scoreBarBg.classList.add('hidden');
+  } else {
+    tagEl.textContent = 'BLIND';
+    tagEl.style.background = 'var(--gold)';
+    hudBottom.classList.remove('shop-mode');
+    eqBox.classList.remove('hidden');
+    roundScoreWrap.innerHTML = `Score: <span id="ui-round-score">${state.roundScore.toLocaleString()}</span>`;
+    scoreBarBg.classList.remove('hidden');
+  }
+
+  document.getElementById('ui-blind-name').textContent = getBlindName();
+  document.getElementById('ui-blind-desc').textContent = getBlindFullDescription();
+  document.getElementById('ui-target-score').textContent = state.targetScore.toLocaleString();
+
+  const pct = Math.min(100, Math.round((state.roundScore / state.targetScore) * 100));
+  document.getElementById('ui-score-bar').style.width = pct + '%';
+
+  document.getElementById('ui-money').textContent = '$' + state.money;
+  document.getElementById('ui-ante').textContent = `Ante ${state.ante}/8`;
+  document.getElementById('ui-shoe-count').textContent = `${state.shoe.length}/${state.deck.length}`;
+
+  document.getElementById('ui-joker-slots').textContent = `JOKERS ${state.jokers.length}/${state.maxJokers}`;
+  const jRow = document.getElementById('ui-joker-row');
+  if (state.jokers.length === 0) {
+    jRow.innerHTML = `<span style="font-size:10px; color:#64748b;">No active Jokers</span>`;
+  } else {
+    jRow.innerHTML = state.jokers.map((j, i) => `
+      <div class="mini-card" onclick="inspectJoker(${i})" title="${getJokerFullDesc(j)}">
+        <div class="mini-card-name">${j.name}</div>
+        <div class="mini-card-sub">${getJokerMiniSubHTML(j)}</div>
+      </div>
+    `).join('');
+  }
+
+  document.getElementById('ui-consumable-slots').textContent = `TAROT ${state.consumables.length}/${state.maxConsumables}`;
+  const cRow = document.getElementById('ui-consumable-row');
+  if (state.consumables.length === 0) {
+    cRow.innerHTML = `<span style="font-size:10px; color:#64748b;">Empty</span>`;
+  } else {
+    cRow.innerHTML = state.consumables.map((c, i) => `
+      <div class="mini-card tarot" onclick="inspectConsumable(${i})">
+        <div class="mini-card-name">${c.name}</div>
+        <div class="mini-card-sub">Tap to use</div>
+      </div>
+    `).join('');
+  }
+
+  document.getElementById('ui-dealer-cards').innerHTML = state.dealerHand.map((c, idx) =>
+    renderCardHTML(c, idx === 1 && !state.dealerHoleRevealed)
+  ).join('');
+
+  if (state.dealerHand.length === 0) {
+    document.getElementById('ui-dealer-total').textContent = '?';
+  } else if (!state.dealerHoleRevealed) {
+    const firstVal = evaluateBlackjackTotal([state.dealerHand[0]], false).total;
+    document.getElementById('ui-dealer-total').textContent = firstVal + '+?';
+  } else {
+    const dEval = evaluateBlackjackTotal(state.dealerHand, false);
+    document.getElementById('ui-dealer-total').textContent = dEval.total;
+  }
+
+  document.getElementById('ui-player-cards').innerHTML = state.playerHand.map(c => renderCardHTML(c, false)).join('');
+  if (state.playerHand.length === 0) {
+    document.getElementById('ui-player-total').textContent = '0';
+  } else {
+    const pEval = evaluatePlayerHand();
+    if (pEval.cushioned) {
+      document.getElementById('ui-player-total').textContent = '21 (22!)';
+    } else {
+      document.getElementById('ui-player-total').textContent =
+        (pEval.isSoft && pEval.total < 21 ? 'Soft ' : '') + pEval.total;
+    }
+  }
+
+  const dealBtn = document.getElementById('btn-deal');
+  const hitBtn = document.getElementById('btn-hit');
+  const standBtn = document.getElementById('btn-stand');
+  const doubleBtn = document.getElementById('btn-double');
+
+  if (state.blindClearedReady && state.pendingPayout) {
+    dealBtn.className = 'btn btn-cashout';
+    dealBtn.textContent = `CASH OUT (+$${state.pendingPayout.totalEarned}) ➔`;
+    dealBtn.disabled = state.isDealing;
+    hitBtn.classList.add('hidden');
+  } else if (state.blindFailedReady) {
+    dealBtn.className = 'btn btn-newrun';
+    dealBtn.textContent = `NEW RUN ↻`;
+    dealBtn.disabled = state.isDealing;
+    hitBtn.classList.add('hidden');
+  } else {
+    dealBtn.className = 'btn btn-deal';
+    dealBtn.textContent = `DEAL (${state.handsLeft})`;
+    dealBtn.disabled = state.inHand || state.isDealing || state.handsLeft <= 0;
+    hitBtn.classList.remove('hidden');
+  }
+
+  hitBtn.disabled = !state.inHand || state.isDealing;
+  standBtn.disabled = !state.inHand || state.isDealing;
+  const anchorBoss = state.bossBlind && state.bossBlind.id === 'the_anchor';
+  doubleBtn.disabled = !state.inHand || state.isDealing || state.playerHand.length !== 2 || anchorBoss;
+}
+
+function toggleBlindModal(show) {
+  const modal = document.getElementById('ui-blind-modal');
+  if (show) {
+    const tag = document.getElementById('ui-modal-blind-tag');
+    tag.textContent = state.inShop ? 'UPCOMING BLIND (AFTER SHOP)' : 'CURRENT BLIND';
+    tag.style.background = state.inShop ? 'var(--green)' : 'var(--gold)';
+    document.getElementById('ui-modal-blind-name').textContent = getBlindName();
+    document.getElementById('ui-modal-blind-desc').textContent = getBlindFullDescription();
+    document.getElementById('ui-modal-blind-target').textContent = state.targetScore.toLocaleString();
+    document.getElementById('ui-modal-blind-reward').textContent = '$' + getBlindReward();
+  }
+  modal.classList.toggle('hidden', !show);
+}
+
+function toggleCogModal(show) {
+  document.getElementById('ui-cog-modal').classList.toggle('hidden', !show);
+}
+
+function toggleSimModal(show) {
+  document.getElementById('ui-sim-modal').classList.toggle('hidden', !show);
+}
+
+function toggleDeckModal(show) {
+  const modal = document.getElementById('ui-deck-modal');
+  if (show) {
+    const hiddenHoleCard = (!state.dealerHoleRevealed && state.dealerHand.length >= 2)
+      ? state.dealerHand[1]
+      : null;
+
+    const unrevealedUids = new Set(state.shoe.map(c => c.uid));
+    if (hiddenHoleCard) {
+      unrevealedUids.add(hiddenHoleCard.uid);
+    }
+
+    document.getElementById('ui-deck-modal-title').textContent =
+      `DECK (${unrevealedUids.size} of ${state.deck.length} Unseen)`;
+
+    const rankOrder = { 'A': 14, 'K': 13, 'Q': 12, 'J': 11, '10': 10, '9': 9, '8': 8, '7': 7, '6': 6, '5': 5, '4': 4, '3': 3, '2': 2 };
+    const suits = ['♠', '♥', '♣', '♦'];
+
+    const listEl = document.getElementById('ui-deck-list');
+    listEl.innerHTML = suits.map(suit => {
+      const suitCards = state.deck
+        .filter(c => c.suit === suit)
+        .sort((a, b) => rankOrder[b.rank] - rankOrder[a.rank]);
+
+      const cardsHtml = suitCards.map(c => {
+        const isUnseen = unrevealedUids.has(c.uid);
+        const extraClass = `deck-mini ${isUnseen ? '' : 'dealt-out'}`;
+        return renderCardHTML(c, false, extraClass);
+      }).join('');
+
+      return `<div class="deck-suit-row">${cardsHtml}</div>`;
+    }).join('');
+  }
+  modal.classList.toggle('hidden', !show);
+}
+
+/* ==========================================================
+   MONTE CARLO SIMULATION ENGINE & TELEMETRY EXPORT
+========================================================== */
+function applySimConfigToLiveGame() {
+  balanceConfig.startingDeals = parseInt(document.getElementById('sim-deals').value, 10);
+  balanceConfig.targetScalePct = parseInt(document.getElementById('sim-scale').value, 10);
+  balanceConfig.unusedDealCashCap = parseInt(document.getElementById('sim-dealcap').value, 10);
+  balanceConfig.pushRefundsDeal = document.getElementById('sim-push-refund').checked;
+  balanceConfig.anteHandScaling = document.getElementById('sim-ante-leveling').checked;
+
+  toggleSimModal(false);
+  startNewRun();
+  setBanner('Applied Balance Lab settings to Live Game!', `Starting Deals: ${balanceConfig.startingDeals} • Target Scale: ${balanceConfig.targetScalePct}%`);
+}
+
+function triggerTextFileDownload(textContent, filename) {
+  const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 200);
+}
+
+function downloadLastSimReport() {
+  if (!lastSimReportText) return;
+  triggerTextFileDownload(lastSimReportText, lastSimFilename);
+}
+
+function copyLastSimReport() {
+  if (!lastSimReportText) return;
+  navigator.clipboard.writeText(lastSimReportText).then(() => {
+    const btn = document.getElementById('btn-copy-txt');
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copied!';
+    setTimeout(() => { btn.textContent = orig; }, 1400);
+  });
+}
+
+function decideBotAction(pHand, dUpCard, simRun, botType, bossBlind) {
+  const ownsJoker = (id) => simRun.jokers.some(j => j.id === id);
+  const hasCushion = ownsJoker('bust_cushion');
+  const pEval = evaluateBlackjackTotal(pHand, hasCushion);
+  const pTotal = pEval.total;
+  const isSoft = pEval.isSoft;
+  const dUp = evaluateBlackjackTotal([dUpCard], false).total;
+  const canDouble = pHand.length === 2 && (!bossBlind || bossBlind.id !== 'the_anchor');
+
+  if (botType === 'synergy' || botType === 'charlie') {
+    if (hasCushion && !isSoft && pTotal === 12) {
+      return 'HIT';
+    }
+    if (ownsJoker('daredevil')) {
+      if (isSoft && pTotal >= 14 && pTotal <= 17) return 'HIT';
+      if ((hasCushion || ownsJoker('safety_net')) && pTotal >= 14 && pTotal <= 15) return 'HIT';
+    }
+    if (ownsJoker('chip_stacker') && canDouble) {
+      if (pTotal === 11 || pTotal === 10 || (pTotal === 9 && dUp <= 6) || (hasCushion && pTotal === 12)) {
+        return 'DOUBLE';
+      }
+    }
+    if (ownsJoker('sweet_16') && pTotal >= 13 && pTotal <= 16 && dUp <= 6) {
+      return 'STAND';
+    }
+    if ((ownsJoker('hit_me_baby') || botType === 'charlie') && pTotal <= (hasCushion ? 14 : 13)) {
+      return 'HIT';
+    }
+    if (ownsJoker('safety_net') && pTotal <= 15 && dUp >= 7) {
+      return 'HIT';
+    }
+  }
+
+  if (botType === 'highroller' && canDouble && (pTotal === 10 || pTotal === 11 || (pTotal === 9 && dUp <= 6))) {
+    return 'DOUBLE';
+  }
+
+  if (canDouble) {
+    if (!ownsJoker('minimalist')) {
+      if (pTotal === 11) return 'DOUBLE';
+      if (pTotal === 10 && dUp <= 9) return 'DOUBLE';
+      if (pTotal === 9 && dUp >= 3 && dUp <= 6) return 'DOUBLE';
+    }
+  }
+
+  if (isSoft) {
+    if (pTotal >= 19) return 'STAND';
+    if (pTotal === 18) return (dUp >= 9) ? 'HIT' : 'STAND';
+    return 'HIT';
+  } else {
+    if (pTotal >= 17) return 'STAND';
+    if (hasCushion && pTotal === 12) return 'HIT';
+    if (pTotal >= 13 && pTotal <= 16) {
+      return (dUp >= 2 && dUp <= 6) ? 'STAND' : 'HIT';
+    }
+    if (pTotal === 12) {
+      return (dUp >= 4 && dUp <= 6) ? 'STAND' : 'HIT';
+    }
+    return 'HIT';
+  }
+}
+
+function scoreSimulatedHand(simRun, pHand, dHand, doubled, bossBlind, cfg, outcomeCounters) {
+  const ownsJoker = (id) => simRun.jokers.some(j => j.id === id);
+  const hasCushion = ownsJoker('bust_cushion');
+  const pEval = evaluateBlackjackTotal(pHand, hasCushion);
+  const pTotal = pEval.total;
+  const dTotal = evaluateBlackjackTotal(dHand, false).total;
+  const pCount = pHand.length;
+  const dBust = dTotal > 21;
+  const pBust = pTotal > 21;
+
+  if (pEval.cushioned) outcomeCounters.cushioned22Saves++;
+
+  let outcomeType = 'LOSS';
+  let baseChips = 0;
+  let baseMult = 0;
+
+  if (pBust) {
+    outcomeType = 'BUST';
+  } else if (pCount >= 5) {
+    outcomeType = 'CHARLIE'; baseChips = 160; baseMult = 5;
+  } else if (pTotal === 21 && pCount === 2) {
+    if (dTotal === 21 && dHand.length === 2) {
+      outcomeType = 'PUSH'; baseChips = 25; baseMult = 1;
+    } else {
+      outcomeType = 'NATURAL'; baseChips = 120; baseMult = 4;
+    }
+  } else if (dBust || pTotal > dTotal) {
+    if (pTotal === 21) {
+      outcomeType = 'EXACT21'; baseChips = 75; baseMult = 3;
+    } else {
+      outcomeType = 'WIN'; baseChips = 40; baseMult = 2;
+    }
+  } else if (pTotal === dTotal) {
+    if (bossBlind && bossBlind.id === 'the_house' && !ownsJoker('push_it_good')) {
+      outcomeType = 'LOSS';
+    } else {
+      outcomeType = 'PUSH'; baseChips = 25; baseMult = 1;
+    }
+  } else {
+    outcomeType = 'LOSS';
+  }
+
+  outcomeCounters[outcomeType] = (outcomeCounters[outcomeType] || 0) + 1;
+
+  let isScoring = ['CHARLIE', 'NATURAL', 'EXACT21', 'WIN', 'PUSH'].includes(outcomeType);
+  if (outcomeType === 'BUST' && ownsJoker('safety_net')) {
+    isScoring = true; baseChips = 50; baseMult = 2;
+    outcomeCounters.safetyNetSaves++;
+  }
+  if (outcomeType === 'PUSH' && ownsJoker('push_it_good')) {
+    outcomeType = 'WIN'; baseChips += 80; baseMult += 5;
+  }
+
+  const isWinOutcome = ['CHARLIE', 'NATURAL', 'EXACT21', 'WIN'].includes(outcomeType);
+  if (doubled) {
+    outcomeCounters.doubleAttempts++;
+    if (isWinOutcome) {
+      outcomeCounters.doubleWins++;
+      for (let j of simRun.jokers) {
+        if (j.id === 'chip_stacker') {
+          j.bonusChips = (j.bonusChips || 0) + 15;
+        }
+      }
+    }
+  }
+
+  if (!isScoring) return { score: 0, outcomeType };
+
+  if (cfg.anteHandScaling && simRun.ante > 1) {
+    const f = 1 + (simRun.ante - 1) * 0.15;
+    baseChips = Math.round(baseChips * f);
+    baseMult = Math.round(baseMult * f * 10) / 10;
+  }
+
+  let chips = baseChips + simRun.baseWinChipBonus;
+  let mult = baseMult + simRun.baseWinMultBonus;
+
+  for (let c of pHand) {
+    chips += getCardChipValue(c, bossBlind);
+    if (c.enhancement === 'foil') chips += 30;
+    if (c.enhancement === 'holo') mult += 4;
+    if (c.enhancement === 'poly') mult *= 1.5;
+    if (c.enhancement === 'gold') simRun.money += 3;
+  }
+
+  for (let j of simRun.jokers) {
+    switch (j.id) {
+      case 'daredevil':
+        mult += (j.bonusMult || 0); break;
+      case 'chip_stacker':
+        chips += (j.bonusChips || 0); break;
+      case 'card_counter':
+        chips += pHand.filter(c => ['2','3','4','5','6'].includes(c.rank)).length * 25; break;
+      case 'vip_high_roller':
+        mult += pHand.filter(c => ['J','Q','K'].includes(c.rank)).length * 4; break;
+      case 'ace_up_sleeve':
+        if (pHand.some(c => c.rank === 'A')) { chips += 40; mult += 4; } break;
+      case 'sweet_16':
+        if (pTotal <= 16 && !pBust) mult += 10; break;
+      case 'lucky_sevens': {
+        const s = pHand.filter(c => c.rank === '7').length;
+        chips += s * 77; mult += s * 7; break;
+      }
+      case 'hit_me_baby':
+        mult += Math.max(0, pHand.length - 2) * 4; break;
+      case 'golden_parachute':
+        if (dBust) simRun.money += 3; break;
+      case 'blackjack_tycoon':
+        if (pTotal === 21) { mult *= 2; simRun.money += 2; } break;
+      case 'the_shark':
+        if (!pBust && (dBust || (pTotal - dTotal >= 3))) mult *= 1.5; break;
+      case 'even_steven':
+        mult += pHand.filter(c => ['2','4','6','8','10'].includes(c.rank)).length * 3; break;
+      case 'red_velvet':
+        chips += pHand.filter(c => ['♥','♦'].includes(c.suit)).length * 20; break;
+      case 'dark_knight':
+        mult += pHand.filter(c => ['♠','♣'].includes(c.suit)).length * 3; break;
+      case 'compound_edge':
+        chips += Math.floor(simRun.money / 5) * 20; break;
+      case 'minimalist':
+        if (pHand.length === 2 && outcomeType !== 'PUSH') mult *= 1.75; break;
+    }
+  }
+
+  if (doubled) mult *= 2;
+
+  return { score: Math.round(chips * mult), outcomeType };
+}
+
+function scoreJokerPriorityForBot(joker, botType) {
+  let score = joker.cost;
+  if (joker.isXMult) score += 5;
+  if (joker.id === 'daredevil') score += (joker.bonusMult || 0) * 0.6;
+  if (joker.id === 'chip_stacker') score += (joker.bonusChips || 0) * 0.12;
+
+  if (botType === 'highroller' && ['blackjack_tycoon','vip_high_roller','ace_up_sleeve','chip_stacker','minimalist','the_shark'].includes(joker.id)) score += 6;
+  if (botType === 'charlie' && ['bust_cushion','daredevil','card_counter','hit_me_baby','sweet_16','safety_net'].includes(joker.id)) score += 6;
+  if (botType === 'synergy' && ['bust_cushion','daredevil','chip_stacker','the_shark','blackjack_tycoon','ace_up_sleeve','vip_high_roller','push_it_good'].includes(joker.id)) score += 5;
+  return score;
+}
+
+function simulateShopVisit(simRun, botType, jokerStats, voucherStats) {
+  if (botType === 'vanilla') return;
+
+  const availVouchers = VOUCHER_CATALOG.filter(v => !simRun.vouchers.includes(v.id));
+  if (availVouchers.length > 0) {
+    const v = availVouchers[Math.floor(Math.random() * availVouchers.length)];
+    voucherStats[v.id].offered++;
+    if (simRun.money >= v.cost + 2) {
+      simRun.money -= v.cost;
+      simRun.vouchers.push(v.id);
+      voucherStats[v.id].bought++;
+      if (v.id === 'extra_hand') simRun.maxHands++;
+      if (v.id === 'table_leverage') simRun.baseWinMultBonus += 1;
+      if (v.id === 'joker_slot') simRun.maxJokers++;
+      if (v.id === 'base_boost') simRun.baseWinChipBonus += 30;
+    }
+  }
+
+  const ownedIds = simRun.jokers.map(j => j.id);
+  const offers = shuffle(JOKER_CATALOG.filter(j => !ownedIds.includes(j.id))).slice(0, 2);
+  offers.forEach(o => { jokerStats[o.id].offered++; });
+  offers.sort((a, b) => scoreJokerPriorityForBot(b, botType) - scoreJokerPriorityForBot(a, botType));
+
+  for (let j of offers) {
+    if (simRun.money >= j.cost) {
+      if (simRun.jokers.length < simRun.maxJokers) {
+        simRun.money -= j.cost;
+        jokerStats[j.id].bought++;
+        simRun.jokers.push({ ...j, bonusMult: 0, bonusChips: 0 });
+      } else {
+        let weakestIdx = 0;
+        let weakestVal = 999;
+        simRun.jokers.forEach((owned, idx) => {
+          const val = scoreJokerPriorityForBot(owned, botType);
+          if (val < weakestVal) { weakestVal = val; weakestIdx = idx; }
+        });
+        if (scoreJokerPriorityForBot(j, botType) > weakestVal + 2) {
+          const sellPrice = Math.max(1, Math.floor(simRun.jokers[weakestIdx].cost / 2));
+          simRun.money += sellPrice - j.cost;
+          jokerStats[j.id].bought++;
+          simRun.jokers[weakestIdx] = { ...j, bonusMult: 0, bonusChips: 0 };
+        }
+      }
+    }
+  }
+
+  simRun.jokers.sort((a, b) => (a.isXMult ? 1 : 0) - (b.isXMult ? 1 : 0));
+
+  if (simRun.money >= 9) {
+    const enhs = ['foil','holo','poly','gold'];
+    const ranks = botType === 'charlie' ? ['2','4','6','7','A'] : ['A','K','Q','J','10','7'];
+    simRun.money -= 4;
+    simRun.deck.push({
+      uid: 9999,
+      rank: ranks[Math.floor(Math.random() * ranks.length)],
+      suit: ['♠','♥','♣','♦'][Math.floor(Math.random() * 4)],
+      enhancement: enhs[Math.floor(Math.random() * enhs.length)]
+    });
+  }
+}
+
+function runBatchSimulationForBot(numRuns, botType, cfg) {
+  const baseDeckTemplate = createStandardDeck();
+  const t0 = performance.now();
+
+  let wins = 0;
+  let totalFinalAnte = 0;
+  let scalingDeaths = 0;
+  let coldShoeDeaths = 0;
+  let totalHandsWon = 0;
+  let totalHandsPlayed = 0;
+
+  const anteClearedCounts = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+  // 24 Blinds telemetry (Ante 1..8 x Blind 0..2)
+  const blindStats = [];
+  for (let a = 1; a <= 8; a++) {
+    for (let b = 0; b < 3; b++) {
+      const rawBase = ANTE_TARGETS[a - 1];
+      const base = Math.round(rawBase * (cfg.targetScalePct / 100));
+      const multFactor = b === 0 ? 1.0 : b === 1 ? 1.45 : 2.0;
+      blindStats.push({
+        ante: a,
+        blindIdx: b,
+        label: `A${a}-${b === 0 ? 'Small' : b === 1 ? 'Big' : 'Boss'}`,
+        target: Math.round(base * multFactor),
+        entered: 0,
+        cleared: 0,
+        scoreSum: 0,
+        dealsUsedSum: 0,
+        cashAfterSum: 0,
+        scalingDeaths: 0,
+        coldShoeDeaths: 0
+      });
+    }
+  }
+
+  const outcomeCounters = {
+    CHARLIE: 0,
+    NATURAL: 0,
+    EXACT21: 0,
+    WIN: 0,
+    PUSH: 0,
+    LOSS: 0,
+    BUST: 0,
+    cushioned22Saves: 0,
+    safetyNetSaves: 0,
+    doubleAttempts: 0,
+    doubleWins: 0
+  };
+
+  const jokerStats = {};
+  JOKER_CATALOG.forEach(j => {
+    jokerStats[j.id] = {
+      id: j.id,
+      name: j.name,
+      cost: j.cost,
+      offered: 0,
+      bought: 0,
+      picks: 0, // Held at end of run
+      wins: 0,
+      anteSum: 0,
+      scalingSum: 0
+    };
+  });
+
+  const voucherStats = {};
+  VOUCHER_CATALOG.forEach(v => {
+    voucherStats[v.id] = { id: v.id, name: v.name, offered: 0, bought: 0, wins: 0 };
+  });
+
+  for (let r = 0; r < numRuns; r++) {
+    const simRun = {
+      ante: 1,
+      blindIndex: 0,
+      money: 6,
+      maxHands: cfg.startingDeals,
+      maxJokers: 5,
+      baseWinChipBonus: 0,
+      baseWinMultBonus: 0,
+      deck: baseDeckTemplate.slice(),
+      jokers: [],
+      vouchers: []
+    };
+
+    let highestAnteCleared = 0;
+    let runFailed = false;
+
+    for (let a = 1; a <= 8 && !runFailed; a++) {
+      simRun.ante = a;
+      for (let b = 0; b < 3 && !runFailed; b++) {
+        simRun.blindIndex = b;
+        const bStat = blindStats[(a - 1) * 3 + b];
+        bStat.entered++;
+
+        const targetScore = bStat.target;
+        const bossBlind = b === 2 ? BOSS_BLINDS[(a - 1) % BOSS_BLINDS.length] : null;
+
+        let dealsStart = simRun.maxHands;
+        if (bossBlind && bossBlind.id === 'the_cooler') dealsStart = Math.max(1, dealsStart - 1);
+        let dealsLeft = dealsStart;
+
+        let shoe = shuffle(simRun.deck);
+        const draw = () => {
+          if (shoe.length === 0) shoe = shuffle(simRun.deck);
+          return shoe.pop();
+        };
+
+        let roundScore = 0;
+        let blindWins = 0;
+        let dealsUsedThisBlind = 0;
+        const hasCushion = simRun.jokers.some(j => j.id === 'bust_cushion');
+
+        while (dealsLeft > 0 && roundScore < targetScore) {
+          dealsLeft--;
+          dealsUsedThisBlind++;
+          totalHandsPlayed++;
+
+          const pHand = [draw(), draw()];
+          const dHand = [draw(), draw()];
+          let doubled = false;
+
+          if (evaluateBlackjackTotal(pHand, hasCushion).total < 21) {
+            while (true) {
+              const act = decideBotAction(pHand, dHand[0], simRun, botType, bossBlind);
+              if (act === 'DOUBLE') {
+                doubled = true;
+                pHand.push(draw());
+                break;
+              } else if (act === 'HIT') {
+                const preHitTotal = evaluateBlackjackTotal(pHand, hasCushion).total;
+                pHand.push(draw());
+                const postHitTotal = evaluateBlackjackTotal(pHand, hasCushion).total;
+
+                if (preHitTotal >= 14 && postHitTotal <= 21) {
+                  for (let j of simRun.jokers) {
+                    if (j.id === 'daredevil') {
+                      j.bonusMult = (j.bonusMult || 0) + 3;
+                    }
+                  }
+                }
+                if (postHitTotal >= 21 || pHand.length >= 5) break;
+              } else {
+                break;
+              }
+            }
+          }
+
+          if (evaluateBlackjackTotal(pHand, hasCushion).total <= 21) {
+            while (evaluateBlackjackTotal(dHand, false).total < 17) {
+              dHand.push(draw());
+            }
+          }
+
+          const res = scoreSimulatedHand(simRun, pHand, dHand, doubled, bossBlind, cfg, outcomeCounters);
+          roundScore += res.score;
+
+          if (['CHARLIE','NATURAL','EXACT21','WIN'].includes(res.outcomeType)) {
+            blindWins++;
+            totalHandsWon++;
+          }
+          if (res.outcomeType === 'PUSH' && cfg.pushRefundsDeal) {
+            dealsLeft++;
+          }
+        }
+
+        bStat.scoreSum += roundScore;
+        bStat.dealsUsedSum += dealsUsedThisBlind;
+
+        if (roundScore < targetScore) {
+          runFailed = true;
+          totalFinalAnte += a;
+          const isScalingDeath = blindWins >= Math.ceil(simRun.maxHands * 0.42);
+          if (isScalingDeath) {
+            scalingDeaths++;
+            bStat.scalingDeaths++;
+          } else {
+            coldShoeDeaths++;
+            bStat.coldShoeDeaths++;
+          }
+
+          for (let j of simRun.jokers) {
+            jokerStats[j.id].picks++;
+            jokerStats[j.id].anteSum += a;
+            if (j.id === 'daredevil') jokerStats[j.id].scalingSum += (j.bonusMult || 0);
+            if (j.id === 'chip_stacker') jokerStats[j.id].scalingSum += (j.bonusChips || 0);
+          }
+        } else {
+          bStat.cleared++;
+          const blindReward = b === 0 ? 4 : b === 1 ? 5 : 6;
+          const handBonus = Math.min(cfg.unusedDealCashCap, dealsLeft);
+          const interest = Math.min(5, Math.floor(simRun.money / 5));
+          simRun.money += blindReward + handBonus + interest;
+          bStat.cashAfterSum += simRun.money;
+
+          simulateShopVisit(simRun, botType, jokerStats, voucherStats);
+        }
+      }
+      if (!runFailed) {
+        highestAnteCleared = a;
+        anteClearedCounts[a]++;
+      }
+    }
+
+    if (!runFailed) {
+      wins++;
+      totalFinalAnte += 8;
+      for (let j of simRun.jokers) {
+        jokerStats[j.id].picks++;
+        jokerStats[j.id].wins++;
+        jokerStats[j.id].anteSum += 9;
+        if (j.id === 'daredevil') jokerStats[j.id].scalingSum += (j.bonusMult || 0);
+        if (j.id === 'chip_stacker') jokerStats[j.id].scalingSum += (j.bonusChips || 0);
+      }
+      for (let vId of simRun.vouchers) {
+        if (voucherStats[vId]) voucherStats[vId].wins++;
+      }
+    }
+  }
+
+  const elapsedMs = Math.round(performance.now() - t0);
+  return {
+    numRuns,
+    botType,
+    cfg,
+    elapsedMs,
+    wins,
+    totalFinalAnte,
+    scalingDeaths,
+    coldShoeDeaths,
+    totalHandsWon,
+    totalHandsPlayed,
+    anteClearedCounts,
+    blindStats,
+    outcomeCounters,
+    jokerStats,
+    voucherStats
+  };
+}
+
+function formatBotReportSection(simData) {
+  const {
+    numRuns, botType, cfg, elapsedMs, wins, totalFinalAnte,
+    scalingDeaths, coldShoeDeaths, totalHandsWon, totalHandsPlayed,
+    anteClearedCounts, blindStats, outcomeCounters, jokerStats, voucherStats
+  } = simData;
+
+  const botNames = {
+    synergy: 'Smart Synergy AI (Adapts to Jokers)',
+    highroller: 'High-Roller 21 AI (Faces/Aces/Doubles)',
+    charlie: 'Low-Card Charlie AI (Hits Low Cards)',
+    basic: 'Strict Casino Basic Strategy AI (With Jokers)',
+    vanilla: 'No-Jokers Baseline (Vanilla Basic Strategy)'
+  };
+
+  const winRate = ((wins / numRuns) * 100).toFixed(2);
+  const avgAnte = (totalFinalAnte / numRuns).toFixed(2);
+  const handWinPct = ((totalHandsWon / Math.max(1, totalHandsPlayed)) * 100).toFixed(2);
+  const totalDeaths = Math.max(1, numRuns - wins);
+  const scalingDeathPct = ((scalingDeaths / totalDeaths) * 100).toFixed(1);
+  const coldShoeDeathPct = ((coldShoeDeaths / totalDeaths) * 100).toFixed(1);
+
+  const pad = (str, len) => String(str).padEnd(len, ' ');
+  const padL = (str, len) => String(str).padStart(len, ' ');
+
+  let lines = [];
+  lines.push('================================================================================');
+  lines.push(`BOT STRATEGY: ${botNames[botType] || botType}`);
+  lines.push('================================================================================');
+  lines.push(`Runs Simulated        : ${numRuns.toLocaleString()} (${elapsedMs} ms)`);
+  lines.push(`Starting Deals/Blind  : ${cfg.startingDeals}`);
+  lines.push(`Target Score Scaling  : ${cfg.targetScalePct}%`);
+  lines.push(`Unused Deal Cash Cap  : $${cfg.unusedDealCashCap}`);
+  lines.push(`Pushes Refund Deal    : ${cfg.pushRefundsDeal ? 'ON' : 'OFF'}`);
+  lines.push(`Hand Tiers +15%/Ante  : ${cfg.anteHandScaling ? 'ON' : 'OFF'}`);
+  lines.push('--------------------------------------------------------------------------------');
+  lines.push(`OVERALL KPI SUMMARY`);
+  lines.push(`  Ante 8 Victory Rate : ${winRate}% (${wins} / ${numRuns})`);
+  lines.push(`  Avg Final Ante      : ${avgAnte}`);
+  lines.push(`  Total Hands Played  : ${totalHandsPlayed.toLocaleString()} (Avg ${(totalHandsPlayed / numRuns).toFixed(1)} hands/run)`);
+  lines.push(`  BJ Hand Win Rate    : ${handWinPct}%`);
+  lines.push(`  Cause of Death      : ${scalingDeathPct}% Scaling Wall (${scalingDeaths}) | ${coldShoeDeathPct}% Cold Shoe (${coldShoeDeaths})`);
+  lines.push('--------------------------------------------------------------------------------');
+  lines.push(`HAND OUTCOME BREAKDOWN (% of ${totalHandsPlayed.toLocaleString()} total hands)`);
+  const pctOfHands = (n) => ((n / Math.max(1, totalHandsPlayed)) * 100).toFixed(2) + '%';
+  lines.push(`  Natural Blackjack   : ${padL(outcomeCounters.NATURAL, 8)} (${pctOfHands(outcomeCounters.NATURAL)})`);
+  lines.push(`  5-Card Charlie      : ${padL(outcomeCounters.CHARLIE, 8)} (${pctOfHands(outcomeCounters.CHARLIE)})`);
+  lines.push(`  Exact 21 (3+ cards) : ${padL(outcomeCounters.EXACT21, 8)} (${pctOfHands(outcomeCounters.EXACT21)})`);
+  lines.push(`  Standard Win        : ${padL(outcomeCounters.WIN, 8)} (${pctOfHands(outcomeCounters.WIN)})`);
+  lines.push(`  Push (Tie)          : ${padL(outcomeCounters.PUSH, 8)} (${pctOfHands(outcomeCounters.PUSH)})`);
+  lines.push(`  Dealer Win (Loss)   : ${padL(outcomeCounters.LOSS, 8)} (${pctOfHands(outcomeCounters.LOSS)})`);
+  lines.push(`  Player Bust         : ${padL(outcomeCounters.BUST, 8)} (${pctOfHands(outcomeCounters.BUST)})`);
+  lines.push(`  Double Down Win %   : ${outcomeCounters.doubleAttempts > 0 ? ((outcomeCounters.doubleWins / outcomeCounters.doubleAttempts) * 100).toFixed(1) + '%' : 'N/A'} (${outcomeCounters.doubleWins}/${outcomeCounters.doubleAttempts})`);
+  lines.push(`  Bust Cushion Saves  : ${outcomeCounters.cushioned22Saves} hands (22 converted to 21)`);
+  lines.push(`  Safety Net Saves    : ${outcomeCounters.safetyNetSaves} busts scored`);
+  lines.push('--------------------------------------------------------------------------------');
+  lines.push(`ANTE SURVIVAL FUNNEL (% of runs clearing all 3 Blinds of Ante)`);
+  for (let a = 1; a <= 8; a++) {
+    const c = anteClearedCounts[a];
+    const p = ((c / numRuns) * 100).toFixed(2);
+    lines.push(`  Ante ${a} Cleared      : ${padL(p + '%', 7)} (${c} / ${numRuns})`);
+  }
+  lines.push('--------------------------------------------------------------------------------');
+  lines.push(`BLIND-BY-BLIND PROGRESSION & DEATH DIAGNOSTICS (24 BLINDS)`);
+  lines.push(`${pad('Blind', 10)} | ${padL('Target', 7)} | ${padL('Entered', 7)} | ${padL('Clear%', 7)} | ${padL('AvgScore', 8)} | ${padL('AvgDeals', 8)} | ${padL('AvgCash$', 8)} | ${padL('ScaleDth', 8)} | ${padL('ShoeDth', 7)}`);
+  lines.push('-'.repeat(96));
+  for (let b of blindStats) {
+    if (b.entered === 0) continue;
+    const clrPct = ((b.cleared / b.entered) * 100).toFixed(1) + '%';
+    const avgScr = Math.round(b.scoreSum / b.entered);
+    const avgDls = (b.dealsUsedSum / b.entered).toFixed(2);
+    const avgCsh = b.cleared > 0 ? '$' + (b.cashAfterSum / b.cleared).toFixed(1) : '-';
+    lines.push(
+      `${pad(b.label, 10)} | ${padL(b.target, 7)} | ${padL(b.entered, 7)} | ${padL(clrPct, 7)} | ${padL(avgScr, 8)} | ${padL(avgDls, 8)} | ${padL(avgCsh, 8)} | ${padL(b.scalingDeaths, 8)} | ${padL(b.coldShoeDeaths, 7)}`
+    );
+  }
+  lines.push('--------------------------------------------------------------------------------');
+  lines.push(`JOKER PERFORMANCE LEADERBOARD (Sorted by End-of-Run Win Rate)`);
+  lines.push(`${pad('Joker Name', 18)} | ${padL('Cost', 4)} | ${padL('Offered', 7)} | ${padL('Bought', 6)} | ${padL('EndHeld', 7)} | ${padL('RunWin%', 8)} | ${padL('AvgAnte', 7)} | ${pad('Avg Scaling Bonus', 18)}`);
+  lines.push('-'.repeat(96));
+
+  const sortedJokers = Object.values(jokerStats)
+    .filter(j => j.picks > 0 || j.offered > 0)
+    .sort((a, b) => {
+      const wrA = a.picks > 0 ? a.wins / a.picks : -1;
+      const wrB = b.picks > 0 ? b.wins / b.picks : -1;
+      return wrB - wrA;
+    });
+
+  for (let j of sortedJokers) {
+    const winPct = j.picks > 0 ? ((j.wins / j.picks) * 100).toFixed(1) + '%' : '0.0%';
+    const avgA = j.picks > 0 ? (j.anteSum / j.picks).toFixed(2) : '-';
+    let scaleNote = '-';
+    if (j.id === 'daredevil' && j.picks > 0) {
+      scaleNote = `+${(j.scalingSum / j.picks).toFixed(1)} Mult`;
+    } else if (j.id === 'chip_stacker' && j.picks > 0) {
+      scaleNote = `+${(j.scalingSum / j.picks).toFixed(1)} Chips`;
+    }
+    lines.push(
+      `${pad(j.name, 18)} | ${padL('$' + j.cost, 4)} | ${padL(j.offered, 7)} | ${padL(j.bought, 6)} | ${padL(j.picks, 7)} | ${padL(winPct, 8)} | ${padL(avgA, 7)} | ${pad(scaleNote, 18)}`
+    );
+  }
+
+  lines.push('--------------------------------------------------------------------------------');
+  lines.push(`VOUCHER PERFORMANCE`);
+  for (let v of Object.values(voucherStats)) {
+    const vWinPct = v.bought > 0 ? ((v.wins / v.bought) * 100).toFixed(1) + '%' : '0.0%';
+    lines.push(`  ${pad(v.name, 20)} : Offered ${padL(v.offered, 5)} | Bought ${padL(v.bought, 5)} | Run Win Rate when bought: ${vWinPct}`);
+  }
+  lines.push('');
+  return lines.join('\n');
+}
+
+function renderSimResultsToModal(simData) {
+  const {
+    numRuns, elapsedMs, wins, totalFinalAnte,
+    scalingDeaths, totalHandsWon, totalHandsPlayed,
+    anteClearedCounts, jokerStats
+  } = simData;
+
+  const winRate = ((wins / numRuns) * 100).toFixed(1);
+  const avgAnte = (totalFinalAnte / numRuns).toFixed(2);
+  const handWinPct = ((totalHandsWon / Math.max(1, totalHandsPlayed)) * 100).toFixed(1);
+  const totalDeaths = Math.max(1, numRuns - wins);
+  const scalingDeathPct = Math.round((scalingDeaths / totalDeaths) * 100);
+  const coldShoeDeathPct = 100 - scalingDeathPct;
+
+  const sortedJokers = Object.values(jokerStats)
+    .filter(j => j.picks > 0)
+    .sort((a, b) => (b.wins / b.picks) - (a.wins / a.picks));
+
+  const funnelHtml = [1,2,3,4,5,6,7,8].map(a => {
+    const pct = ((anteClearedCounts[a] / numRuns) * 100).toFixed(1);
+    return `
+      <div class="funnel-row">
+        <span style="width:58px; font-weight:bold; color:var(--gold);">Ante ${a}</span>
+        <div class="funnel-bar-bg">
+          <div class="funnel-bar-fill" style="width:${pct}%"></div>
+        </div>
+        <span style="width:48px; text-align:right; font-weight:bold;">${pct}%</span>
+      </div>
+    `;
+  }).join('');
+
+  const topJokersHtml = sortedJokers.length > 0 ? sortedJokers.map(j => {
+    const wPct = ((j.wins / j.picks) * 100).toFixed(1);
+    const avgA = (j.anteSum / j.picks).toFixed(1);
+    let extra = '';
+    if (j.id === 'daredevil') extra = ` <span style="color:var(--mult);font-size:10px;">(Avg +${(j.scalingSum / j.picks).toFixed(1)}m)</span>`;
+    if (j.id === 'chip_stacker') extra = ` <span style="color:var(--chips);font-size:10px;">(Avg +${(j.scalingSum / j.picks).toFixed(1)}c)</span>`;
+    return `
+      <tr>
+        <td><strong>${j.name}</strong>${extra}</td>
+        <td>${j.picks}</td>
+        <td style="color:var(--green); font-weight:bold;">${wPct}%</td>
+        <td>Ante ${avgA}</td>
+      </tr>
+    `;
+  }).join('') : `<tr><td colspan="4" style="text-align:center; color:#94a3b8;">No Jokers purchased (No-Jokers Baseline active)</td></tr>`;
+
+  document.getElementById('sim-results-area').innerHTML = `
+    <div class="sim-kpi-row">
+      <div class="sim-kpi">
+        <div class="sim-kpi-val">${winRate}%</div>
+        <div class="sim-kpi-lbl">Ante 8 Win Rate</div>
+      </div>
+      <div class="sim-kpi">
+        <div class="sim-kpi-val" style="color:var(--gold);">${avgAnte}</div>
+        <div class="sim-kpi-lbl">Avg Death Ante</div>
+      </div>
+      <div class="sim-kpi">
+        <div class="sim-kpi-val" style="color:var(--chips);">${handWinPct}%</div>
+        <div class="sim-kpi-lbl">BJ Hand Win %</div>
+      </div>
+      <div class="sim-kpi">
+        <div class="sim-kpi-val" style="color:#cbd5e1;">${elapsedMs}ms</div>
+        <div class="sim-kpi-lbl">${numRuns.toLocaleString()} Runs Time</div>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+      <div style="background:#0b0e14; padding:10px; border-radius:8px; border:1px solid #283246;">
+        <div style="font-size:11px; font-weight:bold; color:var(--gold); margin-bottom:6px;">ANTE SURVIVAL FUNNEL (% CLEARED)</div>
+        ${funnelHtml}
+      </div>
+
+      <div style="background:#0b0e14; padding:10px; border-radius:8px; border:1px solid #283246; display:flex; flex-direction:column; justify-content:space-between;">
+        <div>
+          <div style="font-size:11px; font-weight:bold; color:var(--gold); margin-bottom:6px;">CAUSE OF DEATH DIAGNOSTIC</div>
+          <div style="font-size:11px; color:#e2e8f0; margin-bottom:6px;">
+            • <strong style="color:var(--mult);">Scaling Wall (${scalingDeathPct}% of losses):</strong> Bot won plenty of Blackjack hands in the Blind, but its Chips × Mult couldn't reach the Target Score.
+          </div>
+          <div style="font-size:11px; color:#e2e8f0;">
+            • <strong style="color:var(--chips);">Cold Shoe / Dealer Streak (${coldShoeDeathPct}% of losses):</strong> Dealer drew hot totals or player busted repeatedly, scoring too few hands.
+          </div>
+        </div>
+        <div style="font-size:10px; color:var(--green); border-top:1px solid #1e293b; padding-top:6px;">
+          ✓ Telemetry ready! Click <strong>💾 Export Last Sim (.TXT)</strong> above to save the full 24-blind report.
+        </div>
+      </div>
+    </div>
+
+    <div style="background:#0b0e14; padding:10px; border-radius:8px; border:1px solid #283246;">
+      <div style="font-size:11px; font-weight:bold; color:var(--gold); margin-bottom:6px;">JOKER PERFORMANCE LEADERBOARD (END-OF-RUN)</div>
+      <table class="rules-table">
+        <thead>
+          <tr>
+            <th>Joker</th>
+            <th>Times Held</th>
+            <th>Run Win %</th>
+            <th>Avg Ante Reached</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${topJokersHtml}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function getSimConfigFromInputs() {
+  return {
+    startingDeals: parseInt(document.getElementById('sim-deals').value, 10),
+    targetScalePct: parseInt(document.getElementById('sim-scale').value, 10),
+    unusedDealCashCap: parseInt(document.getElementById('sim-dealcap').value, 10),
+    pushRefundsDeal: document.getElementById('sim-push-refund').checked,
+    anteHandScaling: document.getElementById('sim-ante-leveling').checked
+  };
+}
+
+function runMonteCarloSimulation() {
+  const runBtn = document.getElementById('btn-run-sim');
+  runBtn.textContent = '⏳ Simulating...';
+  runBtn.disabled = true;
+
+  setTimeout(() => {
+    const numRuns = parseInt(document.getElementById('sim-runs').value, 10);
+    const botType = document.getElementById('sim-bot').value;
+    const cfg = getSimConfigFromInputs();
+
+    const simData = runBatchSimulationForBot(numRuns, botType, cfg);
+    renderSimResultsToModal(simData);
+
+    const header = [
+      `JACK-LATRO v1.7 // MONTE CARLO TELEMETRY REPORT`,
+      `Generated: ${new Date().toISOString()}`,
+      ''
+    ].join('\n');
+
+    lastSimReportText = header + formatBotReportSection(simData);
+    lastSimFilename = `jack-latro-sim-${botType}-${numRuns}runs.txt`;
+
+    document.getElementById('btn-export-txt').disabled = false;
+    document.getElementById('btn-copy-txt').disabled = false;
+    runBtn.textContent = '▶ Run Simulation';
+    runBtn.disabled = false;
+  }, 20);
+}
+
+function runAllBotsSuiteAndExport() {
+  const suiteBtn = document.getElementById('btn-suite-txt');
+  suiteBtn.textContent = '⏳ Running All 5 Bots...';
+  suiteBtn.disabled = true;
+
+  setTimeout(() => {
+    const numRuns = parseInt(document.getElementById('sim-runs').value, 10);
+    const cfg = getSimConfigFromInputs();
+    const botOrder = ['vanilla', 'basic', 'synergy', 'highroller', 'charlie'];
+
+    const reports = [];
+    const summaryRows = [];
+    let synergyData = null;
+
+    for (let bType of botOrder) {
+      const simData = runBatchSimulationForBot(numRuns, bType, cfg);
+      if (bType === 'synergy') synergyData = simData;
+      reports.push(formatBotReportSection(simData));
+
+      const winPct = ((simData.wins / numRuns) * 100).toFixed(2) + '%';
+      const avgA = (simData.totalFinalAnte / numRuns).toFixed(2);
+      const bjWin = ((simData.totalHandsWon / Math.max(1, simData.totalHandsPlayed)) * 100).toFixed(2) + '%';
+      summaryRows.push(
+        `  ${bType.padEnd(12, ' ')} | Win Rate: ${winPct.padStart(7, ' ')} | Avg Ante: ${avgA.padStart(5, ' ')} | BJ Hand Win%: ${bjWin.padStart(7, ' ')}`
+      );
+    }
+
+    if (synergyData) {
+      renderSimResultsToModal(synergyData);
+    }
+
+    const masterHeader = [
+      `================================================================================`,
+      `JACK-LATRO v1.7 // FULL 5-BOT COMPARATIVE TELEMETRY SUITE`,
+      `Generated: ${new Date().toISOString()}`,
+      `Runs Per Bot: ${numRuns.toLocaleString()} (${(numRuns * 5).toLocaleString()} Total Simulated Games)`,
+      `Settings: Deals=${cfg.startingDeals}, TargetScale=${cfg.targetScalePct}%, DealCashCap=$${cfg.unusedDealCashCap}, PushRefund=${cfg.pushRefundsDeal}, AnteScale=${cfg.anteHandScaling}`,
+      `================================================================================`,
+      `HEAD-TO-HEAD BOT SUMMARY:`,
+      ...summaryRows,
+      `================================================================================\n\n`
+    ].join('\n');
+
+    lastSimReportText = masterHeader + reports.join('\n\n');
+    lastSimFilename = `jack-latro-5bot-suite-${numRuns}runs.txt`;
+
+    document.getElementById('btn-export-txt').disabled = false;
+    document.getElementById('btn-copy-txt').disabled = false;
+    suiteBtn.textContent = '🚀 Run All 5 Bots & Export (.TXT)';
+    suiteBtn.disabled = false;
+
+    triggerTextFileDownload(lastSimReportText, lastSimFilename);
+  }, 30);
+}
+
+startNewRun();
+</script>
+</body>
+</html>
