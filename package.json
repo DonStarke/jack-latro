@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build": "tsc && node scripts/prepare-www.js",
+    "deploy": "npm run build && node scripts/deploy-gh-pages.js",
     "sync": "npm run build && npx cap sync android",
     "test": "node tests/ui-smoke.js"
   },
