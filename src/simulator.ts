@@ -7,11 +7,11 @@
    Depends on (global): gameState.ts, deckEngine.ts, modifierEngine.ts, shopEngine.ts
 ========================================================== */
 
-type BotType = 'vanilla' | 'basic' | 'synergy' | 'highroller' | 'charlie';
+type BotType = 'expert' | 'synergy' | 'highroller' | 'charlie' | 'basic' | 'vanilla';
 type BotAction = 'HIT' | 'STAND' | 'DOUBLE';
 type SimConfig = BalanceConfig;
 
-const BOT_ORDER: ReadonlyArray<BotType> = ['vanilla', 'basic', 'synergy', 'highroller', 'charlie'];
+const BOT_ORDER: ReadonlyArray<BotType> = ['expert', 'synergy', 'highroller', 'charlie', 'basic', 'vanilla'];
 
 interface SimRun {
   ante: number;
@@ -25,6 +25,8 @@ interface SimRun {
   jokers: JokerInstance[];
   vouchers: string[];
   consumables: string[];
+  handsWonInBlind?: number;
+  previousHandTotal?: number | null;
 }
 
 interface BlindStat {
@@ -59,6 +61,7 @@ interface JokerStat {
   id: string;
   name: string;
   cost: number;
+  rarity: JokerRarity;
   offered: number;
   bought: number;
   picks: number;
@@ -99,7 +102,10 @@ function decideBotAction(
   dUpCard: Card,
   simRun: SimRun,
   botType: BotType,
-  bossBlind: BossBlindDef | null
+  bossBlind: BossBlindDef | null,
+  roundScore: number = 0,
+  targetScore: number = 0,
+  dealsLeft: number = 7
 ): BotAction {
   const ownsJoker = (id: string): boolean => simRun.jokers.some(j => j.id === id);
   const hasCushion = ownsJoker('bust_cushion');
@@ -109,13 +115,84 @@ function decideBotAction(
   const dUp = evaluateBlackjackTotal([dUpCard], false).total;
   const canDouble = pHand.length === 2 && (!bossBlind || bossBlind.id !== 'the_anchor');
 
+  if (botType === 'expert') {
+    const scoreDeficit = Math.max(0, targetScore - roundScore);
+
+    // 1. Target Awareness: Desperation play on final deal if far behind
+    if (dealsLeft === 0 && scoreDeficit > 2500) {
+      if (canDouble && !ownsJoker('minimalist')) return 'DOUBLE';
+      if (pTotal <= 17) return 'HIT';
+    }
+
+    // Target Awareness: If blind is virtually cleared, avoid risky busts
+    if (scoreDeficit <= 350) {
+      if (pTotal >= 17) return 'STAND';
+      if (pTotal >= 14 && dUp >= 7) return 'STAND';
+    }
+
+    // 2. Joker Synergies
+    if (ownsJoker('minimalist') && pHand.length === 2 && pTotal >= 17) {
+      return 'STAND';
+    }
+    if (ownsJoker('snake_eyes') && pTotal <= 13 && pTotal >= 11 && dUp <= 6) {
+      return 'STAND';
+    }
+    if (ownsJoker('deja_vu') && simRun.previousHandTotal && pTotal === simRun.previousHandTotal && pTotal >= 16) {
+      return 'STAND';
+    }
+    if (ownsJoker('sweet_16') && pTotal >= 13 && pTotal <= 16 && dUp <= 6) {
+      return 'STAND';
+    }
+    if (hasCushion && !isSoft && pTotal === 12) {
+      return 'HIT';
+    }
+    if (ownsJoker('daredevil')) {
+      if (isSoft && pTotal >= 15 && pTotal <= 18) return 'HIT';
+      if (hasCushion && pTotal === 15) return 'HIT';
+    }
+    if (canDouble && !ownsJoker('minimalist')) {
+      if (ownsJoker('double_or_nothing')) {
+        if (pTotal === 11 || pTotal === 10 || (pTotal === 9 && dUp <= 7)) return 'DOUBLE';
+        if (isSoft && pTotal >= 16 && pTotal <= 18 && dUp <= 6) return 'DOUBLE';
+      }
+      if (ownsJoker('chip_stacker')) {
+        if (pTotal === 11 || pTotal === 10 || (pTotal === 9 && dUp <= 6)) return 'DOUBLE';
+      }
+    }
+
+    // Standard high-EV Doubling
+    if (canDouble && !ownsJoker('minimalist')) {
+      if (pTotal === 11) return 'DOUBLE';
+      if (pTotal === 10 && dUp <= 9) return 'DOUBLE';
+      if (pTotal === 9 && dUp >= 3 && dUp <= 6) return 'DOUBLE';
+      if (isSoft && (pTotal === 17 || pTotal === 18) && dUp >= 4 && dUp <= 6) return 'DOUBLE';
+    }
+
+    // Basic Strategy Soft/Hard Play
+    if (isSoft) {
+      if (pTotal >= 19) return 'STAND';
+      if (pTotal === 18) return (dUp >= 9) ? 'HIT' : 'STAND';
+      return 'HIT';
+    } else {
+      if (pTotal >= 17) return 'STAND';
+      if (hasCushion && pTotal === 12) return 'HIT';
+      if (pTotal >= 13 && pTotal <= 16) {
+        return (dUp >= 2 && dUp <= 6) ? 'STAND' : 'HIT';
+      }
+      if (pTotal === 12) {
+        return (dUp >= 4 && dUp <= 6) ? 'STAND' : 'HIT';
+      }
+      return 'HIT';
+    }
+  }
+
   if (botType === 'synergy' || botType === 'charlie') {
     if (hasCushion && !isSoft && pTotal === 12) {
       return 'HIT';
     }
     if (ownsJoker('daredevil')) {
-      if (isSoft && pTotal >= 14 && pTotal <= 17) return 'HIT';
-      if ((hasCushion || ownsJoker('safety_net')) && pTotal >= 14 && pTotal <= 15) return 'HIT';
+      if (isSoft && pTotal >= 15 && pTotal <= 17) return 'HIT';
+      if (hasCushion && pTotal === 15) return 'HIT';
     }
     if (ownsJoker('chip_stacker') && canDouble) {
       if (pTotal === 11 || pTotal === 10 || (pTotal === 9 && dUp <= 6) || (hasCushion && pTotal === 12)) {
@@ -168,10 +245,193 @@ function scoreJokerPriorityForBot(joker: JokerInstance, botType: BotType): numbe
   if (joker.id === 'daredevil') score += (joker.bonusMult || 0) * 0.8;
   if (joker.id === 'chip_stacker') score += (joker.bonusChips || 0) * 0.15;
 
-  if (botType === 'highroller' && ['blackjack_tycoon', 'vip_high_roller', 'ace_up_sleeve', 'chip_stacker', 'minimalist', 'the_shark'].includes(joker.id)) score += 6;
-  if (botType === 'charlie' && ['bust_cushion', 'daredevil', 'card_counter', 'hit_me_baby', 'sweet_16', 'safety_net', 'even_steven'].includes(joker.id)) score += 6;
-  if (botType === 'synergy' && ['bust_cushion', 'daredevil', 'chip_stacker', 'the_shark', 'blackjack_tycoon', 'ace_up_sleeve', 'vip_high_roller', 'push_it_good', 'card_counter', 'sweet_16', 'compound_edge'].includes(joker.id)) score += 5;
+  if (botType === 'expert') {
+    if (joker.isXMult) score += 8;
+    if (joker.id === 'daredevil') score += 6 + (joker.bonusMult || 0) * 1.0;
+    if (joker.id === 'chip_stacker') score += 5 + (joker.bonusChips || 0) * 0.2;
+    if (joker.id === 'hot_hand') score += 6 + (joker.bonusMult || 0) * 0.4;
+    if (['bust_cushion', 'the_shark', 'blackjack_tycoon', 'card_sharp_joker', 'double_or_nothing', 'deja_vu', 'monochrome'].includes(joker.id)) score += 8;
+    if (['golden_parachute', 'loan_shark', 'diamond_cutter', 'the_grinder', 'compound_edge'].includes(joker.id)) score += 6;
+    if (['vip_high_roller', 'ace_up_sleeve', 'push_it_good', 'trips_ahoy', 'spade_slicer', 'crimson_heart', 'club_sandwich', 'slow_and_steady', 'sweet_16'].includes(joker.id)) score += 5;
+    return score;
+  }
+
+  if (botType === 'highroller' && ['blackjack_tycoon', 'vip_high_roller', 'ace_up_sleeve', 'chip_stacker', 'minimalist', 'the_shark', 'pocket_rockets', 'double_or_nothing', 'deja_vu', 'trips_ahoy'].includes(joker.id)) score += 6;
+  if (botType === 'charlie' && ['bust_cushion', 'daredevil', 'card_counter', 'hit_me_baby', 'sweet_16', 'safety_net', 'even_steven', 'snake_eyes', 'the_grinder', 'odd_ball', 'trips_ahoy'].includes(joker.id)) score += 6;
+  if (botType === 'synergy' && ['bust_cushion', 'daredevil', 'chip_stacker', 'the_shark', 'blackjack_tycoon', 'ace_up_sleeve', 'vip_high_roller', 'push_it_good', 'card_counter', 'sweet_16', 'compound_edge', 'hot_hand', 'spade_slicer', 'crimson_heart', 'diamond_cutter', 'club_sandwich', 'monochrome', 'card_sharp_joker', 'slow_and_steady'].includes(joker.id)) score += 5;
   return score;
+}
+
+function simulateExpertShopVisit(
+  simRun: SimRun,
+  jokerStats: Record<string, JokerStat>,
+  voucherStats: Record<string, VoucherStat>
+): void {
+  const interestPer = simRun.vouchers.includes('liquidity_pass') ? 4 : 5;
+  const maxInterest = simRun.vouchers.includes('deep_pockets') ? 8 : 5;
+  const capCash = maxInterest * interestPer;
+
+  const targetBank = simRun.ante === 1 ? 5 : (simRun.ante === 2 ? 15 : capCash);
+
+  // 1. High-value Vouchers
+  const voucherPriority = [
+    'joker_slot',
+    'clearance_sale',
+    'liquidity_pass',
+    'table_leverage',
+    'card_shark_voucher',
+    'base_boost',
+    'deep_pockets',
+    'card_sharp',
+    'extra_hand',
+    'overstock'
+  ];
+  const availVouchers = VOUCHER_CATALOG
+    .filter(v => !simRun.vouchers.includes(v.id))
+    .sort((a, b) => voucherPriority.indexOf(a.id) - voucherPriority.indexOf(b.id));
+
+  if (availVouchers.length > 0) {
+    const v = availVouchers[0];
+    voucherStats[v.id].offered++;
+    const reserve = (v.id === 'joker_slot' || v.id === 'clearance_sale') ? 0 : Math.floor(targetBank * 0.5);
+    if (simRun.money >= v.cost + reserve) {
+      simRun.money -= v.cost;
+      simRun.vouchers.push(v.id);
+      voucherStats[v.id].bought++;
+      const d = getVoucherDeltas(v.id);
+      simRun.maxHands += d.maxHands || 0;
+      simRun.baseWinMultBonus += d.baseWinMultBonus || 0;
+      simRun.maxJokers += d.maxJokers || 0;
+      simRun.baseWinChipBonus += d.baseWinChipBonus || 0;
+    }
+  }
+
+  // 2. Tarots & Permanent Deck Thinning / Enhancements
+  if (simRun.consumables.length < 2 && simRun.money >= targetBank + 3) {
+    const tarotOffer = shuffle(TAROT_CATALOG)[0];
+    if (simRun.money >= tarotOffer.cost + targetBank) {
+      simRun.money -= tarotOffer.cost;
+      if (tarotOffer.id === 'the_guillotine') {
+        const lowIdx = simRun.deck.findIndex(c => ['2', '3', '4', '5'].includes(c.rank));
+        if (lowIdx >= 0) simRun.deck.splice(lowIdx, 1);
+      } else if (tarotOffer.id === 'card_forge') {
+        const nonAce = simRun.deck.find(c => c.rank !== 'A');
+        if (nonAce) {
+          const ranks: Rank[] = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+          const idx = ranks.indexOf(nonAce.rank);
+          if (idx >= 0) nonAce.rank = ranks[Math.min(ranks.length - 1, idx + 2)];
+        }
+      } else if (tarotOffer.id === 'wild_suit') {
+        const unenhanced = simRun.deck.find(c => !c.enhancement);
+        if (unenhanced) unenhanced.enhancement = 'foil';
+      } else if (tarotOffer.id === 'lucky_charm') {
+        const unenhanced = simRun.deck.find(c => !c.enhancement);
+        if (unenhanced) unenhanced.enhancement = 'holo';
+      } else if (tarotOffer.id === 'polychrome_dice') {
+        const unenhanced = simRun.deck.find(c => !c.enhancement);
+        if (unenhanced) unenhanced.enhancement = 'poly';
+      } else {
+        simRun.consumables.push(tarotOffer.id);
+      }
+    }
+  }
+
+  // 3. Joker Evaluation Helper
+  const evaluateAndBuyJoker = (j: JokerDef): boolean => {
+    const score = scoreJokerPriorityForBot(j, 'expert');
+    const minReserve = score >= 14 ? 0 : (score >= 10 ? Math.floor(targetBank * 0.4) : targetBank);
+    if (simRun.money < j.cost + minReserve) return false;
+
+    if (simRun.jokers.length < simRun.maxJokers) {
+      simRun.money -= j.cost;
+      jokerStats[j.id].bought++;
+      simRun.jokers.push({ ...j, bonusMult: 0, bonusChips: 0 });
+      if (j.id === 'loan_shark') simRun.money += 15;
+      return true;
+    } else {
+      let weakestIdx = 0;
+      let weakestVal = 999;
+      simRun.jokers.forEach((owned, idx) => {
+        const val = scoreJokerPriorityForBot(owned, 'expert');
+        if (val < weakestVal) { weakestVal = val; weakestIdx = idx; }
+      });
+      if (score > weakestVal + 2) {
+        const sellPrice = getJokerSellValue(simRun.jokers[weakestIdx]);
+        simRun.money += sellPrice - j.cost;
+        jokerStats[j.id].bought++;
+        simRun.jokers[weakestIdx] = { ...j, bonusMult: 0, bonusChips: 0 };
+        if (j.id === 'loan_shark') simRun.money += 15;
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // Roll initial 2 offers
+  const ownedIds = simRun.jokers.map(j => j.id);
+  const excludedIds = [...ownedIds];
+  const initialOffers: JokerDef[] = [];
+  for (let s = 0; s < 2; s++) {
+    const rolled = rollWeightedJoker(excludedIds);
+    if (rolled) {
+      initialOffers.push(rolled);
+      excludedIds.push(rolled.id);
+    }
+  }
+  initialOffers.forEach(o => { jokerStats[o.id].offered++; });
+  initialOffers.sort((a, b) => scoreJokerPriorityForBot(b, 'expert') - scoreJokerPriorityForBot(a, 'expert'));
+  for (const j of initialOffers) {
+    evaluateAndBuyJoker(j);
+  }
+
+  // 4. Shop Rerolls
+  let rerollCost = simRun.vouchers.includes('clearance_sale') ? 1 : 2;
+  let rerollsDone = 0;
+  const maxRerolls = 2;
+
+  while (rerollsDone < maxRerolls) {
+    const weakestScore = simRun.jokers.length > 0
+      ? Math.min(...simRun.jokers.map(j => scoreJokerPriorityForBot(j, 'expert')))
+      : 0;
+    const wantsBetterJoker = simRun.jokers.length < simRun.maxJokers || weakestScore < 12;
+
+    if (!wantsBetterJoker) break;
+    if (simRun.money < targetBank + rerollCost + 3) break;
+
+    simRun.money -= rerollCost;
+    rerollCost++;
+    rerollsDone++;
+
+    const rerollOffers: JokerDef[] = [];
+    for (let s = 0; s < 2; s++) {
+      const rolled = rollWeightedJoker(excludedIds);
+      if (rolled) {
+        rerollOffers.push(rolled);
+        excludedIds.push(rolled.id);
+      }
+    }
+    rerollOffers.forEach(o => { jokerStats[o.id].offered++; });
+    rerollOffers.sort((a, b) => scoreJokerPriorityForBot(b, 'expert') - scoreJokerPriorityForBot(a, 'expert'));
+    for (const j of rerollOffers) {
+      evaluateAndBuyJoker(j);
+    }
+  }
+
+  simRun.jokers.sort((a, b) => (a.isXMult ? 1 : 0) - (b.isXMult ? 1 : 0));
+
+  // 5. Deck Card Purchases
+  if (simRun.money >= targetBank + 8) {
+    const enhs: Exclude<Enhancement, null>[] = ['foil', 'holo', 'poly', 'gold'];
+    const highRanks: Rank[] = ['A', 'K', 'Q', 'J', '10', '7'];
+    const suits: Suit[] = ['♠', '♥', '♣', '♦'];
+    simRun.money -= 4;
+    simRun.deck.push({
+      uid: 9999,
+      rank: highRanks[Math.floor(Math.random() * highRanks.length)],
+      suit: suits[Math.floor(Math.random() * suits.length)],
+      enhancement: enhs[Math.floor(Math.random() * enhs.length)]
+    });
+  }
 }
 
 function simulateShopVisit(
@@ -181,6 +441,10 @@ function simulateShopVisit(
   voucherStats: Record<string, VoucherStat>
 ): void {
   if (botType === 'vanilla') return;
+  if (botType === 'expert') {
+    simulateExpertShopVisit(simRun, jokerStats, voucherStats);
+    return;
+  }
 
   const availVouchers = VOUCHER_CATALOG.filter(v => !simRun.vouchers.includes(v.id));
   if (availVouchers.length > 0) {
@@ -208,7 +472,15 @@ function simulateShopVisit(
   }
 
   const ownedIds = simRun.jokers.map(j => j.id);
-  const offers: JokerInstance[] = shuffle(JOKER_CATALOG.filter(j => !ownedIds.includes(j.id))).slice(0, 2);
+  const offers: JokerDef[] = [];
+  const excludedIds = [...ownedIds];
+  for (let s = 0; s < 2; s++) {
+    const rolled = rollWeightedJoker(excludedIds);
+    if (rolled) {
+      offers.push(rolled);
+      excludedIds.push(rolled.id);
+    }
+  }
   offers.forEach(o => { jokerStats[o.id].offered++; });
   offers.sort((a, b) => scoreJokerPriorityForBot(b, botType) - scoreJokerPriorityForBot(a, botType));
 
@@ -218,6 +490,7 @@ function simulateShopVisit(
         simRun.money -= j.cost;
         jokerStats[j.id].bought++;
         simRun.jokers.push({ ...j, bonusMult: 0, bonusChips: 0 });
+        if (j.id === 'loan_shark') simRun.money += 15;
       } else {
         let weakestIdx = 0;
         let weakestVal = 999;
@@ -230,6 +503,7 @@ function simulateShopVisit(
           simRun.money += sellPrice - j.cost;
           jokerStats[j.id].bought++;
           simRun.jokers[weakestIdx] = { ...j, bonusMult: 0, bonusChips: 0 };
+          if (j.id === 'loan_shark') simRun.money += 15;
         }
       }
     }
@@ -295,7 +569,7 @@ function runBatchSimulationForBot(numRuns: number, botType: BotType, cfg: SimCon
   const jokerStats: Record<string, JokerStat> = {};
   JOKER_CATALOG.forEach(j => {
     jokerStats[j.id] = {
-      id: j.id, name: j.name, cost: j.cost,
+      id: j.id, name: j.name, cost: j.cost, rarity: j.rarity,
       offered: 0, bought: 0, picks: 0, wins: 0, anteSum: 0, scalingSum: 0
     };
   });
@@ -344,6 +618,8 @@ function runBatchSimulationForBot(numRuns: number, botType: BotType, cfg: SimCon
         let roundScore = 0;
         let blindWins = 0;
         let dealsUsedThisBlind = 0;
+        simRun.handsWonInBlind = 0;
+        simRun.previousHandTotal = null;
         const hasCushion = simRun.jokers.some(j => j.id === 'bust_cushion');
 
         while (dealsLeft > 0 && roundScore < targetScore) {
@@ -374,7 +650,7 @@ function runBatchSimulationForBot(numRuns: number, botType: BotType, cfg: SimCon
 
           if (evaluateBlackjackTotal(pHand, hasCushion).total < 21) {
             while (true) {
-              const act = decideBotAction(pHand, dHand[0], simRun, botType, bossBlind);
+              const act = decideBotAction(pHand, dHand[0], simRun, botType, bossBlind, roundScore, targetScore, dealsLeft);
               if (act === 'DOUBLE') {
                 doubled = true;
                 pHand.push(draw());
@@ -384,8 +660,8 @@ function runBatchSimulationForBot(numRuns: number, botType: BotType, cfg: SimCon
                 pHand.push(draw());
                 const postHitTotal = evaluateBlackjackTotal(pHand, hasCushion).total;
 
-                if (preHitTotal >= 14 && postHitTotal <= 21) {
-                  const gain = preHitTotal >= 16 ? 2 : 1;
+                if (preHitTotal >= 15 && postHitTotal <= 21) {
+                  const gain = 1;
                   for (const j of simRun.jokers) {
                     if (j.id === 'daredevil') {
                       j.bonusMult = (j.bonusMult || 0) + gain;
@@ -441,7 +717,10 @@ function runBatchSimulationForBot(numRuns: number, botType: BotType, cfg: SimCon
             tempBonusChips: simRunTempChips,
             doubledDown: doubled,
             anteHandScaling: cfg.anteHandScaling,
-            vouchers: simRun.vouchers
+            vouchers: simRun.vouchers,
+            handsLeft: dealsLeft,
+            handsWonInBlind: simRun.handsWonInBlind || 0,
+            previousHandTotal: simRun.previousHandTotal
           });
 
           // Apply the result to the simulated run + telemetry
@@ -457,6 +736,18 @@ function runBatchSimulationForBot(numRuns: number, botType: BotType, cfg: SimCon
               if (j.id === 'chip_stacker') j.bonusChips = res.chipStackerNewBonus;
             }
           }
+
+          // Hot Hand tracking
+          for (const j of simRun.jokers) {
+            if (j.id === 'hot_hand') {
+              if (res.isWin) j.bonusMult = Math.min(20, (j.bonusMult || 0) + 2);
+              else if (res.rawOutcomeType === 'LOSS' || res.rawOutcomeType === 'BUST') j.bonusMult = 0;
+            }
+          }
+
+          if (res.isWin) simRun.handsWonInBlind = (simRun.handsWonInBlind || 0) + 1;
+          simRun.previousHandTotal = res.pBust ? null : res.pTotal;
+
           simRun.money += res.moneyGained;
           roundScore += res.handScore;
 
@@ -489,11 +780,14 @@ function runBatchSimulationForBot(numRuns: number, botType: BotType, cfg: SimCon
             jokerStats[j.id].anteSum += a;
             if (j.id === 'daredevil') jokerStats[j.id].scalingSum += (j.bonusMult || 0);
             if (j.id === 'chip_stacker') jokerStats[j.id].scalingSum += (j.bonusChips || 0);
+            if (j.id === 'hot_hand') jokerStats[j.id].scalingSum += (j.bonusMult || 0);
           }
         } else {
           bStat.cleared++;
           const maxInterest = simRun.vouchers.includes('deep_pockets') ? 8 : 5;
-          simRun.money += calcBlindPayout(b, dealsLeft, simRun.money, cfg.unusedDealCashCap, maxInterest).totalEarned;
+          const interestPer = simRun.vouchers.includes('liquidity_pass') ? 4 : 5;
+          const loanSharkFee = simRun.jokers.some(j => j.id === 'loan_shark') ? 1 : 0;
+          simRun.money += calcBlindPayout(b, dealsLeft, simRun.money, cfg.unusedDealCashCap, maxInterest, interestPer, loanSharkFee).totalEarned;
           bStat.cashAfterSum += simRun.money;
 
           simulateShopVisit(simRun, botType, jokerStats, voucherStats);
@@ -513,6 +807,7 @@ function runBatchSimulationForBot(numRuns: number, botType: BotType, cfg: SimCon
         jokerStats[j.id].anteSum += 9;
         if (j.id === 'daredevil') jokerStats[j.id].scalingSum += (j.bonusMult || 0);
         if (j.id === 'chip_stacker') jokerStats[j.id].scalingSum += (j.bonusChips || 0);
+        if (j.id === 'hot_hand') jokerStats[j.id].scalingSum += (j.bonusMult || 0);
       }
       for (const vId of simRun.vouchers) {
         if (voucherStats[vId]) voucherStats[vId].wins++;
@@ -537,6 +832,7 @@ function formatBotReportSection(simData: SimData): string {
   } = simData;
 
   const botNames: Record<BotType, string> = {
+    expert: 'Expert Strategy AI (Rerolls, Interest & Target Aware)',
     synergy: 'Smart Synergy AI (Adapts to Jokers)',
     highroller: 'High-Roller 21 AI (Faces/Aces/Doubles)',
     charlie: 'Low-Card Charlie AI (Hits Low Cards)',
@@ -607,8 +903,8 @@ function formatBotReportSection(simData: SimData): string {
   }
   lines.push('--------------------------------------------------------------------------------');
   lines.push(`JOKER PERFORMANCE LEADERBOARD (Sorted by End-of-Run Win Rate)`);
-  lines.push(`${pad('Joker Name', 18)} | ${padL('Cost', 4)} | ${padL('Offered', 7)} | ${padL('Bought', 6)} | ${padL('EndHeld', 7)} | ${padL('RunWin%', 8)} | ${padL('AvgAnte', 7)} | ${pad('Avg Scaling Bonus', 18)}`);
-  lines.push('-'.repeat(96));
+  lines.push(`${pad('Joker Name', 18)} | ${pad('Rarity', 8)} | ${padL('Cost', 4)} | ${padL('Offered', 7)} | ${padL('Bought', 6)} | ${padL('EndHeld', 7)} | ${padL('RunWin%', 8)} | ${padL('AvgAnte', 7)} | ${pad('Avg Scaling Bonus', 18)}`);
+  lines.push('-'.repeat(107));
 
   const sortedJokers = Object.values(jokerStats)
     .filter(j => j.picks > 0 || j.offered > 0)
@@ -626,9 +922,11 @@ function formatBotReportSection(simData: SimData): string {
       scaleNote = `+${(j.scalingSum / j.picks).toFixed(1)} Mult`;
     } else if (j.id === 'chip_stacker' && j.picks > 0) {
       scaleNote = `+${(j.scalingSum / j.picks).toFixed(1)} Chips`;
+    } else if (j.id === 'hot_hand' && j.picks > 0) {
+      scaleNote = `+${(j.scalingSum / j.picks).toFixed(1)} Mult`;
     }
     lines.push(
-      `${pad(j.name, 18)} | ${padL('$' + j.cost, 4)} | ${padL(j.offered, 7)} | ${padL(j.bought, 6)} | ${padL(j.picks, 7)} | ${padL(winPct, 8)} | ${padL(avgA, 7)} | ${pad(scaleNote, 18)}`
+      `${pad(j.name, 18)} | ${pad(j.rarity.toUpperCase(), 8)} | ${padL('$' + j.cost, 4)} | ${padL(j.offered, 7)} | ${padL(j.bought, 6)} | ${padL(j.picks, 7)} | ${padL(winPct, 8)} | ${padL(avgA, 7)} | ${pad(scaleNote, 18)}`
     );
   }
 
@@ -654,18 +952,21 @@ function buildSingleBotReport(simData: SimData): string {
 
 interface SuiteResult {
   reportText: string;
+  expertData: SimData | null;
   /** Synergy bot data, for the on-screen modal. */
   synergyData: SimData | null;
 }
 
-/** Runs all 5 bots and assembles the comparative report text. */
+/** Runs all 6 bots and assembles the comparative report text. */
 function runBotSuite(numRuns: number, cfg: SimConfig): SuiteResult {
   const reports: string[] = [];
   const summaryRows: string[] = [];
+  let expertData: SimData | null = null;
   let synergyData: SimData | null = null;
 
   for (const bType of BOT_ORDER) {
     const simData = runBatchSimulationForBot(numRuns, bType, cfg);
+    if (bType === 'expert') expertData = simData;
     if (bType === 'synergy') synergyData = simData;
     reports.push(formatBotReportSection(simData));
 
@@ -679,9 +980,9 @@ function runBotSuite(numRuns: number, cfg: SimConfig): SuiteResult {
 
   const masterHeader = [
     `================================================================================`,
-    `JACK-LATRO v1.7 // FULL 5-BOT COMPARATIVE TELEMETRY SUITE`,
+    `JACK-LATRO v1.7 // FULL 6-BOT COMPARATIVE TELEMETRY SUITE`,
     `Generated: ${new Date().toISOString()}`,
-    `Runs Per Bot: ${numRuns.toLocaleString()} (${(numRuns * 5).toLocaleString()} Total Simulated Games)`,
+    `Runs Per Bot: ${numRuns.toLocaleString()} (${(numRuns * BOT_ORDER.length).toLocaleString()} Total Simulated Games)`,
     `Settings: Deals=${cfg.startingDeals}, TargetScale=${cfg.targetScalePct}%, DealCashCap=$${cfg.unusedDealCashCap}, PushRefund=${cfg.pushRefundsDeal}, AnteScale=${cfg.anteHandScaling}`,
     `================================================================================`,
     `HEAD-TO-HEAD BOT SUMMARY:`,
@@ -689,5 +990,5 @@ function runBotSuite(numRuns: number, cfg: SimConfig): SuiteResult {
     `================================================================================\n\n`
   ].join('\n');
 
-  return { reportText: masterHeader + reports.join('\n\n'), synergyData };
+  return { reportText: masterHeader + reports.join('\n\n'), expertData, synergyData };
 }

@@ -8,7 +8,7 @@
 ========================================================== */
 
 /* ---------- Constants ---------- */
-const ANTE_TARGETS: ReadonlyArray<number> = [300, 600, 1100, 1800, 2900, 4500, 7000, 10500];
+const ANTE_TARGETS: ReadonlyArray<number> = [300, 600, 1200, 2400, 4500, 8500, 15000, 25000];
 /** Target multiplier per Blind (Small, Big, Boss). */
 const BLIND_TARGET_MULTS: ReadonlyArray<number> = [1.0, 1.45, 2.0];
 /** Cash reward per Blind (Small, Big, Boss). */
@@ -23,7 +23,7 @@ function computeBlindTarget(ante: number, blindIndex: number, targetScalePct: nu
   if (ante <= ANTE_TARGETS.length) {
     rawBase = ANTE_TARGETS[ante - 1];
   } else {
-    const maxBase = ANTE_TARGETS[ANTE_TARGETS.length - 1]; // 10,500
+    const maxBase = ANTE_TARGETS[ANTE_TARGETS.length - 1]; // 25,000
     rawBase = Math.round(maxBase * Math.pow(1.6, ante - ANTE_TARGETS.length));
   }
   const base = Math.round(rawBase * (targetScalePct / 100));
@@ -34,8 +34,8 @@ function computeBlindBoss(ante: number, blindIndex: number): BossBlindDef | null
   return blindIndex >= 2 ? BOSS_BLINDS[(ante - 1) % BOSS_BLINDS.length] : null;
 }
 
-function computeInterest(money: number, maxInterest: number = INTEREST_CAP): number {
-  return Math.min(maxInterest, Math.floor(money / INTEREST_PER));
+function computeInterest(money: number, maxInterest: number = INTEREST_CAP, interestPer: number = INTEREST_PER): number {
+  return Math.min(maxInterest, Math.floor(money / interestPer));
 }
 
 function getJokerSellValue(j: { cost: number }): number {
@@ -43,18 +43,29 @@ function getJokerSellValue(j: { cost: number }): number {
 }
 
 /** Pure payout math (shared with simulator). */
-function calcBlindPayout(blindIndex: number, dealsLeft: number, money: number, unusedDealCashCap: number, maxInterest: number = INTEREST_CAP): PendingPayout {
+function calcBlindPayout(
+  blindIndex: number,
+  dealsLeft: number,
+  money: number,
+  unusedDealCashCap: number,
+  maxInterest: number = INTEREST_CAP,
+  interestPer: number = INTEREST_PER,
+  loanSharkFee: number = 0
+): PendingPayout {
   const blindReward = BLIND_REWARDS[Math.min(blindIndex, 2)];
   const handBonus = Math.min(unusedDealCashCap, dealsLeft);
-  const interest = computeInterest(money, maxInterest);
-  return { blindReward, handBonus, interest, totalEarned: blindReward + handBonus + interest };
+  const interest = computeInterest(money, maxInterest, interestPer);
+  const totalEarned = Math.max(0, blindReward + handBonus + interest - loanSharkFee);
+  return { blindReward, handBonus, interest, totalEarned };
 }
 
 /** Payout for clearing the current Blind, from current state. Does not modify state. */
 function computeBlindPayout(): PendingPayout {
   const s = getState();
   const maxInterest = s.vouchersBought.includes('deep_pockets') ? 8 : INTEREST_CAP;
-  return calcBlindPayout(s.blindIndex, s.handsLeft, s.money, getBalanceConfig().unusedDealCashCap, maxInterest);
+  const interestPer = s.vouchersBought.includes('liquidity_pass') ? 4 : INTEREST_PER;
+  const loanSharkFee = s.jokers.some(j => j.id === 'loan_shark') ? 1 : 0;
+  return calcBlindPayout(s.blindIndex, s.handsLeft, s.money, getBalanceConfig().unusedDealCashCap, maxInterest, interestPer, loanSharkFee);
 }
 
 /* ---------- Blind progression (state side only) ---------- */
@@ -87,7 +98,9 @@ function beginBlindState(): void {
     inHand: false,
     dealerHoleRevealed: false,
     doubledDown: false,
-    tempBonusChips: 0
+    tempBonusChips: 0,
+    handsWonInBlind: 0,
+    previousHandTotal: null
   });
   setShoe(buildShoeFromDeck());
 }
@@ -119,17 +132,52 @@ function cashOutAndEnterShop(): PendingPayout | null {
     blindIndex = 0;
     ante++;
   }
-  patchState({ blindClearedReady: false, blindIndex, ante, inShop: true, rerollCost: SHOP_BASE_REROLL });
+  const rerollCost = s.vouchersBought.includes('clearance_sale') ? 1 : SHOP_BASE_REROLL;
+  patchState({ blindClearedReady: false, blindIndex, ante, inShop: true, rerollCost });
   configureBlindMetrics();
   generateShopStock();
   return payout;
+}
+
+/* ---------- Weighted Rarity Rolling (Shared with Simulator) ---------- */
+function rollWeightedJoker(excludedIds: string[]): JokerDef | null {
+  const available = JOKER_CATALOG.filter(j => !excludedIds.includes(j.id));
+  if (available.length === 0) return null;
+
+  // Weights: Common 60%, Uncommon 30%, Rare 10%
+  const roll = Math.random();
+  let targetRarity: JokerRarity;
+  if (roll < 0.60) {
+    targetRarity = 'common';
+  } else if (roll < 0.90) {
+    targetRarity = 'uncommon';
+  } else {
+    targetRarity = 'rare';
+  }
+
+  let pool = available.filter(j => j.rarity === targetRarity);
+  if (pool.length === 0) {
+    // Fallback order: uncommon -> common -> any
+    if (targetRarity === 'rare') pool = available.filter(j => j.rarity === 'uncommon');
+    if (pool.length === 0) pool = available.filter(j => j.rarity === 'common');
+    if (pool.length === 0) pool = available;
+  }
+
+  return shuffle(pool)[0] || null;
 }
 
 /* ---------- Shop stock ---------- */
 function generateShopStock(): void {
   const s = getState();
   const ownedIds = s.jokers.map(j => j.id);
-  const availableJokers = shuffle(JOKER_CATALOG.filter(j => !ownedIds.includes(j.id))).slice(0, 2);
+  const excluded = [...ownedIds];
+  const j1 = rollWeightedJoker(excluded);
+  if (j1) excluded.push(j1.id);
+  const j2 = rollWeightedJoker(excluded);
+  const availableJokers: JokerDef[] = [];
+  if (j1) availableJokers.push(j1);
+  if (j2) availableJokers.push(j2);
+
   const tarot = shuffle(TAROT_CATALOG)[0];
 
   const shopJokers: ShopJokerSlot[] = [
@@ -146,7 +194,8 @@ function generateShopStock(): void {
   const highRanks: ReadonlyArray<Rank> = ['A', 'K', 'Q', 'J', '10', '7'];
   const suits: ReadonlyArray<Suit> = ['♠', '♥', '♣', '♦'];
 
-  const cardOffers: ShopCardOffer[] = [0, 1].map(() => {
+  const extraCount = s.vouchersBought.includes('overstock') ? 3 : 2;
+  const cardOffers: ShopCardOffer[] = Array.from({ length: extraCount }, () => {
     const enh = enhancements[Math.floor(Math.random() * enhancements.length)];
     const r = highRanks[Math.floor(Math.random() * highRanks.length)];
     const su = suits[Math.floor(Math.random() * suits.length)];
@@ -197,6 +246,7 @@ function getVoucherDeltas(id: string): VoucherDeltas {
   if (id === 'table_leverage') return { baseWinMultBonus: 1 };
   if (id === 'joker_slot') return { maxJokers: 1 };
   if (id === 'base_boost') return { baseWinChipBonus: 30 };
+  if (id === 'card_shark_voucher') return { maxHands: 1, baseWinChipBonus: 20 };
   return {};
 }
 
@@ -204,12 +254,16 @@ function applyVoucher(id: string): void {
   const s = getState();
   const d = getVoucherDeltas(id);
   addVoucher(id);
-  patchState({
+  const patch: Partial<GameState> = {
     maxHands: s.maxHands + (d.maxHands || 0),
     baseWinMultBonus: s.baseWinMultBonus + (d.baseWinMultBonus || 0),
     maxJokers: s.maxJokers + (d.maxJokers || 0),
     baseWinChipBonus: s.baseWinChipBonus + (d.baseWinChipBonus || 0)
-  });
+  };
+  if (id === 'clearance_sale') {
+    patch.rerollCost = 1;
+  }
+  patchState(patch);
 }
 
 function buyShopItem(listName: 'shopJokers' | 'shopExtras', idx: number): ShopActionResult {
@@ -223,6 +277,9 @@ function buyShopItem(listName: 'shopJokers' | 'shopExtras', idx: number): ShopAc
     spendMoney(item.cost);
     markShopItemBought(listName, idx);
     addJoker({ ...item, bonusMult: item.bonusMult || 0, bonusChips: item.bonusChips || 0 });
+    if (item.id === 'loan_shark') {
+      addMoney(15);
+    }
   } else if (item.shopType === 'tarot') {
     if (s.consumables.length >= s.maxConsumables) return { ok: false, reason: 'tarots_full' };
     spendMoney(item.cost);
@@ -300,6 +357,33 @@ function useConsumable(index: number): ConsumableResult {
     if (firstCard) {
       setCardEnhancement(firstCard, 'poly');
       message = `${firstCard.rank}${firstCard.suit} enhanced to Polychrome (×1.5 Mult)!`;
+    }
+  } else if (c.id === 'the_guillotine') {
+    if (s.playerHand.length === 0) return { ok: false, warning: 'No card in hand to destroy!' };
+    const target = s.playerHand[0];
+    removeCardFromGame(target.uid);
+    message = `The Guillotine permanently destroyed ${target.rank}${target.suit}!`;
+  } else if (c.id === 'card_forge') {
+    const nonAces = s.playerHand.filter(card => card.rank !== 'A');
+    if (nonAces.length === 0) return { ok: false, warning: 'No non-Ace card in hand!' };
+    const rankOrder: Rank[] = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+    nonAces.sort((a, b) => rankOrder.indexOf(b.rank) - rankOrder.indexOf(a.rank));
+    const target = nonAces[0];
+    const curIdx = rankOrder.indexOf(target.rank);
+    const newIdx = Math.min(rankOrder.length - 1, curIdx + 2);
+    setCardRank(target, rankOrder[newIdx]);
+    message = `Card Forge upgraded card to ${target.rank}!`;
+  } else if (c.id === 'wild_suit') {
+    const firstCard = s.playerHand[0];
+    if (firstCard) {
+      setCardEnhancement(firstCard, 'foil');
+      message = `${firstCard.rank}${firstCard.suit} enhanced to Foil (+30 Chips)!`;
+    }
+  } else if (c.id === 'lucky_charm') {
+    const lastCard = s.playerHand[s.playerHand.length - 1];
+    if (lastCard) {
+      setCardEnhancement(lastCard, 'holo');
+      message = `${lastCard.rank}${lastCard.suit} enhanced to Holo (+4 Mult)!`;
     }
   }
 

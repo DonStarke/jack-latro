@@ -18,10 +18,13 @@ interface Card {
   enhancement: Enhancement;
 }
 
+type JokerRarity = 'common' | 'uncommon' | 'rare';
+
 interface JokerDef {
   id: string;
   name: string;
   cost: number;
+  rarity: JokerRarity;
   isXMult: boolean;
   desc: string;
   bonusMult?: number;
@@ -110,6 +113,8 @@ interface GameState {
   doubledDown: boolean;
   tempBonusChips: number;
   endlessMode?: boolean;
+  handsWonInBlind?: number;
+  previousHandTotal?: number | null;
 
   jokers: JokerInstance[];
   consumables: (TarotDef | ShopTarot)[];
@@ -164,6 +169,8 @@ let _state: GameState = {
   doubledDown: false,
   tempBonusChips: 0,
   endlessMode: false,
+  handsWonInBlind: 0,
+  previousHandTotal: null,
 
   jokers: [],
   consumables: [],
@@ -240,6 +247,12 @@ function setCardRank(card: Card, rank: Rank): void {
 }
 
 function addCardToShoe(card: Card): void { _state.shoe.push(card); }
+
+function removeCardFromGame(uid: number): void {
+  _state.deck = _state.deck.filter(c => c.uid !== uid);
+  _state.shoe = _state.shoe.filter(c => c.uid !== uid);
+  _state.playerHand = _state.playerHand.filter(c => c.uid !== uid);
+}
 
 function markShopItemBought(listName: 'shopJokers' | 'shopExtras', idx: number): void {
   const item = _state[listName][idx];

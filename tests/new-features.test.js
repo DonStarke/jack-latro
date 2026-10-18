@@ -201,7 +201,7 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   w.startNextBlindFromShop();
   await sleep(50);
   ck('Ante 9 displays as Endless in HUD', w.getState().ante === 9 && $('ui-ante').textContent.includes('Endless'));
-  ck('Endless target score scales beyond 10,500', w.getState().targetScore > 10500);
+  ck('Endless target score scales beyond 25,000', w.getState().targetScore > 25000);
 
   // Victory music functions exist
   ck('startVictoryMusic function exists', typeof w.startVictoryMusic === 'function');

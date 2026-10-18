@@ -1,0 +1,676 @@
+================================================================================
+JACK-LATRO v1.7 // FULL 6-BOT COMPARATIVE TELEMETRY SUITE
+Generated: 2026-10-18T13:52:59.894Z
+Runs Per Bot: 1,000 (6,000 Total Simulated Games)
+Settings: Deals=7, TargetScale=100%, DealCashCap=$6, PushRefund=false, AnteScale=false
+================================================================================
+HEAD-TO-HEAD BOT SUMMARY:
+  expert       | Win Rate:   0.20% | Avg Ante:  3.61 | BJ Hand Win%:  46.42%
+  synergy      | Win Rate:   0.50% | Avg Ante:  4.51 | BJ Hand Win%:  47.04%
+  highroller   | Win Rate:   0.00% | Avg Ante:  4.00 | BJ Hand Win%:  45.12%
+  charlie      | Win Rate:   0.90% | Avg Ante:  4.49 | BJ Hand Win%:  46.59%
+  basic        | Win Rate:   0.00% | Avg Ante:  4.37 | BJ Hand Win%:  45.97%
+  vanilla      | Win Rate:   0.00% | Avg Ante:  1.39 | BJ Hand Win%:  44.11%
+================================================================================
+
+================================================================================
+BOT STRATEGY: Expert Strategy AI (Rerolls, Interest & Target Aware)
+================================================================================
+Runs Simulated        : 1,000 (281 ms)
+Starting Deals/Blind  : 7
+Target Score Scaling  : 100%
+Unused Deal Cash Cap  : $6
+Pushes Refund Deal    : OFF
+Hand Tiers +15%/Ante  : OFF
+--------------------------------------------------------------------------------
+OVERALL KPI SUMMARY
+  Ante 8 Victory Rate : 0.20% (2 / 1000)
+  Avg Final Ante      : 3.61
+  Total Hands Played  : 39,042 (Avg 39.0 hands/run)
+  BJ Hand Win Rate    : 46.42%
+  Cause of Death      : 17.6% Scaling Wall (176) | 82.4% Cold Shoe (822)
+--------------------------------------------------------------------------------
+HAND OUTCOME BREAKDOWN (% of 39,042 total hands)
+  Natural Blackjack   :     2354 (6.03%)
+  5-Card Charlie      :      246 (0.63%)
+  Exact 21 (3+ cards) :     2202 (5.64%)
+  Standard Win        :    13186 (33.77%)
+  Push (Tie)          :     3189 (8.17%)
+  Dealer Win (Loss)   :    12273 (31.44%)
+  Player Bust         :     5592 (14.32%)
+  Double Down Win %   : 57.8% (1520/2629)
+  Bust Cushion Saves  : 687 hands (22 converted to 21)
+  Safety Net Saves    : 54 busts scored
+--------------------------------------------------------------------------------
+ANTE SURVIVAL FUNNEL (% of runs clearing all 3 Blinds of Ante)
+  Ante 1 Cleared      :  74.30% (743 / 1000)
+  Ante 2 Cleared      :  66.30% (663 / 1000)
+  Ante 3 Cleared      :  55.40% (554 / 1000)
+  Ante 4 Cleared      :  40.70% (407 / 1000)
+  Ante 5 Cleared      :  19.20% (192 / 1000)
+  Ante 6 Cleared      :   4.50% (45 / 1000)
+  Ante 7 Cleared      :   0.90% (9 / 1000)
+  Ante 8 Cleared      :   0.20% (2 / 1000)
+--------------------------------------------------------------------------------
+BLIND-BY-BLIND PROGRESSION & DEATH DIAGNOSTICS (24 BLINDS)
+Blind      |  Target | Entered |  Clear% | AvgScore | AvgDeals | AvgCash$ | ScaleDth | ShoeDth
+------------------------------------------------------------------------------------------------
+A1-Small   |     300 |    1000 |   85.0% |      479 |     4.36 |    $31.5 |        0 |     150
+A1-Big     |     435 |     850 |   93.1% |     1204 |     3.11 |    $29.0 |        4 |      55
+A1-Boss    |     600 |     791 |   93.9% |     2041 |     2.90 |    $29.3 |        3 |      45
+A2-Small   |     600 |     743 |   96.0% |     1945 |     2.66 |    $31.9 |        2 |      28
+A2-Big     |     870 |     713 |   95.4% |     2216 |     2.80 |    $42.4 |        1 |      32
+A2-Boss    |    1200 |     680 |   97.5% |     2784 |     3.09 |    $51.0 |        0 |      17
+A3-Small   |    1200 |     663 |   98.3% |     2924 |     2.80 |    $57.1 |        0 |      11
+A3-Big     |    1740 |     652 |   95.6% |     3470 |     3.48 |    $70.3 |        0 |      29
+A3-Boss    |    2400 |     623 |   88.9% |     4590 |     3.86 |    $85.8 |        3 |      66
+A4-Small   |    2400 |     554 |   94.6% |     4851 |     3.96 |   $100.5 |        1 |      29
+A4-Big     |    3480 |     524 |   91.4% |     5982 |     4.76 |   $119.6 |        4 |      41
+A4-Boss    |    4800 |     479 |   85.0% |     6935 |     5.58 |   $148.6 |       14 |      58
+A5-Small   |    4500 |     407 |   89.7% |     7325 |     5.05 |   $172.5 |        8 |      34
+A5-Big     |    6525 |     365 |   79.2% |     8770 |     5.83 |   $199.0 |       22 |      54
+A5-Boss    |    9000 |     289 |   66.4% |    10673 |     6.65 |   $224.0 |       38 |      59
+A6-Small   |    8500 |     192 |   75.0% |    11031 |     6.13 |   $249.1 |       22 |      26
+A6-Big     |   12325 |     144 |   61.1% |    14111 |     6.94 |   $276.9 |       28 |      28
+A6-Boss    |   17000 |      88 |   51.1% |    16854 |     7.43 |   $296.3 |       21 |      22
+A7-Small   |   15000 |      45 |   71.1% |    16412 |     6.42 |   $319.5 |        1 |      12
+A7-Big     |   21750 |      32 |   78.1% |    25269 |     7.03 |   $351.3 |        1 |       6
+A7-Boss    |   30000 |      25 |   36.0% |    22362 |     7.24 |   $380.6 |        2 |      14
+A8-Small   |   25000 |       9 |   77.8% |    27377 |     7.44 |   $402.1 |        0 |       2
+A8-Big     |   36250 |       7 |   57.1% |    34283 |     7.57 |   $450.8 |        1 |       2
+A8-Boss    |   50000 |       4 |   50.0% |    47919 |     8.50 |   $474.5 |        0 |       2
+--------------------------------------------------------------------------------
+JOKER PERFORMANCE LEADERBOARD (Sorted by End-of-Run Win Rate)
+Joker Name         | Rarity   | Cost | Offered | Bought | EndHeld |  RunWin% | AvgAnte | Avg Scaling Bonus 
+-----------------------------------------------------------------------------------------------------------
+Compound Edge      | UNCOMMON |   $6 |     834 |    170 |      47 |     2.1% |    3.28 | -                 
+Daredevil          | UNCOMMON |   $6 |     834 |    166 |     114 |     1.8% |    4.75 | +5.7 Mult         
+Chip Stacker       | UNCOMMON |   $6 |     816 |    182 |     137 |     0.7% |    4.03 | +36.9 Chips       
+The Shark          | RARE     |   $8 |     466 |    460 |     460 |     0.4% |    4.84 | -                 
+Monochrome         | UNCOMMON |   $6 |     565 |    556 |     556 |     0.4% |    4.56 | -                 
+Snake Eyes         | UNCOMMON |   $6 |     613 |    543 |     427 |     0.2% |    4.26 | -                 
+BJ Tycoon          | RARE     |   $8 |     464 |    459 |     459 |     0.2% |    4.69 | -                 
+Card Sharp         | RARE     |   $8 |     476 |    469 |     469 |     0.2% |    4.76 | -                 
+Double or Nothing  | RARE     |   $8 |     483 |    475 |     475 |     0.2% |    4.70 | -                 
+Bust Cushion       | UNCOMMON |   $6 |     642 |    486 |     247 |     0.0% |    4.05 | -                 
+Card Counter       | COMMON   |   $4 |    1087 |    106 |       5 |     0.0% |    1.20 | -                 
+VIP High Roller    | COMMON   |   $5 |     974 |    207 |      22 |     0.0% |    2.36 | -                 
+Ace Up Sleeve      | COMMON   |   $5 |     954 |    210 |      27 |     0.0% |    2.00 | -                 
+Sweet Sixteen      | UNCOMMON |   $5 |     929 |    172 |      24 |     0.0% |    2.00 | -                 
+Lucky Sevens       | COMMON   |   $5 |    1057 |    119 |      11 |     0.0% |    1.18 | -                 
+Hit Me Baby        | COMMON   |   $5 |    1089 |    132 |      11 |     0.0% |    1.09 | -                 
+Gold Parachute     | COMMON   |   $4 |     925 |    226 |      34 |     0.0% |    2.09 | -                 
+Push It Good       | UNCOMMON |   $5 |     939 |    151 |      13 |     0.0% |    1.54 | -                 
+Safety Net         | UNCOMMON |   $5 |    1005 |    104 |       8 |     0.0% |    1.13 | -                 
+Even Steven        | COMMON   |   $4 |    1032 |    112 |       6 |     0.0% |    1.17 | -                 
+Red Velvet         | COMMON   |   $5 |    1048 |    118 |      12 |     0.0% |    1.33 | -                 
+Dark Knight        | COMMON   |   $5 |    1100 |    128 |       7 |     0.0% |    1.43 | -                 
+Minimalist         | RARE     |   $7 |     508 |    416 |     342 |     0.0% |    4.53 | -                 
+Hot Hand           | UNCOMMON |   $6 |     872 |    186 |      98 |     0.0% |    3.40 | +0.6 Mult         
+Pocket Rockets     | UNCOMMON |   $6 |    1015 |     94 |       4 |     0.0% |    1.25 | -                 
+Trips Ahoy         | COMMON   |   $5 |     981 |    207 |      41 |     0.0% |    1.93 | -                 
+Spade Slicer       | COMMON   |   $5 |     935 |    212 |      14 |     0.0% |    1.43 | -                 
+Crimson Heart      | COMMON   |   $5 |     953 |    200 |      14 |     0.0% |    2.00 | -                 
+Diamond Cutter     | COMMON   |   $5 |     905 |    228 |      46 |     0.0% |    2.33 | -                 
+Club Sandwich      | COMMON   |   $5 |     911 |    219 |      26 |     0.0% |    2.15 | -                 
+Odd Ball           | COMMON   |   $4 |    1088 |    121 |       6 |     0.0% |    1.33 | -                 
+The Grinder        | COMMON   |   $4 |     942 |    215 |      39 |     0.0% |    1.87 | -                 
+Slow & Steady      | COMMON   |   $5 |     990 |    214 |      27 |     0.0% |    1.89 | -                 
+Loan Shark         | COMMON   |   $4 |     963 |    216 |      31 |     0.0% |    1.97 | -                 
+Deja Vu            | RARE     |   $8 |     503 |    494 |     494 |     0.0% |    4.62 | -                 
+--------------------------------------------------------------------------------
+VOUCHER PERFORMANCE
+  Extra Cushion        : Offered   553 | Bought   553 | Run Win Rate when bought: 0.4%
+  Table Leverage       : Offered   719 | Bought   712 | Run Win Rate when bought: 0.3%
+  VIP Lounge Pass      : Offered   850 | Bought   850 | Run Win Rate when bought: 0.2%
+  High Stakes Table    : Offered   663 | Bought   663 | Run Win Rate when bought: 0.3%
+  High Roller Credit   : Offered   652 | Bought   651 | Run Win Rate when bought: 0.3%
+  Precision Edge       : Offered   624 | Bought   622 | Run Win Rate when bought: 0.3%
+  Clearance Rack       : Offered   791 | Bought   791 | Run Win Rate when bought: 0.3%
+  Liquid Assets        : Offered   743 | Bought   743 | Run Win Rate when bought: 0.3%
+  Card Sharp License   : Offered   681 | Bought   679 | Run Win Rate when bought: 0.3%
+  Overstock Shelves    : Offered   522 | Bought   522 | Run Win Rate when bought: 0.4%
+
+
+================================================================================
+BOT STRATEGY: Smart Synergy AI (Adapts to Jokers)
+================================================================================
+Runs Simulated        : 1,000 (288 ms)
+Starting Deals/Blind  : 7
+Target Score Scaling  : 100%
+Unused Deal Cash Cap  : $6
+Pushes Refund Deal    : OFF
+Hand Tiers +15%/Ante  : OFF
+--------------------------------------------------------------------------------
+OVERALL KPI SUMMARY
+  Ante 8 Victory Rate : 0.50% (5 / 1000)
+  Avg Final Ante      : 4.51
+  Total Hands Played  : 47,359 (Avg 47.4 hands/run)
+  BJ Hand Win Rate    : 47.04%
+  Cause of Death      : 18.8% Scaling Wall (187) | 81.2% Cold Shoe (808)
+--------------------------------------------------------------------------------
+HAND OUTCOME BREAKDOWN (% of 47,359 total hands)
+  Natural Blackjack   :     2911 (6.15%)
+  5-Card Charlie      :      558 (1.18%)
+  Exact 21 (3+ cards) :     2654 (5.60%)
+  Standard Win        :    15572 (32.88%)
+  Push (Tie)          :     3940 (8.32%)
+  Dealer Win (Loss)   :    13500 (28.51%)
+  Player Bust         :     8224 (17.37%)
+  Double Down Win %   : 58.2% (1721/2956)
+  Bust Cushion Saves  : 730 hands (22 converted to 21)
+  Safety Net Saves    : 174 busts scored
+--------------------------------------------------------------------------------
+ANTE SURVIVAL FUNNEL (% of runs clearing all 3 Blinds of Ante)
+  Ante 1 Cleared      :  80.40% (804 / 1000)
+  Ante 2 Cleared      :  75.70% (757 / 1000)
+  Ante 3 Cleared      :  69.40% (694 / 1000)
+  Ante 4 Cleared      :  62.00% (620 / 1000)
+  Ante 5 Cleared      :  42.30% (423 / 1000)
+  Ante 6 Cleared      :  17.70% (177 / 1000)
+  Ante 7 Cleared      :   3.40% (34 / 1000)
+  Ante 8 Cleared      :   0.50% (5 / 1000)
+--------------------------------------------------------------------------------
+BLIND-BY-BLIND PROGRESSION & DEATH DIAGNOSTICS (24 BLINDS)
+Blind      |  Target | Entered |  Clear% | AvgScore | AvgDeals | AvgCash$ | ScaleDth | ShoeDth
+------------------------------------------------------------------------------------------------
+A1-Small   |     300 |    1000 |   89.1% |      521 |     3.96 |    $30.4 |        0 |     109
+A1-Big     |     435 |     891 |   94.9% |     1160 |     3.09 |    $32.2 |        1 |      44
+A1-Boss    |     600 |     846 |   95.0% |     1923 |     3.02 |    $33.7 |        1 |      41
+A2-Small   |     600 |     804 |   98.4% |     2294 |     2.39 |    $35.8 |        0 |      13
+A2-Big     |     870 |     791 |   97.6% |     2750 |     2.74 |    $43.4 |        0 |      19
+A2-Boss    |    1200 |     772 |   98.1% |     3375 |     2.72 |    $54.4 |        0 |      15
+A3-Small   |    1200 |     757 |   98.8% |     3490 |     2.65 |    $64.0 |        0 |       9
+A3-Big     |    1740 |     748 |   98.3% |     4367 |     2.86 |    $76.7 |        1 |      12
+A3-Boss    |    2400 |     735 |   94.4% |     5198 |     3.27 |    $91.4 |        0 |      41
+A4-Small   |    2400 |     694 |   98.7% |     5561 |     3.15 |   $104.8 |        0 |       9
+A4-Big     |    3480 |     685 |   97.2% |     6797 |     3.38 |   $120.4 |        1 |      18
+A4-Boss    |    4800 |     666 |   93.1% |     7904 |     4.35 |   $145.9 |        5 |      41
+A5-Small   |    4500 |     620 |   95.8% |     8066 |     3.99 |   $169.3 |        6 |      20
+A5-Big     |    6525 |     594 |   89.9% |     9788 |     4.96 |   $194.3 |        7 |      53
+A5-Boss    |    9000 |     534 |   79.2% |    11768 |     5.80 |   $222.3 |       26 |      85
+A6-Small   |    8500 |     423 |   88.7% |    11984 |     5.22 |   $248.8 |        8 |      40
+A6-Big     |   12325 |     375 |   73.1% |    14734 |     6.23 |   $278.8 |       29 |      72
+A6-Boss    |   17000 |     274 |   64.6% |    19170 |     6.66 |   $311.0 |       42 |      55
+A7-Small   |   15000 |     177 |   70.1% |    17622 |     6.50 |   $335.6 |       17 |      36
+A7-Big     |   21750 |     124 |   64.5% |    22599 |     6.77 |   $369.9 |       18 |      26
+A7-Boss    |   30000 |      80 |   42.5% |    26130 |     7.14 |   $384.7 |       14 |      32
+A8-Small   |   25000 |      34 |   67.6% |    29059 |     6.56 |   $407.3 |        4 |       7
+A8-Big     |   36250 |      23 |   56.5% |    36822 |     7.70 |   $423.5 |        4 |       6
+A8-Boss    |   50000 |      13 |   38.5% |    43301 |     8.23 |   $509.0 |        3 |       5
+--------------------------------------------------------------------------------
+JOKER PERFORMANCE LEADERBOARD (Sorted by End-of-Run Win Rate)
+Joker Name         | Rarity   | Cost | Offered | Bought | EndHeld |  RunWin% | AvgAnte | Avg Scaling Bonus 
+-----------------------------------------------------------------------------------------------------------
+Daredevil          | UNCOMMON |   $6 |     634 |    206 |     203 |     2.5% |    5.65 | +6.3 Mult         
+Compound Edge      | UNCOMMON |   $6 |     588 |    202 |     172 |     1.7% |    5.56 | -                 
+Chip Stacker       | UNCOMMON |   $6 |     633 |    234 |     233 |     1.3% |    5.22 | +38.2 Chips       
+Bust Cushion       | UNCOMMON |   $6 |     600 |    225 |     190 |     1.1% |    5.50 | -                 
+Club Sandwich      | COMMON   |   $5 |     694 |    252 |     119 |     0.8% |    5.04 | -                 
+Monochrome         | UNCOMMON |   $6 |     512 |    487 |     487 |     0.8% |    5.48 | -                 
+BJ Tycoon          | RARE     |   $8 |     386 |    371 |     371 |     0.8% |    5.61 | -                 
+VIP High Roller    | COMMON   |   $5 |     668 |    242 |     137 |     0.7% |    5.07 | -                 
+Spade Slicer       | COMMON   |   $5 |     633 |    262 |     137 |     0.7% |    5.20 | -                 
+Diamond Cutter     | COMMON   |   $5 |     701 |    259 |     143 |     0.7% |    4.59 | -                 
+Card Sharp         | RARE     |   $8 |     366 |    345 |     345 |     0.6% |    5.86 | -                 
+The Shark          | RARE     |   $8 |     382 |    361 |     361 |     0.6% |    5.77 | -                 
+Deja Vu            | RARE     |   $8 |     382 |    323 |     319 |     0.3% |    5.53 | -                 
+Double or Nothing  | RARE     |   $8 |     416 |    351 |     351 |     0.3% |    5.41 | -                 
+Card Counter       | COMMON   |   $4 |     816 |    261 |      52 |     0.0% |    3.48 | -                 
+Ace Up Sleeve      | COMMON   |   $5 |     706 |    253 |     145 |     0.0% |    4.65 | -                 
+Sweet Sixteen      | UNCOMMON |   $5 |     635 |    206 |     117 |     0.0% |    4.81 | -                 
+Lucky Sevens       | COMMON   |   $5 |     833 |    177 |      18 |     0.0% |    1.78 | -                 
+Hit Me Baby        | COMMON   |   $5 |     819 |    150 |      11 |     0.0% |    2.18 | -                 
+Gold Parachute     | COMMON   |   $4 |     875 |    126 |       9 |     0.0% |    1.56 | -                 
+Push It Good       | UNCOMMON |   $5 |     613 |    194 |     102 |     0.0% |    4.81 | -                 
+Safety Net         | UNCOMMON |   $5 |     777 |    123 |       3 |     0.0% |    1.33 | -                 
+Even Steven        | COMMON   |   $4 |     849 |    158 |       7 |     0.0% |    1.29 | -                 
+Red Velvet         | COMMON   |   $5 |     812 |    150 |      10 |     0.0% |    1.70 | -                 
+Dark Knight        | COMMON   |   $5 |     787 |    133 |       5 |     0.0% |    1.80 | -                 
+Minimalist         | RARE     |   $7 |     446 |    176 |     166 |     0.0% |    5.24 | -                 
+Hot Hand           | UNCOMMON |   $6 |     619 |    241 |     217 |     0.0% |    5.09 | +0.6 Mult         
+Snake Eyes         | UNCOMMON |   $6 |     627 |    215 |     209 |     0.0% |    4.94 | -                 
+Pocket Rockets     | UNCOMMON |   $6 |     805 |    107 |      18 |     0.0% |    1.67 | -                 
+Trips Ahoy         | COMMON   |   $5 |     802 |    153 |      17 |     0.0% |    1.53 | -                 
+Crimson Heart      | COMMON   |   $5 |     693 |    270 |     141 |     0.0% |    4.62 | -                 
+Odd Ball           | COMMON   |   $4 |     824 |    136 |       8 |     0.0% |    1.63 | -                 
+The Grinder        | COMMON   |   $4 |     861 |    154 |      15 |     0.0% |    1.53 | -                 
+Slow & Steady      | COMMON   |   $5 |     691 |    265 |     130 |     0.0% |    4.88 | -                 
+Loan Shark         | COMMON   |   $4 |     845 |    131 |      11 |     0.0% |    1.18 | -                 
+--------------------------------------------------------------------------------
+VOUCHER PERFORMANCE
+  Extra Cushion        : Offered   764 | Bought   762 | Run Win Rate when bought: 0.7%
+  Table Leverage       : Offered   770 | Bought   767 | Run Win Rate when bought: 0.7%
+  VIP Lounge Pass      : Offered   778 | Bought   770 | Run Win Rate when bought: 0.6%
+  High Stakes Table    : Offered   765 | Bought   764 | Run Win Rate when bought: 0.7%
+  High Roller Credit   : Offered   787 | Bought   786 | Run Win Rate when bought: 0.6%
+  Precision Edge       : Offered   776 | Bought   774 | Run Win Rate when bought: 0.6%
+  Clearance Rack       : Offered   780 | Bought   780 | Run Win Rate when bought: 0.6%
+  Liquid Assets        : Offered   783 | Bought   779 | Run Win Rate when bought: 0.6%
+  Card Sharp License   : Offered   759 | Bought   756 | Run Win Rate when bought: 0.7%
+  Overstock Shelves    : Offered   783 | Bought   779 | Run Win Rate when bought: 0.6%
+
+
+================================================================================
+BOT STRATEGY: High-Roller 21 AI (Faces/Aces/Doubles)
+================================================================================
+Runs Simulated        : 1,000 (236 ms)
+Starting Deals/Blind  : 7
+Target Score Scaling  : 100%
+Unused Deal Cash Cap  : $6
+Pushes Refund Deal    : OFF
+Hand Tiers +15%/Ante  : OFF
+--------------------------------------------------------------------------------
+OVERALL KPI SUMMARY
+  Ante 8 Victory Rate : 0.00% (0 / 1000)
+  Avg Final Ante      : 4.00
+  Total Hands Played  : 42,547 (Avg 42.5 hands/run)
+  BJ Hand Win Rate    : 45.12%
+  Cause of Death      : 17.5% Scaling Wall (175) | 82.5% Cold Shoe (825)
+--------------------------------------------------------------------------------
+HAND OUTCOME BREAKDOWN (% of 42,547 total hands)
+  Natural Blackjack   :     2570 (6.04%)
+  5-Card Charlie      :      495 (1.16%)
+  Exact 21 (3+ cards) :     2136 (5.02%)
+  Standard Win        :    13770 (32.36%)
+  Push (Tie)          :     3523 (8.28%)
+  Dealer Win (Loss)   :    12512 (29.41%)
+  Player Bust         :     7541 (17.72%)
+  Double Down Win %   : 54.5% (2012/3693)
+  Bust Cushion Saves  : 232 hands (22 converted to 21)
+  Safety Net Saves    : 386 busts scored
+--------------------------------------------------------------------------------
+ANTE SURVIVAL FUNNEL (% of runs clearing all 3 Blinds of Ante)
+  Ante 1 Cleared      :  78.20% (782 / 1000)
+  Ante 2 Cleared      :  72.80% (728 / 1000)
+  Ante 3 Cleared      :  63.90% (639 / 1000)
+  Ante 4 Cleared      :  51.40% (514 / 1000)
+  Ante 5 Cleared      :  25.70% (257 / 1000)
+  Ante 6 Cleared      :   7.00% (70 / 1000)
+  Ante 7 Cleared      :   0.70% (7 / 1000)
+  Ante 8 Cleared      :   0.00% (0 / 1000)
+--------------------------------------------------------------------------------
+BLIND-BY-BLIND PROGRESSION & DEATH DIAGNOSTICS (24 BLINDS)
+Blind      |  Target | Entered |  Clear% | AvgScore | AvgDeals | AvgCash$ | ScaleDth | ShoeDth
+------------------------------------------------------------------------------------------------
+A1-Small   |     300 |    1000 |   89.6% |      527 |     3.88 |    $28.9 |        0 |     104
+A1-Big     |     435 |     896 |   92.6% |     1136 |     3.26 |    $29.9 |        0 |      66
+A1-Boss    |     600 |     830 |   94.2% |     2008 |     2.97 |    $31.0 |        2 |      46
+A2-Small   |     600 |     782 |   98.7% |     2446 |     2.36 |    $33.3 |        0 |      10
+A2-Big     |     870 |     772 |   98.2% |     2870 |     2.67 |    $41.7 |        0 |      14
+A2-Boss    |    1200 |     758 |   96.0% |     3397 |     2.99 |    $53.2 |        0 |      30
+A3-Small   |    1200 |     728 |   97.8% |     3390 |     2.77 |    $63.0 |        1 |      15
+A3-Big     |    1740 |     712 |   96.6% |     4292 |     3.35 |    $75.6 |        1 |      23
+A3-Boss    |    2400 |     688 |   92.9% |     4715 |     3.59 |    $89.2 |        2 |      47
+A4-Small   |    2400 |     639 |   96.9% |     5186 |     3.67 |   $102.9 |        1 |      19
+A4-Big     |    3480 |     619 |   92.7% |     6408 |     4.18 |   $118.9 |        3 |      42
+A4-Boss    |    4800 |     574 |   89.5% |     7702 |     4.89 |   $145.3 |       11 |      49
+A5-Small   |    4500 |     514 |   90.5% |     7695 |     4.81 |   $169.0 |        5 |      44
+A5-Big     |    6525 |     465 |   82.8% |     9347 |     5.68 |   $195.5 |       16 |      64
+A5-Boss    |    9000 |     385 |   66.8% |    11013 |     6.44 |   $219.1 |       35 |      93
+A6-Small   |    8500 |     257 |   77.0% |    10711 |     5.84 |   $243.1 |       19 |      40
+A6-Big     |   12325 |     198 |   66.2% |    14019 |     6.70 |   $273.3 |       21 |      46
+A6-Boss    |   17000 |     131 |   53.4% |    16530 |     7.56 |   $296.3 |       29 |      32
+A7-Small   |   15000 |      70 |   58.6% |    16848 |     6.94 |   $311.2 |       12 |      17
+A7-Big     |   21750 |      41 |   63.4% |    21451 |     7.61 |   $334.5 |        9 |       6
+A7-Boss    |   30000 |      26 |   26.9% |    20904 |     7.46 |   $348.3 |        5 |      14
+A8-Small   |   25000 |       7 |   28.6% |    20048 |     8.71 |   $346.0 |        1 |       4
+A8-Big     |   36250 |       2 |  100.0% |    42172 |     8.00 |   $366.5 |        0 |       0
+A8-Boss    |   50000 |       2 |    0.0% |    40829 |     9.00 |        - |        2 |       0
+--------------------------------------------------------------------------------
+JOKER PERFORMANCE LEADERBOARD (Sorted by End-of-Run Win Rate)
+Joker Name         | Rarity   | Cost | Offered | Bought | EndHeld |  RunWin% | AvgAnte | Avg Scaling Bonus 
+-----------------------------------------------------------------------------------------------------------
+Bust Cushion       | UNCOMMON |   $6 |     552 |    135 |      36 |     0.0% |    3.56 | -                 
+Daredevil          | UNCOMMON |   $6 |     604 |    118 |      62 |     0.0% |    4.48 | +6.3 Mult         
+Chip Stacker       | UNCOMMON |   $6 |     449 |    357 |     357 |     0.0% |    4.76 | +28.0 Chips       
+Card Counter       | COMMON   |   $4 |     747 |    152 |      17 |     0.0% |    1.53 | -                 
+VIP High Roller    | COMMON   |   $5 |     492 |    415 |     304 |     0.0% |    5.08 | -                 
+Ace Up Sleeve      | COMMON   |   $5 |     517 |    419 |     326 |     0.0% |    4.76 | -                 
+Sweet Sixteen      | UNCOMMON |   $5 |     607 |    125 |      35 |     0.0% |    3.06 | -                 
+Lucky Sevens       | COMMON   |   $5 |     706 |    157 |      24 |     0.0% |    3.00 | -                 
+Hit Me Baby        | COMMON   |   $5 |     683 |    139 |      32 |     0.0% |    2.97 | -                 
+Gold Parachute     | COMMON   |   $4 |     758 |    141 |      23 |     0.0% |    1.52 | -                 
+Push It Good       | UNCOMMON |   $5 |     596 |    139 |      31 |     0.0% |    3.26 | -                 
+BJ Tycoon          | RARE     |   $8 |     320 |    308 |     308 |     0.0% |    5.01 | -                 
+The Shark          | RARE     |   $8 |     317 |    301 |     301 |     0.0% |    5.18 | -                 
+Safety Net         | UNCOMMON |   $5 |     667 |    136 |      23 |     0.0% |    2.74 | -                 
+Even Steven        | COMMON   |   $4 |     697 |    137 |       9 |     0.0% |    2.00 | -                 
+Red Velvet         | COMMON   |   $5 |     722 |    160 |      29 |     0.0% |    3.41 | -                 
+Dark Knight        | COMMON   |   $5 |     679 |    146 |      19 |     0.0% |    3.16 | -                 
+Compound Edge      | UNCOMMON |   $6 |     556 |    128 |      37 |     0.0% |    4.00 | -                 
+Minimalist         | RARE     |   $7 |     333 |    318 |     318 |     0.0% |    5.17 | -                 
+Hot Hand           | UNCOMMON |   $6 |     588 |    134 |      41 |     0.0% |    3.54 | +0.5 Mult         
+Snake Eyes         | UNCOMMON |   $6 |     477 |    368 |     346 |     0.0% |    4.72 | -                 
+Pocket Rockets     | UNCOMMON |   $6 |     494 |    399 |     382 |     0.0% |    4.76 | -                 
+Trips Ahoy         | COMMON   |   $5 |     539 |    442 |     357 |     0.0% |    4.76 | -                 
+Spade Slicer       | COMMON   |   $5 |     644 |    156 |      28 |     0.0% |    2.93 | -                 
+Crimson Heart      | COMMON   |   $5 |     705 |    139 |      22 |     0.0% |    3.55 | -                 
+Diamond Cutter     | COMMON   |   $5 |     676 |    146 |      35 |     0.0% |    2.94 | -                 
+Club Sandwich      | COMMON   |   $5 |     681 |    159 |      28 |     0.0% |    2.68 | -                 
+Monochrome         | UNCOMMON |   $6 |     482 |    379 |     363 |     0.0% |    4.76 | -                 
+Odd Ball           | COMMON   |   $4 |     720 |    146 |      13 |     0.0% |    1.92 | -                 
+The Grinder        | COMMON   |   $4 |     744 |    128 |      18 |     0.0% |    1.72 | -                 
+Double or Nothing  | RARE     |   $8 |     343 |    332 |     332 |     0.0% |    4.99 | -                 
+Slow & Steady      | COMMON   |   $5 |     698 |    156 |      23 |     0.0% |    2.61 | -                 
+Card Sharp         | RARE     |   $8 |     345 |    241 |     230 |     0.0% |    5.07 | -                 
+Loan Shark         | COMMON   |   $4 |     713 |    137 |      21 |     0.0% |    2.19 | -                 
+Deja Vu            | RARE     |   $8 |     341 |    330 |     330 |     0.0% |    4.87 | -                 
+--------------------------------------------------------------------------------
+VOUCHER PERFORMANCE
+  Extra Cushion        : Offered   733 | Bought   732 | Run Win Rate when bought: 0.0%
+  Table Leverage       : Offered   723 | Bought   721 | Run Win Rate when bought: 0.0%
+  VIP Lounge Pass      : Offered   742 | Bought   738 | Run Win Rate when bought: 0.0%
+  High Stakes Table    : Offered   724 | Bought   724 | Run Win Rate when bought: 0.0%
+  High Roller Credit   : Offered   748 | Bought   746 | Run Win Rate when bought: 0.0%
+  Precision Edge       : Offered   771 | Bought   768 | Run Win Rate when bought: 0.0%
+  Clearance Rack       : Offered   750 | Bought   747 | Run Win Rate when bought: 0.0%
+  Liquid Assets        : Offered   752 | Bought   749 | Run Win Rate when bought: 0.0%
+  Card Sharp License   : Offered   731 | Bought   727 | Run Win Rate when bought: 0.0%
+  Overstock Shelves    : Offered   768 | Bought   766 | Run Win Rate when bought: 0.0%
+
+
+================================================================================
+BOT STRATEGY: Low-Card Charlie AI (Hits Low Cards)
+================================================================================
+Runs Simulated        : 1,000 (321 ms)
+Starting Deals/Blind  : 7
+Target Score Scaling  : 100%
+Unused Deal Cash Cap  : $6
+Pushes Refund Deal    : OFF
+Hand Tiers +15%/Ante  : OFF
+--------------------------------------------------------------------------------
+OVERALL KPI SUMMARY
+  Ante 8 Victory Rate : 0.90% (9 / 1000)
+  Avg Final Ante      : 4.49
+  Total Hands Played  : 47,790 (Avg 47.8 hands/run)
+  BJ Hand Win Rate    : 46.59%
+  Cause of Death      : 20.9% Scaling Wall (207) | 79.1% Cold Shoe (784)
+--------------------------------------------------------------------------------
+HAND OUTCOME BREAKDOWN (% of 47,790 total hands)
+  Natural Blackjack   :     2406 (5.03%)
+  5-Card Charlie      :     1176 (2.46%)
+  Exact 21 (3+ cards) :     3713 (7.77%)
+  Standard Win        :    14852 (31.08%)
+  Push (Tie)          :     3873 (8.10%)
+  Dealer Win (Loss)   :    13344 (27.92%)
+  Player Bust         :     8426 (17.63%)
+  Double Down Win %   : 62.1% (403/649)
+  Bust Cushion Saves  : 1214 hands (22 converted to 21)
+  Safety Net Saves    : 2174 busts scored
+--------------------------------------------------------------------------------
+ANTE SURVIVAL FUNNEL (% of runs clearing all 3 Blinds of Ante)
+  Ante 1 Cleared      :  83.10% (831 / 1000)
+  Ante 2 Cleared      :  78.30% (783 / 1000)
+  Ante 3 Cleared      :  70.20% (702 / 1000)
+  Ante 4 Cleared      :  61.30% (613 / 1000)
+  Ante 5 Cleared      :  37.40% (374 / 1000)
+  Ante 6 Cleared      :  15.00% (150 / 1000)
+  Ante 7 Cleared      :   3.40% (34 / 1000)
+  Ante 8 Cleared      :   0.90% (9 / 1000)
+--------------------------------------------------------------------------------
+BLIND-BY-BLIND PROGRESSION & DEATH DIAGNOSTICS (24 BLINDS)
+Blind      |  Target | Entered |  Clear% | AvgScore | AvgDeals | AvgCash$ | ScaleDth | ShoeDth
+------------------------------------------------------------------------------------------------
+A1-Small   |     300 |    1000 |   91.7% |      582 |     3.67 |    $29.0 |        0 |      83
+A1-Big     |     435 |     917 |   95.6% |     1133 |     3.08 |    $30.4 |        0 |      40
+A1-Boss    |     600 |     877 |   94.8% |     1929 |     2.94 |    $31.6 |        3 |      43
+A2-Small   |     600 |     831 |   98.4% |     2398 |     2.38 |    $33.6 |        0 |      13
+A2-Big     |     870 |     818 |   98.3% |     2722 |     2.70 |    $42.0 |        0 |      14
+A2-Boss    |    1200 |     804 |   97.4% |     3273 |     2.84 |    $54.0 |        0 |      21
+A3-Small   |    1200 |     783 |   97.8% |     3332 |     2.70 |    $64.6 |        0 |      17
+A3-Big     |    1740 |     766 |   96.2% |     4169 |     3.15 |    $78.6 |        2 |      27
+A3-Boss    |    2400 |     737 |   95.3% |     5090 |     3.38 |    $94.4 |        0 |      35
+A4-Small   |    2400 |     702 |   97.4% |     5137 |     3.28 |   $109.3 |        3 |      15
+A4-Big     |    3480 |     684 |   95.8% |     6525 |     3.80 |   $126.9 |        1 |      28
+A4-Boss    |    4800 |     655 |   93.6% |     7798 |     4.52 |   $154.3 |        3 |      39
+A5-Small   |    4500 |     613 |   94.3% |     7775 |     4.27 |   $179.7 |        6 |      29
+A5-Big     |    6525 |     578 |   89.1% |     9484 |     5.06 |   $206.8 |       13 |      50
+A5-Boss    |    9000 |     515 |   72.6% |    11166 |     6.38 |   $233.4 |       35 |     106
+A6-Small   |    8500 |     374 |   85.6% |    11530 |     5.21 |   $260.2 |       11 |      43
+A6-Big     |   12325 |     320 |   74.7% |    14496 |     6.37 |   $292.5 |       32 |      49
+A6-Boss    |   17000 |     239 |   62.8% |    18173 |     7.10 |   $318.6 |       42 |      47
+A7-Small   |   15000 |     150 |   75.3% |    18122 |     6.43 |   $344.7 |       12 |      25
+A7-Big     |   21750 |     113 |   67.3% |    22558 |     7.04 |   $372.9 |       15 |      22
+A7-Boss    |   30000 |      76 |   44.7% |    25819 |     7.30 |   $424.8 |       17 |      25
+A8-Small   |   25000 |      34 |   67.6% |    27372 |     6.91 |   $461.8 |        3 |       8
+A8-Big     |   36250 |      23 |   73.9% |    37883 |     7.17 |   $502.3 |        3 |       3
+A8-Boss    |   50000 |      17 |   52.9% |    47277 |     7.82 |   $542.8 |        6 |       2
+--------------------------------------------------------------------------------
+JOKER PERFORMANCE LEADERBOARD (Sorted by End-of-Run Win Rate)
+Joker Name         | Rarity   | Cost | Offered | Bought | EndHeld |  RunWin% | AvgAnte | Avg Scaling Bonus 
+-----------------------------------------------------------------------------------------------------------
+Daredevil          | UNCOMMON |   $6 |     529 |    313 |     313 |     2.6% |    5.64 | +9.0 Mult         
+Bust Cushion       | UNCOMMON |   $6 |     550 |    314 |     314 |     2.5% |    5.55 | -                 
+Card Sharp         | RARE     |   $8 |     353 |    290 |     290 |     2.1% |    5.58 | -                 
+BJ Tycoon          | RARE     |   $8 |     369 |    278 |     278 |     1.8% |    5.38 | -                 
+The Shark          | RARE     |   $8 |     375 |    290 |     289 |     1.7% |    5.45 | -                 
+Minimalist         | RARE     |   $7 |     390 |    175 |     174 |     1.7% |    5.14 | -                 
+Chip Stacker       | UNCOMMON |   $6 |     719 |    150 |      65 |     1.5% |    4.09 | +46.3 Chips       
+Deja Vu            | RARE     |   $8 |     388 |    295 |     295 |     1.4% |    5.28 | -                 
+Snake Eyes         | UNCOMMON |   $6 |     501 |    481 |     481 |     1.2% |    5.37 | -                 
+Monochrome         | UNCOMMON |   $6 |     572 |    282 |     279 |     0.7% |    5.02 | -                 
+Odd Ball           | COMMON   |   $4 |     632 |    339 |     159 |     0.6% |    4.97 | -                 
+Card Counter       | COMMON   |   $4 |     660 |    333 |     165 |     0.6% |    4.43 | -                 
+The Grinder        | COMMON   |   $4 |     704 |    340 |     188 |     0.5% |    4.43 | -                 
+Hit Me Baby        | COMMON   |   $5 |     606 |    316 |     294 |     0.3% |    5.38 | -                 
+Double or Nothing  | RARE     |   $8 |     402 |    310 |     310 |     0.3% |    5.27 | -                 
+Trips Ahoy         | COMMON   |   $5 |     665 |    350 |     340 |     0.3% |    4.89 | -                 
+VIP High Roller    | COMMON   |   $5 |     813 |    150 |      10 |     0.0% |    1.50 | -                 
+Ace Up Sleeve      | COMMON   |   $5 |     869 |    155 |      15 |     0.0% |    1.67 | -                 
+Sweet Sixteen      | UNCOMMON |   $5 |     566 |    263 |     258 |     0.0% |    5.20 | -                 
+Lucky Sevens       | COMMON   |   $5 |     813 |    148 |      10 |     0.0% |    1.80 | -                 
+Gold Parachute     | COMMON   |   $4 |     830 |    132 |       7 |     0.0% |    1.14 | -                 
+Push It Good       | UNCOMMON |   $5 |     727 |    127 |      10 |     0.0% |    1.60 | -                 
+Safety Net         | UNCOMMON |   $5 |     592 |    291 |     273 |     0.0% |    5.13 | -                 
+Even Steven        | COMMON   |   $4 |     668 |    346 |     148 |     0.0% |    4.97 | -                 
+Red Velvet         | COMMON   |   $5 |     824 |    158 |      11 |     0.0% |    1.45 | -                 
+Dark Knight        | COMMON   |   $5 |     821 |    149 |       7 |     0.0% |    2.43 | -                 
+Compound Edge      | UNCOMMON |   $6 |     774 |    154 |      22 |     0.0% |    1.50 | -                 
+Hot Hand           | UNCOMMON |   $6 |     722 |    136 |      20 |     0.0% |    2.30 | +0.2 Mult         
+Pocket Rockets     | UNCOMMON |   $6 |     784 |    134 |      15 |     0.0% |    2.00 | -                 
+Spade Slicer       | COMMON   |   $5 |     850 |    148 |       8 |     0.0% |    1.75 | -                 
+Crimson Heart      | COMMON   |   $5 |     832 |    151 |      15 |     0.0% |    1.67 | -                 
+Diamond Cutter     | COMMON   |   $5 |     841 |    152 |      16 |     0.0% |    1.50 | -                 
+Club Sandwich      | COMMON   |   $5 |     820 |    152 |       8 |     0.0% |    2.00 | -                 
+Slow & Steady      | COMMON   |   $5 |     868 |    147 |      11 |     0.0% |    1.45 | -                 
+Loan Shark         | COMMON   |   $4 |     841 |    140 |      16 |     0.0% |    1.19 | -                 
+--------------------------------------------------------------------------------
+VOUCHER PERFORMANCE
+  Extra Cushion        : Offered   781 | Bought   780 | Run Win Rate when bought: 1.2%
+  Table Leverage       : Offered   794 | Bought   791 | Run Win Rate when bought: 1.1%
+  VIP Lounge Pass      : Offered   783 | Bought   780 | Run Win Rate when bought: 1.2%
+  High Stakes Table    : Offered   795 | Bought   795 | Run Win Rate when bought: 1.1%
+  High Roller Credit   : Offered   798 | Bought   796 | Run Win Rate when bought: 1.1%
+  Precision Edge       : Offered   790 | Bought   789 | Run Win Rate when bought: 1.1%
+  Clearance Rack       : Offered   799 | Bought   799 | Run Win Rate when bought: 1.1%
+  Liquid Assets        : Offered   801 | Bought   801 | Run Win Rate when bought: 1.1%
+  Card Sharp License   : Offered   773 | Bought   768 | Run Win Rate when bought: 1.2%
+  Overstock Shelves    : Offered   813 | Bought   811 | Run Win Rate when bought: 1.1%
+
+
+================================================================================
+BOT STRATEGY: Strict Casino Basic Strategy AI (With Jokers)
+================================================================================
+Runs Simulated        : 1,000 (213 ms)
+Starting Deals/Blind  : 7
+Target Score Scaling  : 100%
+Unused Deal Cash Cap  : $6
+Pushes Refund Deal    : OFF
+Hand Tiers +15%/Ante  : OFF
+--------------------------------------------------------------------------------
+OVERALL KPI SUMMARY
+  Ante 8 Victory Rate : 0.00% (0 / 1000)
+  Avg Final Ante      : 4.37
+  Total Hands Played  : 46,029 (Avg 46.0 hands/run)
+  BJ Hand Win Rate    : 45.97%
+  Cause of Death      : 21.1% Scaling Wall (211) | 78.9% Cold Shoe (789)
+--------------------------------------------------------------------------------
+HAND OUTCOME BREAKDOWN (% of 46,029 total hands)
+  Natural Blackjack   :     2788 (6.06%)
+  5-Card Charlie      :      569 (1.24%)
+  Exact 21 (3+ cards) :     2394 (5.20%)
+  Standard Win        :    15082 (32.77%)
+  Push (Tie)          :     3810 (8.28%)
+  Dealer Win (Loss)   :    13145 (28.56%)
+  Player Bust         :     8241 (17.90%)
+  Double Down Win %   : 57.8% (1431/2475)
+  Bust Cushion Saves  : 447 hands (22 converted to 21)
+  Safety Net Saves    : 797 busts scored
+--------------------------------------------------------------------------------
+ANTE SURVIVAL FUNNEL (% of runs clearing all 3 Blinds of Ante)
+  Ante 1 Cleared      :  83.50% (835 / 1000)
+  Ante 2 Cleared      :  78.50% (785 / 1000)
+  Ante 3 Cleared      :  70.70% (707 / 1000)
+  Ante 4 Cleared      :  59.70% (597 / 1000)
+  Ante 5 Cleared      :  34.40% (344 / 1000)
+  Ante 6 Cleared      :   9.40% (94 / 1000)
+  Ante 7 Cleared      :   0.90% (9 / 1000)
+  Ante 8 Cleared      :   0.00% (0 / 1000)
+--------------------------------------------------------------------------------
+BLIND-BY-BLIND PROGRESSION & DEATH DIAGNOSTICS (24 BLINDS)
+Blind      |  Target | Entered |  Clear% | AvgScore | AvgDeals | AvgCash$ | ScaleDth | ShoeDth
+------------------------------------------------------------------------------------------------
+A1-Small   |     300 |    1000 |   91.1% |      548 |     3.85 |    $29.9 |        0 |      89
+A1-Big     |     435 |     911 |   96.0% |     1136 |     3.01 |    $31.0 |        1 |      35
+A1-Boss    |     600 |     875 |   95.4% |     1964 |     2.96 |    $32.1 |        2 |      38
+A2-Small   |     600 |     835 |   98.9% |     2448 |     2.35 |    $34.4 |        0 |       9
+A2-Big     |     870 |     826 |   97.6% |     2866 |     2.53 |    $43.8 |        0 |      20
+A2-Boss    |    1200 |     806 |   97.4% |     3517 |     2.98 |    $56.2 |        1 |      20
+A3-Small   |    1200 |     785 |   97.8% |     3491 |     2.79 |    $66.9 |        1 |      16
+A3-Big     |    1740 |     768 |   96.0% |     4080 |     3.17 |    $80.6 |        2 |      29
+A3-Boss    |    2400 |     737 |   95.9% |     5146 |     3.30 |    $95.2 |        1 |      29
+A4-Small   |    2400 |     707 |   95.6% |     5186 |     3.42 |   $108.6 |        1 |      30
+A4-Big     |    3480 |     676 |   97.0% |     6860 |     3.89 |   $125.0 |        0 |      20
+A4-Boss    |    4800 |     656 |   91.0% |     7748 |     4.58 |   $151.5 |        3 |      56
+A5-Small   |    4500 |     597 |   93.6% |     7704 |     4.42 |   $175.9 |        1 |      37
+A5-Big     |    6525 |     559 |   83.2% |     9569 |     5.42 |   $201.5 |       20 |      74
+A5-Boss    |    9000 |     465 |   74.0% |    11314 |     6.29 |   $225.4 |       45 |      76
+A6-Small   |    8500 |     344 |   82.3% |    11670 |     5.80 |   $252.5 |       14 |      47
+A6-Big     |   12325 |     283 |   64.3% |    13415 |     6.67 |   $276.7 |       36 |      65
+A6-Boss    |   17000 |     182 |   51.6% |    16352 |     7.21 |   $299.5 |       46 |      42
+A7-Small   |   15000 |      94 |   74.5% |    17508 |     6.35 |   $326.2 |        4 |      20
+A7-Big     |   21750 |      70 |   50.0% |    20255 |     7.64 |   $357.1 |       20 |      15
+A7-Boss    |   30000 |      35 |   25.7% |    21343 |     7.11 |   $393.0 |        9 |      17
+A8-Small   |   25000 |       9 |   22.2% |    23148 |     8.22 |   $449.5 |        3 |       4
+A8-Big     |   36250 |       2 |  100.0% |    49221 |     5.00 |   $474.0 |        0 |       0
+A8-Boss    |   50000 |       2 |    0.0% |    18177 |     9.00 |        - |        1 |       1
+--------------------------------------------------------------------------------
+JOKER PERFORMANCE LEADERBOARD (Sorted by End-of-Run Win Rate)
+Joker Name         | Rarity   | Cost | Offered | Bought | EndHeld |  RunWin% | AvgAnte | Avg Scaling Bonus 
+-----------------------------------------------------------------------------------------------------------
+Bust Cushion       | UNCOMMON |   $6 |     655 |    160 |     115 |     0.0% |    4.67 | -                 
+Daredevil          | UNCOMMON |   $6 |     550 |    152 |     134 |     0.0% |    5.36 | +6.2 Mult         
+Chip Stacker       | UNCOMMON |   $6 |     639 |    154 |     140 |     0.0% |    4.61 | +29.9 Chips       
+Card Counter       | COMMON   |   $4 |     753 |    152 |      31 |     0.0% |    3.10 | -                 
+VIP High Roller    | COMMON   |   $5 |     732 |    188 |      69 |     0.0% |    4.65 | -                 
+Ace Up Sleeve      | COMMON   |   $5 |     754 |    189 |      97 |     0.0% |    4.26 | -                 
+Sweet Sixteen      | UNCOMMON |   $5 |     678 |    144 |      75 |     0.0% |    4.00 | -                 
+Lucky Sevens       | COMMON   |   $5 |     756 |    166 |      63 |     0.0% |    4.48 | -                 
+Hit Me Baby        | COMMON   |   $5 |     705 |    162 |      77 |     0.0% |    4.52 | -                 
+Gold Parachute     | COMMON   |   $4 |     771 |    134 |      28 |     0.0% |    3.04 | -                 
+Push It Good       | UNCOMMON |   $5 |     623 |    120 |      54 |     0.0% |    4.50 | -                 
+BJ Tycoon          | RARE     |   $8 |     382 |    356 |     356 |     0.0% |    5.27 | -                 
+The Shark          | RARE     |   $8 |     371 |    346 |     346 |     0.0% |    5.36 | -                 
+Safety Net         | UNCOMMON |   $5 |     686 |    143 |      66 |     0.0% |    4.39 | -                 
+Even Steven        | COMMON   |   $4 |     765 |    124 |      15 |     0.0% |    3.93 | -                 
+Red Velvet         | COMMON   |   $5 |     738 |    170 |      79 |     0.0% |    4.20 | -                 
+Dark Knight        | COMMON   |   $5 |     748 |    171 |      73 |     0.0% |    4.77 | -                 
+Compound Edge      | UNCOMMON |   $6 |     636 |    158 |      95 |     0.0% |    4.89 | -                 
+Minimalist         | RARE     |   $7 |     370 |    349 |     349 |     0.0% |    5.37 | -                 
+Hot Hand           | UNCOMMON |   $6 |     663 |    153 |     118 |     0.0% |    4.50 | +0.9 Mult         
+Snake Eyes         | UNCOMMON |   $6 |     520 |    499 |     499 |     0.0% |    5.08 | -                 
+Pocket Rockets     | UNCOMMON |   $6 |     641 |    171 |     148 |     0.0% |    4.38 | -                 
+Trips Ahoy         | COMMON   |   $5 |     716 |    147 |      70 |     0.0% |    3.97 | -                 
+Spade Slicer       | COMMON   |   $5 |     747 |    169 |      67 |     0.0% |    4.42 | -                 
+Crimson Heart      | COMMON   |   $5 |     683 |    149 |      70 |     0.0% |    4.43 | -                 
+Diamond Cutter     | COMMON   |   $5 |     697 |    175 |      81 |     0.0% |    4.44 | -                 
+Club Sandwich      | COMMON   |   $5 |     733 |    171 |      83 |     0.0% |    4.51 | -                 
+Monochrome         | UNCOMMON |   $6 |     522 |    486 |     486 |     0.0% |    5.15 | -                 
+Odd Ball           | COMMON   |   $4 |     755 |    133 |      18 |     0.0% |    4.28 | -                 
+The Grinder        | COMMON   |   $4 |     780 |    141 |      23 |     0.0% |    3.04 | -                 
+Double or Nothing  | RARE     |   $8 |     382 |    358 |     358 |     0.0% |    5.16 | -                 
+Slow & Steady      | COMMON   |   $5 |     765 |    181 |      91 |     0.0% |    4.47 | -                 
+Card Sharp         | RARE     |   $8 |     367 |    343 |     343 |     0.0% |    5.43 | -                 
+Loan Shark         | COMMON   |   $4 |     774 |    141 |      42 |     0.0% |    3.21 | -                 
+Deja Vu            | RARE     |   $8 |     391 |    370 |     370 |     0.0% |    5.24 | -                 
+--------------------------------------------------------------------------------
+VOUCHER PERFORMANCE
+  Extra Cushion        : Offered   774 | Bought   774 | Run Win Rate when bought: 0.0%
+  Table Leverage       : Offered   777 | Bought   777 | Run Win Rate when bought: 0.0%
+  VIP Lounge Pass      : Offered   800 | Bought   797 | Run Win Rate when bought: 0.0%
+  High Stakes Table    : Offered   793 | Bought   791 | Run Win Rate when bought: 0.0%
+  High Roller Credit   : Offered   795 | Bought   795 | Run Win Rate when bought: 0.0%
+  Precision Edge       : Offered   815 | Bought   814 | Run Win Rate when bought: 0.0%
+  Clearance Rack       : Offered   810 | Bought   808 | Run Win Rate when bought: 0.0%
+  Liquid Assets        : Offered   801 | Bought   800 | Run Win Rate when bought: 0.0%
+  Card Sharp License   : Offered   769 | Bought   767 | Run Win Rate when bought: 0.0%
+  Overstock Shelves    : Offered   801 | Bought   801 | Run Win Rate when bought: 0.0%
+
+
+================================================================================
+BOT STRATEGY: No-Jokers Baseline (Vanilla Basic Strategy)
+================================================================================
+Runs Simulated        : 1,000 (30 ms)
+Starting Deals/Blind  : 7
+Target Score Scaling  : 100%
+Unused Deal Cash Cap  : $6
+Pushes Refund Deal    : OFF
+Hand Tiers +15%/Ante  : OFF
+--------------------------------------------------------------------------------
+OVERALL KPI SUMMARY
+  Ante 8 Victory Rate : 0.00% (0 / 1000)
+  Avg Final Ante      : 1.39
+  Total Hands Played  : 16,342 (Avg 16.3 hands/run)
+  BJ Hand Win Rate    : 44.11%
+  Cause of Death      : 32.9% Scaling Wall (329) | 67.1% Cold Shoe (671)
+--------------------------------------------------------------------------------
+HAND OUTCOME BREAKDOWN (% of 16,342 total hands)
+  Natural Blackjack   :      763 (4.67%)
+  5-Card Charlie      :      214 (1.31%)
+  Exact 21 (3+ cards) :      850 (5.20%)
+  Standard Win        :     5382 (32.93%)
+  Push (Tie)          :     1088 (6.66%)
+  Dealer Win (Loss)   :     5213 (31.90%)
+  Player Bust         :     2832 (17.33%)
+  Double Down Win %   : 57.1% (776/1358)
+  Bust Cushion Saves  : 0 hands (22 converted to 21)
+  Safety Net Saves    : 0 busts scored
+--------------------------------------------------------------------------------
+ANTE SURVIVAL FUNNEL (% of runs clearing all 3 Blinds of Ante)
+  Ante 1 Cleared      :  37.80% (378 / 1000)
+  Ante 2 Cleared      :   1.40% (14 / 1000)
+  Ante 3 Cleared      :   0.00% (0 / 1000)
+  Ante 4 Cleared      :   0.00% (0 / 1000)
+  Ante 5 Cleared      :   0.00% (0 / 1000)
+  Ante 6 Cleared      :   0.00% (0 / 1000)
+  Ante 7 Cleared      :   0.00% (0 / 1000)
+  Ante 8 Cleared      :   0.00% (0 / 1000)
+--------------------------------------------------------------------------------
+BLIND-BY-BLIND PROGRESSION & DEATH DIAGNOSTICS (24 BLINDS)
+Blind      |  Target | Entered |  Clear% | AvgScore | AvgDeals | AvgCash$ | ScaleDth | ShoeDth
+------------------------------------------------------------------------------------------------
+A1-Small   |     300 |    1000 |   87.7% |      487 |     4.24 |    $14.1 |        0 |     123
+A1-Big     |     435 |     877 |   74.7% |      550 |     4.84 |    $24.5 |       45 |     177
+A1-Boss    |     600 |     655 |   57.7% |      620 |     5.60 |    $37.3 |      102 |     175
+A2-Small   |     600 |     378 |   59.8% |      631 |     5.47 |    $48.5 |       59 |      93
+A2-Big     |     870 |     226 |   37.6% |      709 |     6.27 |    $61.2 |       68 |      73
+A2-Boss    |    1200 |      85 |   16.5% |      717 |     6.75 |    $73.9 |       46 |      25
+A3-Small   |    1200 |      14 |   21.4% |      791 |     7.00 |    $83.7 |        6 |       5
+A3-Big     |    1740 |       3 |    0.0% |     1328 |     7.00 |        - |        3 |       0
+--------------------------------------------------------------------------------
+JOKER PERFORMANCE LEADERBOARD (Sorted by End-of-Run Win Rate)
+Joker Name         | Rarity   | Cost | Offered | Bought | EndHeld |  RunWin% | AvgAnte | Avg Scaling Bonus 
+-----------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+VOUCHER PERFORMANCE
+  Extra Cushion        : Offered     0 | Bought     0 | Run Win Rate when bought: 0.0%
+  Table Leverage       : Offered     0 | Bought     0 | Run Win Rate when bought: 0.0%
+  VIP Lounge Pass      : Offered     0 | Bought     0 | Run Win Rate when bought: 0.0%
+  High Stakes Table    : Offered     0 | Bought     0 | Run Win Rate when bought: 0.0%
+  High Roller Credit   : Offered     0 | Bought     0 | Run Win Rate when bought: 0.0%
+  Precision Edge       : Offered     0 | Bought     0 | Run Win Rate when bought: 0.0%
+  Clearance Rack       : Offered     0 | Bought     0 | Run Win Rate when bought: 0.0%
+  Liquid Assets        : Offered     0 | Bought     0 | Run Win Rate when bought: 0.0%
+  Card Sharp License   : Offered     0 | Bought     0 | Run Win Rate when bought: 0.0%
+  Overstock Shelves    : Offered     0 | Bought     0 | Run Win Rate when bought: 0.0%

@@ -332,7 +332,8 @@
       <div class="sim-field">
         <label><span>Bot Playstyle Strategy</span></label>
         <select id="sim-bot">
-          <option value="synergy" selected>Smart Synergy AI (Adapts to Jokers)</option>
+          <option value="expert" selected>Expert Strategy AI (Rerolls, Interest &amp; Target Aware)</option>
+          <option value="synergy">Smart Synergy AI (Adapts to Jokers)</option>
           <option value="highroller">High-Roller 21 AI (Faces/Aces/Doubles)</option>
           <option value="charlie">Low-Card Charlie AI (Hits Low Cards)</option>
           <option value="basic">Strict Casino Basic Strategy AI (With Jokers)</option>
@@ -374,7 +375,7 @@
     <div class="sim-btn-row">
       <button class="btn btn-deal" style="flex:1; min-width:130px; padding:10px;" id="btn-run-sim" onclick="runMonteCarloSimulation()">▶ Run Simulation</button>
       <button class="btn btn-hit" style="flex:1; min-width:140px; padding:10px;" id="btn-export-txt" onclick="downloadLastSimReport()" disabled>💾 Export Last Sim (.TXT)</button>
-      <button class="btn btn-stand" style="flex:1; min-width:160px; padding:10px;" id="btn-suite-txt" onclick="runAllBotsSuiteAndExport()">🚀 Run All 5 Bots & Export (.TXT)</button>
+      <button class="btn btn-stand" style="flex:1; min-width:160px; padding:10px;" id="btn-suite-txt" onclick="runAllBotsSuiteAndExport()">🚀 Run All 6 Bots & Export (.TXT)</button>
       <button class="btn btn-secondary" style="padding:10px;" id="btn-copy-txt" onclick="copyLastSimReport()" disabled>📋 Copy</button>
       <button class="btn btn-double" style="padding:10px;" onclick="applySimConfigToLiveGame()">✓ Apply to Game</button>
     </div>
@@ -382,7 +383,7 @@
     <!-- SIMULATION RESULTS CONTAINER -->
     <div id="sim-results-area" style="display:flex; flex-direction:column; gap:10px;">
       <div style="text-align:center; color:#64748b; font-size:12px; padding:16px;">
-        Click <strong>▶ Run Simulation</strong> (or <strong>🚀 Run All 5 Bots & Export (.TXT)</strong>) to generate telemetry.
+        Click <strong>▶ Run Simulation</strong> (or <strong>🚀 Run All 6 Bots & Export (.TXT)</strong>) to generate telemetry.
       </div>
     </div>
   </div>

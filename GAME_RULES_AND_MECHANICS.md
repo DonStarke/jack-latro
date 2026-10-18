@@ -260,7 +260,7 @@ $$\text{Total Payout} = \text{Blind Reward} + \text{Unused Deals Bonus} + \text{
 
 ### Target Formula
 Base ante targets:
-$$\text{ANTE\_TARGETS} = [300, 600, 1100, 1800, 2900, 4500, 7000, 10500]$$
+$$\text{ANTE\_TARGETS} = [300, 600, 1200, 2400, 4500, 8500, 15000, 25000]$$
 
 For Ante $A \in [1, 8]$ and Blind index $B \in [0, 2]$:
 $$\text{rawBase} = \text{ANTE\_TARGETS}[A - 1]$$
@@ -278,12 +278,12 @@ Where:
 | :---: | :---: | :---: | :---: | :--- |
 | **Ante 1** | 300 | 435 | 600 | The House |
 | **Ante 2** | 600 | 870 | 1,200 | The Pit Boss |
-| **Ante 3** | 1,100 | 1,595 | 2,200 | The Cooler |
-| **Ante 4** | 1,800 | 2,610 | 3,600 | The Anchor |
-| **Ante 5** | 2,900 | 4,205 | 5,800 | The House |
-| **Ante 6** | 4,500 | 6,525 | 9,000 | The Pit Boss |
-| **Ante 7** | 7,000 | 10,150 | 14,000 | The Cooler |
-| **Ante 8** | 10,500 | 15,225 | 21,000 | The Anchor |
+| **Ante 3** | 1,200 | 1,740 | 2,400 | The Cooler |
+| **Ante 4** | 2,400 | 3,480 | 4,800 | The Anchor |
+| **Ante 5** | 4,500 | 6,525 | 9,000 | The House |
+| **Ante 6** | 8,500 | 12,325 | 17,000 | The Pit Boss |
+| **Ante 7** | 15,000 | 21,750 | 30,000 | The Cooler |
+| **Ante 8** | 25,000 | 36,250 | 50,000 | The Anchor |
 
 ---
 

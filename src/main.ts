@@ -26,15 +26,23 @@ let lastSimFilename = 'jack-latro-telemetry.txt';
 function getJokerFullDesc(j: JokerInstance): string {
   if (j.id === 'daredevil') {
     const cur = j.bonusMult || 0;
-    return `Permanently gains +1 Mult on safe Hit on 14+ (+2 Mult on 16+) for the rest of run. (Currently: +${cur} Mult)`;
+    return `Permanently gains +1 Mult on safe Hit on 15+ for the rest of run. (Currently: +${cur} Mult)`;
   }
   if (j.id === 'chip_stacker') {
     const cur = j.bonusChips || 0;
-    return `Permanently gains +30 Chips for the rest of run every time you win with a Double Down or Exact 21. (Currently: +${cur} Chips)`;
+    return `Permanently gains +10 Chips for the rest of run every time you win with a Double Down or Exact 21. (Currently: +${cur} Chips)`;
   }
   if (j.id === 'compound_edge') {
-    const sets = Math.floor(getState().money / 5);
-    return `+20 Chips for every $5 you currently hold. (Currently: +${sets * 20} Chips with $${getState().money})`;
+    const sets = Math.min(15, Math.floor(getState().money / 5));
+    return `+10 Chips for every $5 you currently hold (max +150 Chips). (Currently: +${sets * 10} Chips with $${getState().money})`;
+  }
+  if (j.id === 'hot_hand') {
+    const cur = j.bonusMult || 0;
+    return `Gains +2 Mult per consecutive winning hand (up to +20 Mult max). Resets to 0 on a loss or bust. (Currently: +${cur} Mult)`;
+  }
+  if (j.id === 'deja_vu') {
+    const prev = getState().previousHandTotal;
+    return `×1.5 Mult if your final hand total matches your final total from the previous hand. (${prev ? `Target: ${prev}` : 'No previous hand yet'})`;
   }
   return j.desc;
 }
@@ -42,15 +50,15 @@ function getJokerFullDesc(j: JokerInstance): string {
 function getJokerMiniSubHTML(j: JokerInstance): string {
   if (j.id === 'daredevil') {
     const cur = j.bonusMult || 0;
-    return `<span style="color:var(--mult);font-weight:900;">+${cur}m</span> (+1/+2m on Hit)`;
+    return `<span style="color:var(--mult);font-weight:900;">+${cur}m</span> (+1m on Hit 15+)`;
   }
   if (j.id === 'chip_stacker') {
     const cur = j.bonusChips || 0;
-    return `<span style="color:var(--chips);font-weight:900;">+${cur}c</span> (+30c/Dbl/21)`;
+    return `<span style="color:var(--chips);font-weight:900;">+${cur}c</span> (+10c/Dbl/21)`;
   }
   if (j.id === 'compound_edge') {
-    const sets = Math.floor(getState().money / 5);
-    return `<span style="color:var(--chips);font-weight:900;">+${sets * 20}c</span> (+20c/$5)`;
+    const sets = Math.min(15, Math.floor(getState().money / 5));
+    return `<span style="color:var(--chips);font-weight:900;">+${sets * 10}c</span> (+10c/$5, max 150)`;
   }
   if (j.id === 'bust_cushion') return `22 = 21! (Bust 23+)`;
   if (j.id === 'card_counter') return `+40c / low (2-6)`;
@@ -60,14 +68,33 @@ function getJokerMiniSubHTML(j: JokerInstance): string {
   if (j.id === 'lucky_sevens') return `+77c/+7m (7s), +7m`;
   if (j.id === 'hit_me_baby') return `+5m / card > 2`;
   if (j.id === 'golden_parachute') return `+$3, +40c on dBust`;
-  if (j.id === 'push_it_good') return `+30c / +100c,+6m Push`;
+  if (j.id === 'push_it_good') return `Push = Win (+50c,+4m)`;
   if (j.id === 'blackjack_tycoon') return `×2m, +$2 on 21`;
   if (j.id === 'the_shark') return `×1.5m (Win ≥3/dBust)`;
-  if (j.id === 'safety_net') return `Bust = 50c × 2m`;
+  if (j.id === 'safety_net') return `Bust = 40c × 2m (Salvage)`;
   if (j.id === 'even_steven') return `+10c, +4m / Even`;
   if (j.id === 'red_velvet') return `+35c / ♥♦`;
   if (j.id === 'dark_knight') return `+10c, +3m / ♠♣`;
   if (j.id === 'minimalist') return `×1.8m 2-Card Win`;
+  if (j.id === 'hot_hand') return `<span style="color:var(--mult);font-weight:900;">+${j.bonusMult || 0}m</span> (+2m/Streak)`;
+  if (j.id === 'snake_eyes') return `×2.2m (Win ≤13)`;
+  if (j.id === 'pocket_rockets') return `+50c, +25m (AA Pair)`;
+  if (j.id === 'trips_ahoy') return `+100c, +10m (3-Kind)`;
+  if (j.id === 'spade_slicer') return `+15c, +5m / ♠`;
+  if (j.id === 'crimson_heart') return `+40c, +2m / ♥`;
+  if (j.id === 'diamond_cutter') return `+30c, +$1 / ♦ Win`;
+  if (j.id === 'club_sandwich') return `+6m / ♣ Win`;
+  if (j.id === 'monochrome') return `×1.6m Flush (≥3)`;
+  if (j.id === 'odd_ball') return `+15c, +3m / Odd`;
+  if (j.id === 'the_grinder') return `+15c, +$1 / Safe Hit`;
+  if (j.id === 'double_or_nothing') return `Double Down = ×3m`;
+  if (j.id === 'slow_and_steady') return `+20c / Deal Left`;
+  if (j.id === 'card_sharp_joker') return `×1.75m on 2nd+ Win`;
+  if (j.id === 'loan_shark') return `+$15 Buy (-$1/Blind)`;
+  if (j.id === 'deja_vu') {
+    const prev = getState().previousHandTotal;
+    return `×1.5m (${prev ? `Match ${prev}` : 'Match Prev'})`;
+  }
   return j.desc;
 }
 
@@ -230,7 +257,10 @@ function inspectJoker(index: number): void {
   const box = $('ui-inspect-content');
   box.innerHTML = `
     <div style="display:flex; justify-content:space-between; align-items:center;">
-      <h3 style="color:var(--gold);">${j.name}</h3>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <h3 style="color:var(--gold); margin:0;">${j.name}</h3>
+        <span class="rarity-badge rarity-${j.rarity || 'common'}">${(j.rarity || 'common').toUpperCase()}</span>
+      </div>
       <button class="btn btn-secondary" onclick="closeInspector()">Close</button>
     </div>
     <div style="font-size:13px; color:#e2e8f0; line-height:1.4;">${getJokerFullDesc(j)}</div>
@@ -526,10 +556,19 @@ function renderShop() {
   const eGrid = $('ui-shop-extras');
   $<HTMLButtonElement>('btn-reroll').textContent = `Reroll ($${state.rerollCost})`;
 
-  jGrid.innerHTML = state.shopJokers.map((item, idx) => `
-    <div class="shop-item type-${item.shopType}">
+  jGrid.innerHTML = state.shopJokers.map((item, idx) => {
+    const isJoker = item.shopType === 'joker';
+    const rarityClass = isJoker && item.rarity ? `rarity-${item.rarity}` : '';
+    const badgeHtml = isJoker && item.rarity
+      ? `<span class="rarity-badge rarity-${item.rarity}">${item.rarity.toUpperCase()}</span>`
+      : '';
+    return `
+    <div class="shop-item type-${item.shopType} ${rarityClass}">
       <div>
-        <div class="shop-item-sub">${item.shopType}</div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+          <div class="shop-item-sub">${item.shopType}</div>
+          ${badgeHtml}
+        </div>
         <div class="shop-item-title">${item.name}</div>
         <div class="shop-item-desc">${item.shopType === 'joker' ? getJokerFullDesc(item) : item.desc}</div>
       </div>
@@ -539,7 +578,8 @@ function renderShop() {
         ${item.bought ? 'SOLD' : 'BUY $' + item.cost}
       </button>
     </div>
-  `).join('');
+  `;
+  }).join('');
 
   eGrid.innerHTML = state.shopExtras.map((item, idx) => `
     <div class="shop-item type-${item.shopType}">
@@ -598,7 +638,7 @@ function updateAllUI() {
     jRow.innerHTML = `<span style="font-size:12px; font-weight:700; color:#94a3b8;">No active Jokers</span>`;
   } else {
     jRow.innerHTML = state.jokers.map((j, i) => `
-      <div class="mini-card" onclick="inspectJoker(${i})" title="${getJokerFullDesc(j)}">
+      <div class="mini-card rarity-${j.rarity || 'common'}" onclick="inspectJoker(${i})" title="${getJokerFullDesc(j)}">
         <div class="mini-card-name">${j.name}</div>
         <div class="mini-card-sub">${getJokerMiniSubHTML(j)}</div>
       </div>
@@ -826,9 +866,11 @@ function renderSimResultsToModal(simData: SimData): void {
     let extra = '';
     if (j.id === 'daredevil') extra = ` <span style="color:var(--mult);font-size:10px;">(Avg +${(j.scalingSum / j.picks).toFixed(1)}m)</span>`;
     if (j.id === 'chip_stacker') extra = ` <span style="color:var(--chips);font-size:10px;">(Avg +${(j.scalingSum / j.picks).toFixed(1)}c)</span>`;
+    if (j.id === 'hot_hand') extra = ` <span style="color:var(--mult);font-size:10px;">(Avg +${(j.scalingSum / j.picks).toFixed(1)}m)</span>`;
+    const rBadge = `<span class="rarity-badge rarity-${j.rarity || 'common'}" style="font-size:9px; padding:1px 4px; margin-left:4px;">${(j.rarity || 'common').toUpperCase()}</span>`;
     return `
       <tr>
-        <td><strong>${j.name}</strong>${extra}</td>
+        <td><strong>${j.name}</strong> ${rBadge}${extra}</td>
         <td>${j.picks}</td>
         <td style="color:var(--green); font-weight:bold;">${wPct}%</td>
         <td>Ante ${avgA}</td>
@@ -933,7 +975,7 @@ function runMonteCarloSimulation(): void {
 
 function runAllBotsSuiteAndExport(): void {
   const suiteBtn = $<HTMLButtonElement>('btn-suite-txt');
-  suiteBtn.textContent = '⏳ Running All 5 Bots...';
+  suiteBtn.textContent = '⏳ Running All 6 Bots...';
   suiteBtn.disabled = true;
 
   setTimeout(() => {
@@ -941,16 +983,17 @@ function runAllBotsSuiteAndExport(): void {
     const cfg = getSimConfigFromInputs();
 
     const suite = runBotSuite(numRuns, cfg);
-    if (suite.synergyData) {
-      renderSimResultsToModal(suite.synergyData);
+    const displayData = suite.expertData || suite.synergyData;
+    if (displayData) {
+      renderSimResultsToModal(displayData);
     }
 
     lastSimReportText = suite.reportText;
-    lastSimFilename = `jack-latro-5bot-suite-${numRuns}runs.txt`;
+    lastSimFilename = `jack-latro-6bot-suite-${numRuns}runs.txt`;
 
     $<HTMLButtonElement>('btn-export-txt').disabled = false;
     $<HTMLButtonElement>('btn-copy-txt').disabled = false;
-    suiteBtn.textContent = '🚀 Run All 5 Bots & Export (.TXT)';
+    suiteBtn.textContent = '🚀 Run All 6 Bots & Export (.TXT)';
     suiteBtn.disabled = false;
 
     triggerTextFileDownload(lastSimReportText, lastSimFilename);
@@ -1129,9 +1172,9 @@ async function playerHit(): Promise<void> {
   await dealCardAnimated('player');
   const postHitEval = evaluatePlayerHand();
 
-  if (preHitEval.total >= 14 && postHitEval.total <= 21) {
+  if (preHitEval.total >= 15 && postHitEval.total <= 21) {
     let scaledAny = false;
-    const gain = preHitEval.total >= 16 ? 2 : 1;
+    const gain = 1;
     state.jokers.forEach((j, idx) => {
       if (j.id === 'daredevil') {
         patchJoker('daredevil', { bonusMult: (j.bonusMult || 0) + gain });
@@ -1141,7 +1184,7 @@ async function playerHit(): Promise<void> {
     });
     if (scaledAny) {
       playScoreTickSound(6);
-      setBanner(`Daredevil scaled! (+${gain} Mult permanently added)`, '');
+      setBanner(`Daredevil scaled! (+1 Mult permanently added)`, '');
       updateAllUI();
       await sleep(180);
     }
@@ -1217,7 +1260,10 @@ async function resolveRound(): Promise<void> {
     tempBonusChips: state.tempBonusChips,
     doubledDown: state.doubledDown,
     anteHandScaling: getBalanceConfig().anteHandScaling,
-    vouchers: state.vouchersBought
+    vouchers: state.vouchersBought,
+    handsLeft: state.handsLeft,
+    handsWonInBlind: state.handsWonInBlind || 0,
+    previousHandTotal: state.previousHandTotal
   });
 
   // Hand outcome sound plays IMMEDIATELY after player and dealer finish playing, just before scoring
@@ -1241,6 +1287,23 @@ async function resolveRound(): Promise<void> {
     patchJoker('chip_stacker', { bonusChips: res.chipStackerNewBonus });
     updateAllUI();
   }
+
+  // Hot Hand streak tracking
+  const hotHand = state.jokers.find(j => j.id === 'hot_hand');
+  if (hotHand) {
+    if (res.isWin) {
+      patchJoker('hot_hand', { bonusMult: Math.min(20, (hotHand.bonusMult || 0) + 2) });
+    } else if (res.rawOutcomeType === 'LOSS' || res.rawOutcomeType === 'BUST') {
+      patchJoker('hot_hand', { bonusMult: 0 });
+    }
+    updateAllUI();
+  }
+
+  // Update hands won in blind & previous hand total
+  if (res.isWin) {
+    patchState({ handsWonInBlind: (state.handsWonInBlind || 0) + 1 });
+  }
+  patchState({ previousHandTotal: res.pBust ? null : res.pTotal });
 
   skipScoringAnimation = false;
 
@@ -1699,6 +1762,30 @@ function closeTableInspection(): void {
 (window as any).uiHideModalToViewTable = uiHideModalToViewTable;
 (window as any).uiRestoreModal = uiRestoreModal;
 (window as any).closeTableInspection = closeTableInspection;
+(window as any).toggleCogModal = toggleCogModal;
+(window as any).toggleBlindModal = toggleBlindModal;
+(window as any).toggleDeckModal = toggleDeckModal;
+(window as any).toggleSimModal = toggleSimModal;
+(window as any).inspectJoker = inspectJoker;
+(window as any).inspectConsumable = inspectConsumable;
+(window as any).closeInspector = closeInspector;
+(window as any).uiBuyShopItem = uiBuyShopItem;
+(window as any).uiRerollShop = uiRerollShop;
+(window as any).uiMoveJoker = uiMoveJoker;
+(window as any).uiSellJoker = uiSellJoker;
+(window as any).uiSellConsumable = uiSellConsumable;
+(window as any).uiUseConsumable = uiUseConsumable;
+(window as any).startNextBlindFromShop = startNextBlindFromShop;
+(window as any).dealHand = dealHand;
+(window as any).playerHit = playerHit;
+(window as any).playerStand = playerStand;
+(window as any).playerDouble = playerDouble;
+(window as any).handlePrimaryDealBtn = handlePrimaryDealBtn;
+(window as any).runMonteCarloSimulation = runMonteCarloSimulation;
+(window as any).runAllBotsSuiteAndExport = runAllBotsSuiteAndExport;
+(window as any).downloadLastSimReport = downloadLastSimReport;
+(window as any).copyLastSimReport = copyLastSimReport;
+(window as any).applySimConfigToLiveGame = applySimConfigToLiveGame;
 
 /* ==========================================================
    BOOT

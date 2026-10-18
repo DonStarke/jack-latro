@@ -1116,7 +1116,8 @@
       <div class="sim-field">
         <label><span>Bot Playstyle Strategy</span></label>
         <select id="sim-bot">
-          <option value="synergy" selected>Smart Synergy AI (Adapts to Jokers)</option>
+          <option value="expert" selected>Expert Strategy AI (Rerolls, Interest &amp; Target Aware)</option>
+          <option value="synergy">Smart Synergy AI (Adapts to Jokers)</option>
           <option value="highroller">High-Roller 21 AI (Faces/Aces/Doubles)</option>
           <option value="charlie">Low-Card Charlie AI (Hits Low Cards)</option>
           <option value="basic">Strict Casino Basic Strategy AI (With Jokers)</option>
@@ -1453,7 +1454,7 @@ const BOSS_BLINDS = [
   { id: 'the_anchor', name: 'The Anchor', desc: 'Double Down is disabled during this Blind.' }
 ];
 
-const ANTE_TARGETS = [300, 600, 1100, 1800, 2900, 4500, 7000, 10500];
+const ANTE_TARGETS = [300, 600, 1200, 2400, 4500, 8500, 15000, 25000];
 
 /* ==========================================================
    STATE
@@ -2652,7 +2653,7 @@ function copyLastSimReport() {
   });
 }
 
-function decideBotAction(pHand, dUpCard, simRun, botType, bossBlind) {
+function decideBotAction(pHand, dUpCard, simRun, botType, bossBlind, roundScore = 0, targetScore = 0, dealsLeft = 7) {
   const ownsJoker = (id) => simRun.jokers.some(j => j.id === id);
   const hasCushion = ownsJoker('bust_cushion');
   const pEval = evaluateBlackjackTotal(pHand, hasCushion);
@@ -2660,6 +2661,51 @@ function decideBotAction(pHand, dUpCard, simRun, botType, bossBlind) {
   const isSoft = pEval.isSoft;
   const dUp = evaluateBlackjackTotal([dUpCard], false).total;
   const canDouble = pHand.length === 2 && (!bossBlind || bossBlind.id !== 'the_anchor');
+
+  if (botType === 'expert') {
+    const scoreDeficit = Math.max(0, targetScore - roundScore);
+    if (dealsLeft === 0 && scoreDeficit > 2500) {
+      if (canDouble && !ownsJoker('minimalist')) return 'DOUBLE';
+      if (pTotal <= 17) return 'HIT';
+    }
+    if (scoreDeficit <= 350) {
+      if (pTotal >= 17) return 'STAND';
+      if (pTotal >= 14 && dUp >= 7) return 'STAND';
+    }
+    if (ownsJoker('minimalist') && pHand.length === 2 && pTotal >= 17) return 'STAND';
+    if (ownsJoker('snake_eyes') && pTotal <= 13 && pTotal >= 11 && dUp <= 6) return 'STAND';
+    if (ownsJoker('deja_vu') && simRun.previousHandTotal && pTotal === simRun.previousHandTotal && pTotal >= 16) return 'STAND';
+    if (ownsJoker('sweet_16') && pTotal >= 13 && pTotal <= 16 && dUp <= 6) return 'STAND';
+    if (hasCushion && !isSoft && pTotal === 12) return 'HIT';
+    if (ownsJoker('daredevil')) {
+      if (isSoft && pTotal >= 15 && pTotal <= 18) return 'HIT';
+      if (hasCushion && pTotal === 15) return 'HIT';
+    }
+    if (canDouble && !ownsJoker('minimalist')) {
+      if (ownsJoker('double_or_nothing')) {
+        if (pTotal === 11 || pTotal === 10 || (pTotal === 9 && dUp <= 7)) return 'DOUBLE';
+        if (isSoft && pTotal >= 16 && pTotal <= 18 && dUp <= 6) return 'DOUBLE';
+      }
+      if (ownsJoker('chip_stacker')) {
+        if (pTotal === 11 || pTotal === 10 || (pTotal === 9 && dUp <= 6)) return 'DOUBLE';
+      }
+      if (pTotal === 11) return 'DOUBLE';
+      if (pTotal === 10 && dUp <= 9) return 'DOUBLE';
+      if (pTotal === 9 && dUp >= 3 && dUp <= 6) return 'DOUBLE';
+      if (isSoft && (pTotal === 17 || pTotal === 18) && dUp >= 4 && dUp <= 6) return 'DOUBLE';
+    }
+    if (isSoft) {
+      if (pTotal >= 19) return 'STAND';
+      if (pTotal === 18) return (dUp >= 9) ? 'HIT' : 'STAND';
+      return 'HIT';
+    } else {
+      if (pTotal >= 17) return 'STAND';
+      if (hasCushion && pTotal === 12) return 'HIT';
+      if (pTotal >= 13 && pTotal <= 16) return (dUp >= 2 && dUp <= 6) ? 'STAND' : 'HIT';
+      if (pTotal === 12) return (dUp >= 4 && dUp <= 6) ? 'STAND' : 'HIT';
+      return 'HIT';
+    }
+  }
 
   if (botType === 'synergy' || botType === 'charlie') {
     if (hasCushion && !isSoft && pTotal === 12) {
@@ -2849,14 +2895,120 @@ function scoreJokerPriorityForBot(joker, botType) {
   if (joker.id === 'daredevil') score += (joker.bonusMult || 0) * 0.6;
   if (joker.id === 'chip_stacker') score += (joker.bonusChips || 0) * 0.12;
 
+  if (botType === 'expert') {
+    if (joker.isXMult) score += 8;
+    if (joker.id === 'daredevil') score += 6 + (joker.bonusMult || 0) * 1.0;
+    if (joker.id === 'chip_stacker') score += 5 + (joker.bonusChips || 0) * 0.2;
+    if (joker.id === 'hot_hand') score += 6 + (joker.bonusMult || 0) * 0.4;
+    if (['bust_cushion', 'the_shark', 'blackjack_tycoon', 'card_sharp_joker', 'double_or_nothing', 'deja_vu', 'monochrome'].includes(joker.id)) score += 8;
+    if (['golden_parachute', 'loan_shark', 'diamond_cutter', 'the_grinder', 'compound_edge'].includes(joker.id)) score += 6;
+    if (['vip_high_roller', 'ace_up_sleeve', 'push_it_good', 'trips_ahoy', 'spade_slicer', 'crimson_heart', 'club_sandwich', 'slow_and_steady', 'sweet_16'].includes(joker.id)) score += 5;
+    return score;
+  }
+
   if (botType === 'highroller' && ['blackjack_tycoon','vip_high_roller','ace_up_sleeve','chip_stacker','minimalist','the_shark'].includes(joker.id)) score += 6;
   if (botType === 'charlie' && ['bust_cushion','daredevil','card_counter','hit_me_baby','sweet_16','safety_net'].includes(joker.id)) score += 6;
   if (botType === 'synergy' && ['bust_cushion','daredevil','chip_stacker','the_shark','blackjack_tycoon','ace_up_sleeve','vip_high_roller','push_it_good'].includes(joker.id)) score += 5;
   return score;
 }
 
+function simulateExpertShopVisit(simRun, jokerStats, voucherStats) {
+  const interestPer = simRun.vouchers.includes('liquidity_pass') ? 4 : 5;
+  const maxInterest = simRun.vouchers.includes('deep_pockets') ? 8 : 5;
+  const capCash = maxInterest * interestPer;
+  const targetBank = simRun.ante === 1 ? 5 : (simRun.ante === 2 ? 15 : capCash);
+
+  const voucherPriority = ['joker_slot', 'clearance_sale', 'liquidity_pass', 'table_leverage', 'card_shark_voucher', 'base_boost', 'deep_pockets', 'card_sharp', 'extra_hand', 'overstock'];
+  const availVouchers = VOUCHER_CATALOG.filter(v => !simRun.vouchers.includes(v.id)).sort((a, b) => voucherPriority.indexOf(a.id) - voucherPriority.indexOf(b.id));
+
+  if (availVouchers.length > 0) {
+    const v = availVouchers[0];
+    voucherStats[v.id].offered++;
+    const reserve = (v.id === 'joker_slot' || v.id === 'clearance_sale') ? 0 : Math.floor(targetBank * 0.5);
+    if (simRun.money >= v.cost + reserve) {
+      simRun.money -= v.cost;
+      simRun.vouchers.push(v.id);
+      voucherStats[v.id].bought++;
+      if (v.id === 'extra_hand') simRun.maxHands++;
+      if (v.id === 'table_leverage') simRun.baseWinMultBonus += 1;
+      if (v.id === 'joker_slot') simRun.maxJokers++;
+      if (v.id === 'base_boost') simRun.baseWinChipBonus += 30;
+      if (v.id === 'card_shark_voucher') { simRun.maxHands++; simRun.baseWinChipBonus += 20; }
+    }
+  }
+
+  const evaluateAndBuyJoker = (j) => {
+    const score = scoreJokerPriorityForBot(j, 'expert');
+    const minReserve = score >= 14 ? 0 : (score >= 10 ? Math.floor(targetBank * 0.4) : targetBank);
+    if (simRun.money < j.cost + minReserve) return false;
+
+    if (simRun.jokers.length < simRun.maxJokers) {
+      simRun.money -= j.cost;
+      jokerStats[j.id].bought++;
+      simRun.jokers.push({ ...j, bonusMult: 0, bonusChips: 0 });
+      if (j.id === 'loan_shark') simRun.money += 15;
+      return true;
+    } else {
+      let weakestIdx = 0;
+      let weakestVal = 999;
+      simRun.jokers.forEach((owned, idx) => {
+        const val = scoreJokerPriorityForBot(owned, 'expert');
+        if (val < weakestVal) { weakestVal = val; weakestIdx = idx; }
+      });
+      if (score > weakestVal + 2) {
+        const sellPrice = Math.max(1, Math.floor(simRun.jokers[weakestIdx].cost / 2));
+        simRun.money += sellPrice - j.cost;
+        jokerStats[j.id].bought++;
+        simRun.jokers[weakestIdx] = { ...j, bonusMult: 0, bonusChips: 0 };
+        if (j.id === 'loan_shark') simRun.money += 15;
+        return true;
+      }
+    }
+    return false;
+  };
+
+  const ownedIds = simRun.jokers.map(j => j.id);
+  const initialOffers = shuffle(JOKER_CATALOG.filter(j => !ownedIds.includes(j.id))).slice(0, 2);
+  initialOffers.forEach(o => { jokerStats[o.id].offered++; });
+  initialOffers.sort((a, b) => scoreJokerPriorityForBot(b, 'expert') - scoreJokerPriorityForBot(a, 'expert'));
+  for (let j of initialOffers) evaluateAndBuyJoker(j);
+
+  let rerollCost = simRun.vouchers.includes('clearance_sale') ? 1 : 2;
+  let rerollsDone = 0;
+  while (rerollsDone < 2) {
+    const weakestScore = simRun.jokers.length > 0 ? Math.min(...simRun.jokers.map(j => scoreJokerPriorityForBot(j, 'expert'))) : 0;
+    if (simRun.jokers.length >= simRun.maxJokers && weakestScore >= 12) break;
+    if (simRun.money < targetBank + rerollCost + 3) break;
+    simRun.money -= rerollCost;
+    rerollCost++;
+    rerollsDone++;
+    const ro = shuffle(JOKER_CATALOG.filter(j => !simRun.jokers.map(x => x.id).includes(j.id))).slice(0, 2);
+    ro.forEach(o => { jokerStats[o.id].offered++; });
+    ro.sort((a, b) => scoreJokerPriorityForBot(b, 'expert') - scoreJokerPriorityForBot(a, 'expert'));
+    for (let j of ro) evaluateAndBuyJoker(j);
+  }
+
+  simRun.jokers.sort((a, b) => (a.isXMult ? 1 : 0) - (b.isXMult ? 1 : 0));
+
+  if (simRun.money >= targetBank + 8) {
+    const enhs = ['foil', 'holo', 'poly', 'gold'];
+    const highRanks = ['A', 'K', 'Q', 'J', '10', '7'];
+    simRun.money -= 4;
+    simRun.deck.push({
+      uid: 9999,
+      rank: highRanks[Math.floor(Math.random() * highRanks.length)],
+      suit: ['♠', '♥', '♣', '♦'][Math.floor(Math.random() * 4)],
+      enhancement: enhs[Math.floor(Math.random() * enhs.length)]
+    });
+  }
+}
+
 function simulateShopVisit(simRun, botType, jokerStats, voucherStats) {
   if (botType === 'vanilla') return;
+  if (botType === 'expert') {
+    simulateExpertShopVisit(simRun, jokerStats, voucherStats);
+    return;
+  }
 
   const availVouchers = VOUCHER_CATALOG.filter(v => !simRun.vouchers.includes(v.id));
   if (availVouchers.length > 0) {
@@ -3039,7 +3191,7 @@ function runBatchSimulationForBot(numRuns, botType, cfg) {
 
           if (evaluateBlackjackTotal(pHand, hasCushion).total < 21) {
             while (true) {
-              const act = decideBotAction(pHand, dHand[0], simRun, botType, bossBlind);
+              const act = decideBotAction(pHand, dHand[0], simRun, botType, bossBlind, roundScore, targetScore, dealsLeft);
               if (act === 'DOUBLE') {
                 doubled = true;
                 pHand.push(draw());
@@ -3163,6 +3315,7 @@ function formatBotReportSection(simData) {
   } = simData;
 
   const botNames = {
+    expert: 'Expert Strategy AI (Rerolls, Interest & Target Aware)',
     synergy: 'Smart Synergy AI (Adapts to Jokers)',
     highroller: 'High-Roller 21 AI (Faces/Aces/Doubles)',
     charlie: 'Low-Card Charlie AI (Hits Low Cards)',
@@ -3417,21 +3570,21 @@ function runMonteCarloSimulation() {
 
 function runAllBotsSuiteAndExport() {
   const suiteBtn = document.getElementById('btn-suite-txt');
-  suiteBtn.textContent = '⏳ Running All 5 Bots...';
+  suiteBtn.textContent = '⏳ Running All 6 Bots...';
   suiteBtn.disabled = true;
 
   setTimeout(() => {
     const numRuns = parseInt(document.getElementById('sim-runs').value, 10);
     const cfg = getSimConfigFromInputs();
-    const botOrder = ['vanilla', 'basic', 'synergy', 'highroller', 'charlie'];
+    const botOrder = ['expert', 'synergy', 'highroller', 'charlie', 'basic', 'vanilla'];
 
     const reports = [];
     const summaryRows = [];
-    let synergyData = null;
+    let displayData = null;
 
     for (let bType of botOrder) {
       const simData = runBatchSimulationForBot(numRuns, bType, cfg);
-      if (bType === 'synergy') synergyData = simData;
+      if (bType === 'expert' || (!displayData && bType === 'synergy')) displayData = simData;
       reports.push(formatBotReportSection(simData));
 
       const winPct = ((simData.wins / numRuns) * 100).toFixed(2) + '%';
@@ -3442,15 +3595,15 @@ function runAllBotsSuiteAndExport() {
       );
     }
 
-    if (synergyData) {
-      renderSimResultsToModal(synergyData);
+    if (displayData) {
+      renderSimResultsToModal(displayData);
     }
 
     const masterHeader = [
       `================================================================================`,
-      `JACK-LATRO v1.7 // FULL 5-BOT COMPARATIVE TELEMETRY SUITE`,
+      `JACK-LATRO v1.7 // FULL 6-BOT COMPARATIVE TELEMETRY SUITE`,
       `Generated: ${new Date().toISOString()}`,
-      `Runs Per Bot: ${numRuns.toLocaleString()} (${(numRuns * 5).toLocaleString()} Total Simulated Games)`,
+      `Runs Per Bot: ${numRuns.toLocaleString()} (${(numRuns * 6).toLocaleString()} Total Simulated Games)`,
       `Settings: Deals=${cfg.startingDeals}, TargetScale=${cfg.targetScalePct}%, DealCashCap=$${cfg.unusedDealCashCap}, PushRefund=${cfg.pushRefundsDeal}, AnteScale=${cfg.anteHandScaling}`,
       `================================================================================`,
       `HEAD-TO-HEAD BOT SUMMARY:`,
@@ -3459,11 +3612,11 @@ function runAllBotsSuiteAndExport() {
     ].join('\n');
 
     lastSimReportText = masterHeader + reports.join('\n\n');
-    lastSimFilename = `jack-latro-5bot-suite-${numRuns}runs.txt`;
+    lastSimFilename = `jack-latro-6bot-suite-${numRuns}runs.txt`;
 
     document.getElementById('btn-export-txt').disabled = false;
     document.getElementById('btn-copy-txt').disabled = false;
-    suiteBtn.textContent = '🚀 Run All 5 Bots & Export (.TXT)';
+    suiteBtn.textContent = '🚀 Run All 6 Bots & Export (.TXT)';
     suiteBtn.disabled = false;
 
     triggerTextFileDownload(lastSimReportText, lastSimFilename);
