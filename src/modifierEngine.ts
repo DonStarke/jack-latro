@@ -26,7 +26,7 @@ const JOKER_CATALOG: ReadonlyArray<JokerDef> = [
   { id: 'red_velvet', name: 'Red Velvet', cost: 5, isXMult: false, desc: '+35 Chips for each ♥ or ♦ in your hand.' },
   { id: 'dark_knight', name: 'Dark Knight', cost: 5, isXMult: false, desc: '+10 Chips & +3 Mult for each ♠ or ♣ in your hand.' },
   { id: 'compound_edge', name: 'Compound Edge', cost: 6, isXMult: false, desc: '+20 Chips for every $5 you currently hold.' },
-  { id: 'minimalist', name: 'Minimalist', cost: 6, isXMult: true, desc: '×1.75 Mult if you Win with exactly 2 cards.' }
+  { id: 'minimalist', name: 'Minimalist', cost: 6, isXMult: true, desc: '×1.8 Mult if you Win with exactly 2 cards.' }
 ];
 
 const TAROT_CATALOG: ReadonlyArray<TarotDef> = [
@@ -174,14 +174,14 @@ function scoreHand(ctx: ScoreContext): ScoreResult {
     baseMult = round1(baseMult * f);
   }
 
-  let chips = baseChips + ctx.baseWinChipBonus + ctx.tempBonusChips;
-  let mult = baseMult + ctx.baseWinMultBonus;
+  let chips = Math.round(baseChips + ctx.baseWinChipBonus + ctx.tempBonusChips);
+  let mult = round1(baseMult + ctx.baseWinMultBonus);
   let money = ctx.money;
 
   // Precision Edge voucher bonus on Natural & Exact 21
   if (ctx.vouchers && ctx.vouchers.includes('card_sharp') && (outcomeType === 'NATURAL' || outcomeType === 'EXACT21')) {
     chips += 30;
-    mult += 2;
+    mult = round1(mult + 2);
     logs.push('Precision Edge (+30c, +2m)');
   }
 
@@ -197,17 +197,17 @@ function scoreHand(ctx: ScoreContext): ScoreResult {
     let popLabel = `+${cVal}c`;
     let isX = false;
     if (c.enhancement === 'foil') { chips += 30; popLabel = `+${cVal + 30}c`; logs.push(`${c.rank}${c.suit} +30c`); }
-    if (c.enhancement === 'holo') { mult += 4; popLabel += ' +4m'; logs.push(`${c.rank}${c.suit} +4m`); }
+    if (c.enhancement === 'holo') { mult = round1(mult + 4); popLabel += ' +4m'; logs.push(`${c.rank}${c.suit} +4m`); }
     if (c.enhancement === 'poly') { mult = round1(mult * 1.5); isX = true; popLabel += ' ×1.5m'; logs.push(`${c.rank}${c.suit} ×1.5m`); }
     if (c.enhancement === 'gold') { money += 3; popLabel += ' +$3'; logs.push(`${c.rank}${c.suit} +$3`); }
     steps.push({
       kind: 'card',
       cardIndex: i,
-      chips,
-      mult,
+      chips: Math.round(chips),
+      mult: round1(mult),
       popLabel,
-      deltaChips: chips - prevChips,
-      deltaMult: isX ? 1.5 : (mult - prevMult),
+      deltaChips: Math.round(chips - prevChips),
+      deltaMult: isX ? 1.5 : round1(mult - prevMult),
       isXMult: isX,
       deltaMoney: money - prevMoney,
       sourceName: `${c.rank}${c.suit}`
@@ -292,18 +292,18 @@ function scoreHand(ctx: ScoreContext): ScoreResult {
         break;
       }
       case 'minimalist':
-        if (hand.length === 2 && outcomeType !== 'PUSH') { mult = round1(mult * 1.75); logs.push('Minimalist ×1.75m'); triggered = true; }
+        if (hand.length === 2 && outcomeType !== 'PUSH') { mult = round1(mult * 1.8); logs.push('Minimalist ×1.8m'); triggered = true; }
         break;
     }
     if (triggered) {
       const isX = j.isXMult || ['the_shark', 'blackjack_tycoon', 'minimalist'].includes(j.id);
-      const dMult = isX ? (prevMult > 0 ? round1(mult / prevMult) : mult) : (mult - prevMult);
+      const dMult = isX ? (prevMult > 0 ? round1(mult / prevMult) : mult) : round1(mult - prevMult);
       steps.push({
         kind: 'joker',
         jokerIndex: jIdx,
-        chips,
-        mult,
-        deltaChips: chips - prevChips,
+        chips: Math.round(chips),
+        mult: round1(mult),
+        deltaChips: Math.round(chips - prevChips),
         deltaMult: dMult,
         isXMult: isX,
         deltaMoney: money - prevMoney,
@@ -313,14 +313,21 @@ function scoreHand(ctx: ScoreContext): ScoreResult {
   });
 
   if (ctx.doubledDown) {
-    mult *= 2;
+    mult = round1(mult * 2);
     logs.push('Double Down ×2m');
-    steps.push({ kind: 'double', chips, mult, deltaMult: 2, isXMult: true, sourceName: 'Double Down' });
+    steps.push({ kind: 'double', chips: Math.round(chips), mult: round1(mult), deltaMult: 2, isXMult: true, sourceName: 'Double Down' });
   }
 
-  result.chips = chips;
-  result.mult = mult;
+  result.chips = Math.round(chips);
+  result.mult = round1(mult);
   result.handScore = Math.round(chips * mult);
   result.moneyGained = money - ctx.money;
   return result;
+}
+
+if (typeof window !== 'undefined') {
+  (window as any).JOKER_CATALOG = JOKER_CATALOG;
+  (window as any).TAROT_CATALOG = TAROT_CATALOG;
+  (window as any).VOUCHER_CATALOG = VOUCHER_CATALOG;
+  (window as any).BOSS_BLINDS = BOSS_BLINDS;
 }

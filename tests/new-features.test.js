@@ -207,6 +207,54 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   ck('startVictoryMusic function exists', typeof w.startVictoryMusic === 'function');
   ck('stopVictoryMusic function exists', typeof w.stopVictoryMusic === 'function');
 
+  // Test 4: Decimal cleanliness and Minimalist Joker
+  const minJoker = w.JOKER_CATALOG ? w.JOKER_CATALOG.find(j => j.id === 'minimalist') : null;
+  ck('Minimalist joker uses clean 1-decimal x1.8', minJoker && minJoker.desc.includes('1.8'));
+
+  // Test 5: Defeat Screen Hide / View Table Mode
+  w.showDefeatModal();
+  ck('Defeat modal has View Table button', !!defeatModal.querySelector('button[onclick*="uiHideModalToViewTable"]'));
+  w.uiHideModalToViewTable('DEFEAT');
+  ck('uiHideModalToViewTable(DEFEAT) hides modal', isHidden(defeatModal));
+  ck('App playfield is locked from interaction in inspect mode', $('app').classList.contains('table-inspect-active'));
+  ck('Floating view table bar is shown', !isHidden($('ui-view-table-bar')));
+  ck('Inspect touch shield is active', !isHidden($('ui-inspect-touch-shield')));
+  w.uiRestoreModal();
+  ck('uiRestoreModal() restores Defeat modal', !isHidden(defeatModal));
+  ck('Inspect lockout is removed upon restore', !$('app').classList.contains('table-inspect-active'));
+  ck('View table bar is hidden upon restore', isHidden($('ui-view-table-bar')));
+  w.hideDefeatModal();
+
+  // Test 6: Victory Screen Hide / View Table Mode
+  w.showVictoryModal();
+  ck('Victory modal has View Table button', !!victoryModal.querySelector('button[onclick*="uiHideModalToViewTable"]'));
+  w.uiHideModalToViewTable('VICTORY');
+  ck('uiHideModalToViewTable(VICTORY) hides modal', isHidden(victoryModal));
+  ck('View table return button references VICTORY', $('btn-return-modal').textContent.includes('VICTORY'));
+  w.uiRestoreModal();
+  ck('uiRestoreModal() restores Victory modal', !isHidden(victoryModal));
+  w.hideVictoryModal();
+
+  // Test 7: Multi-line Banner & Badge Formatting
+  w.patchState({
+    playerHand: [
+      { uid: 201, suit: '♠', rank: 'A', enhancement: null },
+      { uid: 202, suit: '♥', rank: 'K', enhancement: null }
+    ],
+    dealerHand: [
+      { uid: 203, suit: '♦', rank: '10', enhancement: null },
+      { uid: 204, suit: '♣', rank: '7', enhancement: null }
+    ],
+    inHand: false,
+    handsLeft: 3,
+    targetScore: 999999
+  });
+  await w.resolveRound();
+  const bannerEl = $('ui-banner');
+  ck('Scoring banner renders top outcome pill', !!bannerEl.querySelector('.outcome-pill'));
+  ck('Scoring banner renders calculation row', !!bannerEl.querySelector('.banner-calc-row'));
+  ck('Calculation row displays chips and mult', bannerEl.querySelector('.banner-calc-row').textContent.includes('Chips'));
+
   console.log('\n--- NEW FEATURES TEST RESULTS ---');
   console.log(results.join('\n'));
   if (errors.length) {

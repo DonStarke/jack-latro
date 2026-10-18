@@ -29,6 +29,7 @@
     padding: 10px;
   }
   .modal-backdrop.hidden { display: none !important; }
+  .view-table-bar.hidden, .inspect-touch-shield.hidden { display: none !important; }
 </style>
 </head>
 <body>
@@ -409,6 +410,7 @@
 <!-- DEFEAT / RUN OVER MODAL -->
 <div class="modal-backdrop hidden" id="ui-defeat-modal">
   <div class="modal-box defeat-box" onclick="event.stopPropagation()">
+    <button class="modal-hide-icon-btn" onclick="uiHideModalToViewTable('DEFEAT')" title="Hide and view table cards">👁️ View Table</button>
     <div class="defeat-header">
       <div class="defeat-badge">RUN OVER</div>
       <h2 class="defeat-title">BUSTED OUT!</h2>
@@ -442,6 +444,7 @@
     <div class="defeat-actions">
       <button class="btn btn-deal btn-defeat-play" onclick="uiRestartFromDefeat()">↻ NEW GAME</button>
       <button class="btn btn-secondary btn-defeat-menu" onclick="showMainMenu()">🏠 MAIN MENU</button>
+      <button class="btn btn-secondary btn-defeat-view" id="btn-defeat-view-table" onclick="uiHideModalToViewTable('DEFEAT')">👁️ VIEW TABLE</button>
     </div>
   </div>
 </div>
@@ -449,6 +452,7 @@
 <!-- ANTE 8 VICTORY / CONQUERED MODAL -->
 <div class="modal-backdrop hidden" id="ui-victory-modal">
   <div class="modal-box victory-box" onclick="event.stopPropagation()">
+    <button class="modal-hide-icon-btn" onclick="uiHideModalToViewTable('VICTORY')" title="Hide and view table cards">👁️ View Table</button>
     <div class="victory-header">
       <div class="victory-crown">👑</div>
       <div class="victory-badge">VICTORY ACHIEVED</div>
@@ -491,9 +495,24 @@
         <button class="btn btn-secondary" onclick="showMainMenu()">
           <span>🏠 MAIN MENU</span>
         </button>
+        <button class="btn btn-secondary" id="btn-victory-view-table" onclick="uiHideModalToViewTable('VICTORY')">
+          <span>👁️ VIEW TABLE</span>
+        </button>
       </div>
     </div>
   </div>
+</div>
+
+<!-- FLOATING VIEW TABLE RETURN BAR (when victory or bust modal is hidden to inspect cards) -->
+<div id="ui-inspect-touch-shield" class="inspect-touch-shield hidden" onclick="uiRestoreModal()"></div>
+<div id="ui-view-table-bar" class="view-table-bar hidden">
+  <div class="view-table-info">
+    <span class="view-table-icon">👁️</span>
+    <span id="ui-view-table-label">Table View Mode</span>
+  </div>
+  <button class="btn btn-deal btn-return-screen" id="btn-return-modal" onclick="uiRestoreModal()">
+    <span>🔙 RETURN TO RESULTS</span>
+  </button>
 </div>
 
 <!-- Compiled TypeScript (npx.cmd tsc: src/*.ts -> dist/*.js). Plain global scripts; order matters. -->

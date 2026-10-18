@@ -67,7 +67,7 @@ function getJokerMiniSubHTML(j: JokerInstance): string {
   if (j.id === 'even_steven') return `+10c, +4m / Even`;
   if (j.id === 'red_velvet') return `+35c / ♥♦`;
   if (j.id === 'dark_knight') return `+10c, +3m / ♠♣`;
-  if (j.id === 'minimalist') return `×1.75m 2-Card Win`;
+  if (j.id === 'minimalist') return `×1.8m 2-Card Win`;
   return j.desc;
 }
 
@@ -123,35 +123,42 @@ function updateScoringSpeed(multiplier: number): void {
   }
 }
 
+function formatScoringVal(val: number): string {
+  if (typeof val !== 'number' || isNaN(val)) return '0';
+  const rounded = Math.round(val * 10) / 10;
+  return rounded % 1 === 0 ? String(rounded) : rounded.toFixed(1);
+}
+
 async function sleepScore(ms: number): Promise<void> {
   if (skipScoringAnimation) return;
   const scaledMs = Math.round(ms / scoringSpeedMultiplier);
   await sleep(scaledMs);
 }
 
-function animateNumberRoll(el: HTMLElement, fromVal: number, toVal: number, durationMs: number = 700): Promise<void> {
+function animateNumberRoll(el: HTMLElement, fromVal: number, toVal: number, durationMs: number = 700, isDecimal: boolean = false): Promise<void> {
   return new Promise(resolve => {
+    const finalFormatted = formatScoringVal(toVal);
     if (fromVal === toVal || durationMs <= 0 || typeof window === 'undefined') {
-      el.textContent = String(toVal);
+      el.textContent = finalFormatted;
       resolve();
       return;
     }
     const start = performance.now();
     const tick = (now: number) => {
       if (skipScoringAnimation) {
-        el.textContent = String(toVal);
+        el.textContent = finalFormatted;
         resolve();
         return;
       }
       const progress = Math.min(1, (now - start) / durationMs);
       const ease = 1 - Math.pow(1 - progress, 3);
-      const cur = Math.round(fromVal + (toVal - fromVal) * ease);
-      el.textContent = String(cur);
+      const cur = fromVal + (toVal - fromVal) * ease;
+      el.textContent = isDecimal ? formatScoringVal(cur) : String(Math.round(cur));
       if (progress < 1) {
         const raf = typeof requestAnimationFrame !== 'undefined' ? requestAnimationFrame : (cb: any) => setTimeout(cb, 16);
         raf(tick);
       } else {
-        el.textContent = String(toVal);
+        el.textContent = finalFormatted;
         resolve();
       }
     };
@@ -286,8 +293,8 @@ function getBlindReward() {
 function setEquationUI(chips: number, mult: number, pop: boolean = false): void {
   const cEl = $('ui-chips');
   const mEl = $('ui-mult');
-  cEl.textContent = String(chips);
-  mEl.textContent = String(mult);
+  cEl.textContent = formatScoringVal(chips);
+  mEl.textContent = formatScoringVal(mult);
   if (pop) {
     cEl.classList.add('pill-pop');
     mEl.classList.add('pill-pop');
@@ -315,7 +322,7 @@ function buildScoreEquationHTML(res: ScoreResult, playerHand: ReadonlyArray<Card
   const baseChips = baseStep ? (baseStep.deltaChips !== undefined ? baseStep.deltaChips : baseStep.chips) : 0;
   const baseMult = baseStep ? (baseStep.deltaMult !== undefined ? baseStep.deltaMult : baseStep.mult) : 0;
   parts.push(
-    `${res.outcomeLabel}[${baseChips}<span class="eq-c">c</span>+${baseMult}<span class="eq-m">m</span>]`
+    `${res.outcomeLabel}[${formatScoringVal(baseChips)}<span class="eq-c">c</span>+${formatScoringVal(baseMult)}<span class="eq-m">m</span>]`
   );
 
   // 2. Card contributions: e.g. "10♣[10]" or "7♠[7]"
@@ -332,17 +339,17 @@ function buildScoreEquationHTML(res: ScoreResult, playerHand: ReadonlyArray<Card
     const dMult = step.deltaMult || 0;
 
     if (card.enhancement === 'foil') {
-      bracketContent = `${dChips}<span class="eq-c">c</span>`;
+      bracketContent = `${formatScoringVal(dChips)}<span class="eq-c">c</span>`;
     } else if (card.enhancement === 'holo') {
       const baseCardVal = getCardChipValue(card);
-      bracketContent = `${baseCardVal}<span class="eq-c">c</span>+${dMult}<span class="eq-m">m</span>`;
+      bracketContent = `${formatScoringVal(baseCardVal)}<span class="eq-c">c</span>+${formatScoringVal(dMult)}<span class="eq-m">m</span>`;
     } else if (card.enhancement === 'poly') {
       const baseCardVal = getCardChipValue(card);
-      bracketContent = `${baseCardVal}<span class="eq-c">c</span> ×${dMult}<span class="eq-m">m</span>`;
+      bracketContent = `${formatScoringVal(baseCardVal)}<span class="eq-c">c</span> ×${formatScoringVal(dMult)}<span class="eq-m">m</span>`;
     } else if (card.enhancement === 'gold') {
-      bracketContent = `${dChips}<span class="eq-c">c</span>+$3`;
+      bracketContent = `${formatScoringVal(dChips)}<span class="eq-c">c</span>+$3`;
     } else {
-      bracketContent = `${dChips}`;
+      bracketContent = `${formatScoringVal(dChips)}`;
     }
 
     parts.push(`${cardSymbol}[${bracketContent}]`);
@@ -354,13 +361,13 @@ function buildScoreEquationHTML(res: ScoreResult, playerHand: ReadonlyArray<Card
     const name = step.sourceName || 'Joker';
     let bracket = '';
     if (step.isXMult) {
-      bracket = `×${step.deltaMult}<span class="eq-m">m</span>`;
+      bracket = `×${formatScoringVal(step.deltaMult || 1)}<span class="eq-m">m</span>`;
     } else if (step.deltaChips && step.deltaMult) {
-      bracket = `+${step.deltaChips}<span class="eq-c">c</span>+${step.deltaMult}<span class="eq-m">m</span>`;
+      bracket = `+${formatScoringVal(step.deltaChips)}<span class="eq-c">c</span>+${formatScoringVal(step.deltaMult)}<span class="eq-m">m</span>`;
     } else if (step.deltaChips) {
-      bracket = `+${step.deltaChips}<span class="eq-c">c</span>`;
+      bracket = `+${formatScoringVal(step.deltaChips)}<span class="eq-c">c</span>`;
     } else if (step.deltaMult) {
-      bracket = `+${step.deltaMult}<span class="eq-m">m</span>`;
+      bracket = `+${formatScoringVal(step.deltaMult)}<span class="eq-m">m</span>`;
     }
     if (bracket) {
       parts.push(`${name}[${bracket}]`);
@@ -374,9 +381,126 @@ function buildScoreEquationHTML(res: ScoreResult, playerHand: ReadonlyArray<Card
   }
 
   const leftHandSide = parts.join(' + ');
-  const rightHandSide = `${res.chips}<span class="eq-c">c</span> × ${res.mult}<span class="eq-m">m</span> = ${res.handScore.toLocaleString()} Total Hand Score`;
+  const rightHandSide = `${formatScoringVal(res.chips)}<span class="eq-c">c</span> × ${formatScoringVal(res.mult)}<span class="eq-m">m</span> = <span class="eq-total">${res.handScore.toLocaleString()} pts</span>`;
 
   return `${leftHandSide} = ${rightHandSide}`;
+}
+
+function renderScoringBanner(
+  res: ScoreResult,
+  playerHand: ReadonlyArray<Card>,
+  status: 'NORMAL' | 'BLIND_CLEARED' | 'ANTE8_VICTORY' | 'BUSTED_OUT',
+  payoutEarned?: number
+): void {
+  const state = getState();
+
+  // 1. Hand Outcome Pill Badge
+  let outcomeClass = 'outcome-win';
+  let outcomeIcon = '🏆';
+  if (res.outcomeType === 'EXACT21') { outcomeClass = 'outcome-win'; outcomeIcon = '🎯'; }
+  else if (res.outcomeType === 'NATURAL') { outcomeClass = 'outcome-win'; outcomeIcon = '🃏'; }
+  else if (res.outcomeType === 'CHARLIE') { outcomeClass = 'outcome-win'; outcomeIcon = '👑'; }
+  else if (res.outcomeType === 'PUSH') { outcomeClass = 'outcome-push'; outcomeIcon = '🤝'; }
+  else if (res.outcomeType === 'BUST' || res.outcomeType === 'LOSS') {
+    outcomeClass = 'outcome-loss';
+    outcomeIcon = res.outcomeType === 'BUST' ? '💥' : '💀';
+  }
+
+  const outcomeBadge = `<span class="outcome-pill ${outcomeClass}">${outcomeIcon} ${res.outcomeLabel}</span>`;
+
+  // 2. High-level Event Badge (Blind Cleared / Ante 8 Conquered / Target Missed)
+  let statusBadge = '';
+  if (status === 'ANTE8_VICTORY') {
+    statusBadge = `<span class="outcome-pill outcome-conquered">👑 ANTE 8 CONQUERED! 👑</span>`;
+  } else if (status === 'BLIND_CLEARED') {
+    statusBadge = `<span class="outcome-pill outcome-cleared">✨ BLIND CLEARED! ✨</span>`;
+  } else if (status === 'BUSTED_OUT') {
+    statusBadge = `<span class="outcome-pill outcome-busted">💀 TARGET MISSED</span>`;
+  }
+
+  // 3. Clear Calculation Line
+  let calcRowHTML = '';
+  if (res.isScoring) {
+    calcRowHTML = `
+      <div class="banner-calc-row">
+        <span class="calc-part"><span class="eq-c">${formatScoringVal(res.chips)}</span> Chips</span>
+        <span class="calc-op">×</span>
+        <span class="calc-part"><span class="eq-m">${formatScoringVal(res.mult)}</span> Mult</span>
+        <span class="calc-op">=</span>
+        <span class="calc-total">+${res.handScore.toLocaleString()} pts</span>
+      </div>
+    `;
+  } else {
+    calcRowHTML = `
+      <div class="banner-calc-row">
+        <span class="calc-zero">0 pts scored on this hand</span>
+      </div>
+    `;
+  }
+
+  const topHTML = `
+    <div class="banner-top-badges">
+      ${outcomeBadge}
+      ${statusBadge}
+    </div>
+    ${calcRowHTML}
+  `;
+
+  // 4. Breakdown Row: Itemized Contributions & Guidance Subtext
+  const parts: string[] = [];
+  if (res.isScoring) {
+    const baseStep = res.steps.find(s => s.kind === 'base');
+    if (baseStep) {
+      parts.push(`Base[${formatScoringVal(baseStep.deltaChips || baseStep.chips)}c+${formatScoringVal(baseStep.deltaMult || baseStep.mult)}m]`);
+    }
+    const cardSteps = res.steps.filter(s => s.kind === 'card');
+    for (const step of cardSteps) {
+      const card = playerHand[step.cardIndex as number];
+      if (!card) continue;
+      const isRed = ['♥', '♦'].includes(card.suit);
+      const suitClass = isRed ? 'suit-red' : 'suit-black';
+      const cSym = `${card.rank}<span class="${suitClass}">${card.suit}</span>`;
+      let bVal = '';
+      if (card.enhancement === 'foil') bVal = `+${formatScoringVal(step.deltaChips || 0)}c`;
+      else if (card.enhancement === 'holo') bVal = `+${formatScoringVal(getCardChipValue(card))}c+${formatScoringVal(step.deltaMult || 0)}m`;
+      else if (card.enhancement === 'poly') bVal = `+${formatScoringVal(getCardChipValue(card))}c ×${formatScoringVal(step.deltaMult || 1.5)}m`;
+      else if (card.enhancement === 'gold') bVal = `+${formatScoringVal(step.deltaChips || 0)}c+$3`;
+      else bVal = `+${formatScoringVal(step.deltaChips || 0)}c`;
+      parts.push(`${cSym}[${bVal}]`);
+    }
+    const jokerSteps = res.steps.filter(s => s.kind === 'joker');
+    for (const step of jokerSteps) {
+      const name = step.sourceName || 'Joker';
+      let bVal = '';
+      if (step.isXMult) bVal = `×${formatScoringVal(step.deltaMult || 1)}m`;
+      else if (step.deltaChips && step.deltaMult) bVal = `+${formatScoringVal(step.deltaChips)}c+${formatScoringVal(step.deltaMult)}m`;
+      else if (step.deltaChips) bVal = `+${formatScoringVal(step.deltaChips)}c`;
+      else if (step.deltaMult) bVal = `+${formatScoringVal(step.deltaMult)}m`;
+      if (bVal) parts.push(`${name}[${bVal}]`);
+    }
+    if (res.steps.some(s => s.kind === 'double')) {
+      parts.push(`Double Down[×2m]`);
+    }
+  }
+
+  let subGuidance = '';
+  if (status === 'ANTE8_VICTORY') {
+    subGuidance = `<div class="banner-subtext gold-txt">Boss Blind Defeated! Taking in the victory...</div>`;
+  } else if (status === 'BLIND_CLEARED') {
+    subGuidance = `<div class="banner-subtext gold-txt">Tap <strong>CASH OUT (+$${payoutEarned || 0})</strong> below when you're ready to visit the Shop.</div>`;
+  } else if (status === 'BUSTED_OUT') {
+    subGuidance = `<div class="banner-subtext red-txt">Out of Deals on Ante ${state.ante} (${state.roundScore.toLocaleString()} / ${state.targetScore.toLocaleString()} pts).</div>`;
+  } else {
+    const dealsMsg = `${state.handsLeft} Deal${state.handsLeft === 1 ? '' : 's'} remaining`;
+    subGuidance = `<div class="banner-subtext">${dealsMsg} — Tap <strong>DEAL</strong> for your next hand.</div>`;
+  }
+
+  const breakdownHTML = `
+    ${parts.length ? `<div class="banner-breakdown-items">${parts.join(' • ')}</div>` : ''}
+    ${subGuidance}
+  `;
+
+  setBanner(topHTML, breakdownHTML);
 }
 
 function renderCardHTML(card: Card, faceDown: boolean = false, extraClasses: string = ''): string {
@@ -1142,8 +1266,8 @@ async function resolveRound(): Promise<void> {
 
       if (step.kind === 'base') {
         $('ui-tier-plaque-title').textContent = res.outcomeLabel;
-        $('ui-tier-plaque-chips').textContent = `+${step.deltaChips || step.chips}c`;
-        $('ui-tier-plaque-mult').textContent = `+${step.deltaMult || step.mult}m`;
+        $('ui-tier-plaque-chips').textContent = `+${formatScoringVal(step.deltaChips || step.chips)}c`;
+        $('ui-tier-plaque-mult').textContent = `+${formatScoringVal(step.deltaMult || step.mult)}m`;
         plaqueEl.classList.remove('hidden');
         setBanner(`${res.outcomeLabel} — Baseline established!`, 'Tap table felt to skip');
         await sleepScore(200);
@@ -1153,9 +1277,9 @@ async function resolveRound(): Promise<void> {
           $('ui-tier-plaque-chips'),
           chipsEl,
           'chip',
-          `+${step.deltaChips || step.chips}c`,
+          `+${formatScoringVal(step.deltaChips || step.chips)}c`,
           () => {
-            void animateNumberRoll(chipsEl, curDisplayChips, targetChips, Math.round(300 / scoringSpeedMultiplier));
+            void animateNumberRoll(chipsEl, curDisplayChips, targetChips, Math.round(300 / scoringSpeedMultiplier), false);
             curDisplayChips = targetChips;
             chipsEl.classList.remove('chip-absorbed');
             void chipsEl.offsetWidth;
@@ -1169,9 +1293,9 @@ async function resolveRound(): Promise<void> {
           $('ui-tier-plaque-mult'),
           multEl,
           'mult-plus',
-          `+${step.deltaMult || step.mult}m`,
+          `+${formatScoringVal(step.deltaMult || step.mult)}m`,
           () => {
-            void animateNumberRoll(multEl, curDisplayMult, targetMult, Math.round(300 / scoringSpeedMultiplier));
+            void animateNumberRoll(multEl, curDisplayMult, targetMult, Math.round(300 / scoringSpeedMultiplier), targetMult % 1 !== 0);
             curDisplayMult = targetMult;
             multEl.classList.remove('mult-absorbed-plus');
             void multEl.offsetWidth;
@@ -1194,9 +1318,9 @@ async function resolveRound(): Promise<void> {
               cardEl,
               chipsEl,
               'chip',
-              `+${step.deltaChips}c`,
+              `+${formatScoringVal(step.deltaChips)}c`,
               () => {
-                void animateNumberRoll(chipsEl, curDisplayChips, targetChips, Math.round(300 / scoringSpeedMultiplier));
+                void animateNumberRoll(chipsEl, curDisplayChips, targetChips, Math.round(300 / scoringSpeedMultiplier), false);
                 curDisplayChips = targetChips;
                 chipsEl.classList.remove('chip-absorbed');
                 void chipsEl.offsetWidth;
@@ -1212,9 +1336,9 @@ async function resolveRound(): Promise<void> {
               cardEl,
               multEl,
               isX ? 'mult-x' : 'mult-plus',
-              isX ? `×${step.deltaMult}m` : `+${step.deltaMult}m`,
+              isX ? `×${formatScoringVal(step.deltaMult)}m` : `+${formatScoringVal(step.deltaMult)}m`,
               () => {
-                void animateNumberRoll(multEl, curDisplayMult, targetMult, Math.round(300 / scoringSpeedMultiplier));
+                void animateNumberRoll(multEl, curDisplayMult, targetMult, Math.round(300 / scoringSpeedMultiplier), targetMult % 1 !== 0);
                 curDisplayMult = targetMult;
                 multEl.classList.remove(isX ? 'mult-absorbed-x' : 'mult-absorbed-plus');
                 void multEl.offsetWidth;
@@ -1256,9 +1380,9 @@ async function resolveRound(): Promise<void> {
               jEl,
               chipsEl,
               'chip',
-              `+${step.deltaChips}c`,
+              `+${formatScoringVal(step.deltaChips)}c`,
               () => {
-                void animateNumberRoll(chipsEl, curDisplayChips, targetChips, Math.round(300 / scoringSpeedMultiplier));
+                void animateNumberRoll(chipsEl, curDisplayChips, targetChips, Math.round(300 / scoringSpeedMultiplier), false);
                 curDisplayChips = targetChips;
                 chipsEl.classList.remove('chip-absorbed');
                 void chipsEl.offsetWidth;
@@ -1274,9 +1398,9 @@ async function resolveRound(): Promise<void> {
               jEl,
               multEl,
               isX ? 'mult-x' : 'mult-plus',
-              isX ? `×${step.deltaMult}m` : `+${step.deltaMult}m`,
+              isX ? `×${formatScoringVal(step.deltaMult)}m` : `+${formatScoringVal(step.deltaMult)}m`,
               () => {
-                void animateNumberRoll(multEl, curDisplayMult, targetMult, Math.round(300 / scoringSpeedMultiplier));
+                void animateNumberRoll(multEl, curDisplayMult, targetMult, Math.round(300 / scoringSpeedMultiplier), targetMult % 1 !== 0);
                 curDisplayMult = targetMult;
                 multEl.classList.remove(isX ? 'mult-absorbed-x' : 'mult-absorbed-plus');
                 void multEl.offsetWidth;
@@ -1309,7 +1433,7 @@ async function resolveRound(): Promise<void> {
           'mult-x',
           '×2m',
           () => {
-            void animateNumberRoll(multEl, curDisplayMult, targetMult, Math.round(300 / scoringSpeedMultiplier));
+            void animateNumberRoll(multEl, curDisplayMult, targetMult, Math.round(300 / scoringSpeedMultiplier), false);
             curDisplayMult = targetMult;
             multEl.classList.remove('mult-absorbed-x');
             void multEl.offsetWidth;
@@ -1334,9 +1458,6 @@ async function resolveRound(): Promise<void> {
   addRoundScore(res.handScore);
   patchState({ isDealing: false });
 
-  const handScore = res.handScore;
-  const eqHTML = buildScoreEquationHTML(res, state.playerHand);
-
   if (state.roundScore >= state.targetScore) {
     const payout = computeBlindPayout();
     patchState({ blindClearedReady: true, pendingPayout: payout });
@@ -1347,10 +1468,7 @@ async function resolveRound(): Promise<void> {
     launchConfetti();
 
     if (isAnte8Victory) {
-      setBanner(
-        `${eqHTML} — <span style="color:var(--gold);">ANTE 8 CONQUERED! VICTORY!</span>`,
-        `Boss Blind Defeated! Taking in the victory...`
-      );
+      renderScoringBanner(res, state.playerHand, 'ANTE8_VICTORY');
       updateAllUI();
 
       // Give the player a moment to see the last hand and scoring animations!
@@ -1360,10 +1478,7 @@ async function resolveRound(): Promise<void> {
       showVictoryModal();
     } else {
       playOutcomeSound('BLIND_WIN');
-      setBanner(
-        `${eqHTML} — <span style="color:var(--gold);">BLIND CLEARED!</span>`,
-        `Tap CASH OUT (+$${payout.totalEarned}) below when you're ready to visit the Shop.`
-      );
+      renderScoringBanner(res, state.playerHand, 'BLIND_CLEARED', payout.totalEarned);
       updateAllUI();
     }
   } else if (state.handsLeft <= 0) {
@@ -1376,10 +1491,7 @@ async function resolveRound(): Promise<void> {
     void felt.offsetWidth;
     felt.classList.add('shake-loss');
 
-    setBanner(
-      `${res.isScoring ? eqHTML : res.outcomeLabel + ' → 0 pts'} — Target Missed (${state.roundScore.toLocaleString()}/${state.targetScore.toLocaleString()})`,
-      `Out of Deals on Ante ${state.ante}. Choose NEW GAME or MAIN MENU.`
-    );
+    renderScoringBanner(res, state.playerHand, 'BUSTED_OUT');
     updateAllUI();
 
     setTimeout(() => {
@@ -1387,10 +1499,7 @@ async function resolveRound(): Promise<void> {
     }, 1100);
   } else {
     // Note: Hand outcome sound was already played immediately before scoring!
-    setBanner(
-      eqHTML,
-      res.logs.length ? `${res.logs.join(' • ')} — Tap DEAL for your next hand.` : 'Tap DEAL for your next hand.'
-    );
+    renderScoringBanner(res, state.playerHand, 'NORMAL');
     updateAllUI();
   }
 }
@@ -1399,6 +1508,7 @@ async function resolveRound(): Promise<void> {
    MAIN MENU, DEFEAT & VICTORY FLOW
 ========================================================== */
 function showMainMenu(): void {
+  closeTableInspection();
   hideDefeatModal();
   hideVictoryModal();
   toggleCogModal(false);
@@ -1419,6 +1529,7 @@ function showMainMenu(): void {
 }
 
 function uiStartGameFromMenu(): void {
+  closeTableInspection();
   toggleCogModal(false);
   const splash = $('ui-splash-screen');
   if (splash) splash.classList.add('hidden');
@@ -1467,6 +1578,7 @@ function hideDefeatModal(): void {
 }
 
 function uiRestartFromDefeat(): void {
+  closeTableInspection();
   hideDefeatModal();
   startNewRun();
 }
@@ -1503,6 +1615,7 @@ function hideVictoryModal(): void {
 }
 
 function uiContinueIntoEndless(): void {
+  closeTableInspection();
   hideVictoryModal();
   stopVictoryMusic();
   patchState({ endlessMode: true });
@@ -1516,10 +1629,62 @@ function uiContinueIntoEndless(): void {
 }
 
 function uiRestartFromVictory(): void {
+  closeTableInspection();
   hideVictoryModal();
   stopVictoryMusic();
   startMusic();
   startNewRun();
+}
+
+/* ---------- Table Inspection / Hide Modal Mode ---------- */
+let tableInspectionActiveModal: 'VICTORY' | 'DEFEAT' | null = null;
+
+function uiHideModalToViewTable(kind: 'VICTORY' | 'DEFEAT'): void {
+  tableInspectionActiveModal = kind;
+  if (kind === 'VICTORY') {
+    hideVictoryModal();
+  } else {
+    hideDefeatModal();
+  }
+  const appEl = $('app');
+  if (appEl) appEl.classList.add('table-inspect-active');
+  const shield = $('ui-inspect-touch-shield');
+  if (shield) shield.classList.remove('hidden');
+  const bar = $('ui-view-table-bar');
+  if (bar) {
+    bar.classList.remove('hidden');
+    const lbl = $('ui-view-table-label');
+    const btn = $('btn-return-modal');
+    if (lbl) lbl.textContent = kind === 'VICTORY' ? 'Ante 8 Victory Table' : 'Final Hand (Busted Out)';
+    if (btn) btn.innerHTML = kind === 'VICTORY' ? '<span>🔙 RETURN TO VICTORY SCREEN</span>' : '<span>🔙 RETURN TO BUST SCREEN</span>';
+  }
+}
+
+function uiRestoreModal(): void {
+  const appEl = $('app');
+  if (appEl) appEl.classList.remove('table-inspect-active');
+  const shield = $('ui-inspect-touch-shield');
+  if (shield) shield.classList.add('hidden');
+  const bar = $('ui-view-table-bar');
+  if (bar) bar.classList.add('hidden');
+
+  const kind = tableInspectionActiveModal;
+  tableInspectionActiveModal = null;
+  if (kind === 'VICTORY') {
+    showVictoryModal();
+  } else if (kind === 'DEFEAT') {
+    showDefeatModal();
+  }
+}
+
+function closeTableInspection(): void {
+  const appEl = $('app');
+  if (appEl) appEl.classList.remove('table-inspect-active');
+  const shield = $('ui-inspect-touch-shield');
+  if (shield) shield.classList.add('hidden');
+  const bar = $('ui-view-table-bar');
+  if (bar) bar.classList.add('hidden');
+  tableInspectionActiveModal = null;
 }
 
 (window as any).showMainMenu = showMainMenu;
@@ -1531,6 +1696,9 @@ function uiRestartFromVictory(): void {
 (window as any).hideVictoryModal = hideVictoryModal;
 (window as any).uiContinueIntoEndless = uiContinueIntoEndless;
 (window as any).uiRestartFromVictory = uiRestartFromVictory;
+(window as any).uiHideModalToViewTable = uiHideModalToViewTable;
+(window as any).uiRestoreModal = uiRestoreModal;
+(window as any).closeTableInspection = closeTableInspection;
 
 /* ==========================================================
    BOOT
