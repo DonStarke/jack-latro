@@ -38,7 +38,7 @@ function shuffle<T>(array: ReadonlyArray<T>): T[] {
 /** Chip value of a card when scored. Pit Boss makes face cards worth 0. */
 function getCardChipValue(card: Card, bossBlind: BossBlindDef | null = getState().bossBlind): number {
   if (bossBlind && bossBlind.id === 'the_pit_boss' && FACE_RANKS.includes(card.rank)) {
-    return 0;
+    return 5;
   }
   if (FACE_RANKS.includes(card.rank)) return 10;
   if (card.rank === 'A') return 11;
@@ -101,9 +101,9 @@ type OutcomeType = 'BUST' | 'CHARLIE' | 'NATURAL' | 'EXACT21' | 'WIN' | 'PUSH' |
 const HAND_TIERS: Readonly<Record<'CHARLIE' | 'NATURAL' | 'EXACT21' | 'WIN' | 'PUSH', { chips: number; mult: number }>> = {
   CHARLIE: { chips: 160, mult: 5 },
   NATURAL: { chips: 120, mult: 4 },
-  EXACT21: { chips: 75, mult: 3 },
-  WIN: { chips: 40, mult: 2 },
-  PUSH: { chips: 25, mult: 1 }
+  EXACT21: { chips: 85, mult: 3 },
+  WIN: { chips: 50, mult: 2 },
+  PUSH: { chips: 30, mult: 1 }
 };
 
 interface HandClassification {

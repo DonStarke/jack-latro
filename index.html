@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -81,6 +81,14 @@
     <!-- CENTER STAGE: SHARED HEADLINE SPOT FOR "YOU WON!" AND "BUSTED OUT!" + STATUS BANNER -->
     <div class="center-stage">
       <div class="outcome-headline hidden" id="ui-outcome-headline">YOU WON!</div>
+      <div class="tier-plaque hidden" id="ui-tier-plaque">
+        <div class="tier-plaque-title" id="ui-tier-plaque-title">EXACT 21 WIN!</div>
+        <div class="tier-plaque-sub" id="ui-tier-plaque-sub">
+          <span class="plaque-chips" id="ui-tier-plaque-chips">+85c</span>
+          <span class="plaque-x">×</span>
+          <span class="plaque-mult" id="ui-tier-plaque-mult">+3m</span>
+        </div>
+      </div>
       <div class="center-banner-wrap">
         <div class="center-banner" id="ui-banner">Tap DEAL to start the round!</div>
         <div class="scoring-breakdown" id="ui-breakdown">7 Deals per Blind — play out every hand!</div>
@@ -169,15 +177,29 @@
       <tbody>
         <tr><td><strong>5-Card Charlie</strong> (5+ cards unbusted)</td><td><span style="color:var(--chips)">160c</span> × <span style="color:var(--mult)">5m</span></td></tr>
         <tr><td><strong>Natural Blackjack</strong> (2-card 21)</td><td><span style="color:var(--chips)">120c</span> × <span style="color:var(--mult)">4m</span></td></tr>
-        <tr><td><strong>Exact 21</strong> (3+ cards)</td><td><span style="color:var(--chips)">75c</span> × <span style="color:var(--mult)">3m</span></td></tr>
-        <tr><td><strong>Beat Dealer / Dealer Bust</strong></td><td><span style="color:var(--chips)">40c</span> × <span style="color:var(--mult)">2m</span></td></tr>
-        <tr><td><strong>Push (Tie)</strong></td><td><span style="color:var(--chips)">25c</span> × <span style="color:var(--mult)">1m</span></td></tr>
+        <tr><td><strong>Exact 21</strong> (3+ cards)</td><td><span style="color:var(--chips)">85c</span> × <span style="color:var(--mult)">3m</span></td></tr>
+        <tr><td><strong>Beat Dealer / Dealer Bust</strong></td><td><span style="color:var(--chips)">50c</span> × <span style="color:var(--mult)">2m</span></td></tr>
+        <tr><td><strong>Push (Tie)</strong></td><td><span style="color:var(--chips)">30c</span> × <span style="color:var(--mult)">1m</span></td></tr>
         <tr><td><strong>Loss / Bust</strong></td><td>0 (unless <em>Safety Net</em>)</td></tr>
       </tbody>
     </table>
     <div style="font-size:10px; color:#94a3b8; line-height:1.4;">
       • <strong>Double Down:</strong> Initial 2 cards only. Draw 1 card, Stand, and multiply final score by <strong>×2</strong>.<br>
-      • <strong>Economy:</strong> Clear a Blind to earn Base Cash + $1 per unused Deal + $1 interest per $5 held (max $5).
+      • <strong>Push Deal Refund:</strong> Pushing against the Dealer refunds your deal counter.<br>
+      • <strong>Economy:</strong> Clear a Blind to earn Base Cash + $1 per unused Deal + $1 interest per $5 held (max $5, or $8 with High Roller Credit).
+    </div>
+
+    <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid #334155;">
+      <label style="font-size: 11px; color: var(--gold); font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
+        <span>Scoring Animation Pace</span>
+        <span id="ui-lbl-anim-speed" style="font-size:10px; color:#38bdf8;">0.10× (Slow / Educational)</span>
+      </label>
+      <select id="setting-anim-speed" style="width:100%; margin-top:4px; padding:6px; background:#0b0e14; color:#fff; border:1px solid #334155; border-radius:4px; font-size:11px;" onchange="updateScoringSpeed(parseFloat(this.value))">
+        <option value="0.10" selected>0.10× (Slow / Educational - 10% Speed)</option>
+        <option value="0.25">0.25× (Relaxed - 25% Speed)</option>
+        <option value="0.50">0.50× (Medium - 50% Speed)</option>
+        <option value="1.00">1.00× (Brisk / Original)</option>
+      </select>
     </div>
   </div>
 </div>
@@ -236,10 +258,10 @@
         <label><span>Experimental Rules</span></label>
         <div style="display:flex; flex-direction:column; gap:3px; margin-top:2px;">
           <label style="color:#e2e8f0; font-weight:normal; justify-content:flex-start; gap:6px; cursor:pointer;">
-            <input type="checkbox" id="sim-push-refund"> Pushes Refund Deal (+1 Deal back)
+            <input type="checkbox" id="sim-push-refund" checked> Pushes Refund Deal (+1 Deal back)
           </label>
           <label style="color:#e2e8f0; font-weight:normal; justify-content:flex-start; gap:6px; cursor:pointer;">
-            <input type="checkbox" id="sim-ante-leveling"> Hand Tiers Scale +15%/Ante
+            <input type="checkbox" id="sim-ante-leveling" checked> Hand Tiers Scale +15%/Ante
           </label>
         </div>
       </div>

@@ -1,4 +1,4 @@
-﻿/* ==========================================================
+/* ==========================================================
    simulator.ts - MONTE CARLO TELEMETRY (data + report text only)
    Runs on its OWN throwaway run objects: it never reads or writes the
    live gameState. Scoring, economy, catalogs and vouchers all come from
@@ -24,6 +24,7 @@ interface SimRun {
   deck: Card[];
   jokers: JokerInstance[];
   vouchers: string[];
+  consumables: string[];
 }
 
 interface BlindStat {
@@ -164,12 +165,12 @@ function decideBotAction(
 function scoreJokerPriorityForBot(joker: JokerInstance, botType: BotType): number {
   let score = joker.cost;
   if (joker.isXMult) score += 5;
-  if (joker.id === 'daredevil') score += (joker.bonusMult || 0) * 0.6;
-  if (joker.id === 'chip_stacker') score += (joker.bonusChips || 0) * 0.12;
+  if (joker.id === 'daredevil') score += (joker.bonusMult || 0) * 0.8;
+  if (joker.id === 'chip_stacker') score += (joker.bonusChips || 0) * 0.15;
 
   if (botType === 'highroller' && ['blackjack_tycoon', 'vip_high_roller', 'ace_up_sleeve', 'chip_stacker', 'minimalist', 'the_shark'].includes(joker.id)) score += 6;
-  if (botType === 'charlie' && ['bust_cushion', 'daredevil', 'card_counter', 'hit_me_baby', 'sweet_16', 'safety_net'].includes(joker.id)) score += 6;
-  if (botType === 'synergy' && ['bust_cushion', 'daredevil', 'chip_stacker', 'the_shark', 'blackjack_tycoon', 'ace_up_sleeve', 'vip_high_roller', 'push_it_good'].includes(joker.id)) score += 5;
+  if (botType === 'charlie' && ['bust_cushion', 'daredevil', 'card_counter', 'hit_me_baby', 'sweet_16', 'safety_net', 'even_steven'].includes(joker.id)) score += 6;
+  if (botType === 'synergy' && ['bust_cushion', 'daredevil', 'chip_stacker', 'the_shark', 'blackjack_tycoon', 'ace_up_sleeve', 'vip_high_roller', 'push_it_good', 'card_counter', 'sweet_16', 'compound_edge'].includes(joker.id)) score += 5;
   return score;
 }
 
@@ -194,6 +195,15 @@ function simulateShopVisit(
       simRun.baseWinMultBonus += d.baseWinMultBonus || 0;
       simRun.maxJokers += d.maxJokers || 0;
       simRun.baseWinChipBonus += d.baseWinChipBonus || 0;
+    }
+  }
+
+  // Tarot purchases for bots
+  if (simRun.consumables.length < 2 && simRun.money >= 7) {
+    const tarotOffer = shuffle(TAROT_CATALOG)[0];
+    if (simRun.money >= tarotOffer.cost + 4) {
+      simRun.money -= tarotOffer.cost;
+      simRun.consumables.push(tarotOffer.id);
     }
   }
 
@@ -306,7 +316,8 @@ function runBatchSimulationForBot(numRuns: number, botType: BotType, cfg: SimCon
       baseWinMultBonus: 0,
       deck: baseDeckTemplate.slice(),
       jokers: [],
-      vouchers: []
+      vouchers: [],
+      consumables: []
     };
 
     let runFailed = false;
@@ -343,6 +354,23 @@ function runBatchSimulationForBot(numRuns: number, botType: BotType, cfg: SimCon
           const pHand: Card[] = [draw(), draw()];
           const dHand: Card[] = [draw(), draw()];
           let doubled = false;
+          let simRunTempChips = 0;
+
+          // Bot uses opening tarots if beneficial
+          if (simRun.consumables.length > 0) {
+            const xIdx = simRun.consumables.indexOf('x_ray');
+            if (xIdx >= 0) {
+              simRunTempChips += 75;
+              simRun.consumables.splice(xIdx, 1);
+            }
+          }
+          if (simRun.consumables.length > 0 && pHand.length === 2 && evaluateBlackjackTotal(pHand, hasCushion).total <= 10) {
+            const aceIdx = simRun.consumables.indexOf('loaded_ace');
+            if (aceIdx >= 0) {
+              pHand.push({ uid: 9998, rank: 'A', suit: '♠', enhancement: 'foil' });
+              simRun.consumables.splice(aceIdx, 1);
+            }
+          }
 
           if (evaluateBlackjackTotal(pHand, hasCushion).total < 21) {
             while (true) {
@@ -357,9 +385,10 @@ function runBatchSimulationForBot(numRuns: number, botType: BotType, cfg: SimCon
                 const postHitTotal = evaluateBlackjackTotal(pHand, hasCushion).total;
 
                 if (preHitTotal >= 14 && postHitTotal <= 21) {
+                  const gain = preHitTotal >= 16 ? 2 : 1;
                   for (const j of simRun.jokers) {
                     if (j.id === 'daredevil') {
-                      j.bonusMult = (j.bonusMult || 0) + 3;
+                      j.bonusMult = (j.bonusMult || 0) + gain;
                     }
                   }
                 }
@@ -376,6 +405,30 @@ function runBatchSimulationForBot(numRuns: number, botType: BotType, cfg: SimCon
             }
           }
 
+          // Bot uses resolution tarots
+          const pTot = evaluateBlackjackTotal(pHand, hasCushion).total;
+          if (simRun.consumables.length > 0 && !doubled && pTot >= 19 && pTot <= 21) {
+            const dvIdx = simRun.consumables.indexOf('double_vision');
+            if (dvIdx >= 0) {
+              doubled = true;
+              simRun.consumables.splice(dvIdx, 1);
+            }
+          }
+          if (simRun.consumables.length > 0) {
+            const polyIdx = simRun.consumables.indexOf('polychrome_dice');
+            if (polyIdx >= 0 && pHand.length > 0 && !pHand[0].enhancement) {
+              pHand[0].enhancement = 'poly';
+              simRun.consumables.splice(polyIdx, 1);
+            }
+          }
+          if (simRun.consumables.length > 0) {
+            const midasIdx = simRun.consumables.indexOf('midas_touch');
+            if (midasIdx >= 0 && pHand.length > 0) {
+              pHand[pHand.length - 1].enhancement = 'gold';
+              simRun.consumables.splice(midasIdx, 1);
+            }
+          }
+
           const res = scoreHand({
             playerHand: pHand,
             dealerHand: dHand,
@@ -385,9 +438,10 @@ function runBatchSimulationForBot(numRuns: number, botType: BotType, cfg: SimCon
             money: simRun.money,
             baseWinChipBonus: simRun.baseWinChipBonus,
             baseWinMultBonus: simRun.baseWinMultBonus,
-            tempBonusChips: 0,
+            tempBonusChips: simRunTempChips,
             doubledDown: doubled,
-            anteHandScaling: cfg.anteHandScaling
+            anteHandScaling: cfg.anteHandScaling,
+            vouchers: simRun.vouchers
           });
 
           // Apply the result to the simulated run + telemetry
@@ -400,7 +454,7 @@ function runBatchSimulationForBot(numRuns: number, botType: BotType, cfg: SimCon
           }
           if (res.chipStackerNewBonus !== null) {
             for (const j of simRun.jokers) {
-              if (j.id === 'chip_stacker') j.bonusChips = (j.bonusChips || 0) + 15;
+              if (j.id === 'chip_stacker') j.bonusChips = res.chipStackerNewBonus;
             }
           }
           simRun.money += res.moneyGained;
@@ -438,7 +492,8 @@ function runBatchSimulationForBot(numRuns: number, botType: BotType, cfg: SimCon
           }
         } else {
           bStat.cleared++;
-          simRun.money += calcBlindPayout(b, dealsLeft, simRun.money, cfg.unusedDealCashCap).totalEarned;
+          const maxInterest = simRun.vouchers.includes('deep_pockets') ? 8 : 5;
+          simRun.money += calcBlindPayout(b, dealsLeft, simRun.money, cfg.unusedDealCashCap, maxInterest).totalEarned;
           bStat.cashAfterSum += simRun.money;
 
           simulateShopVisit(simRun, botType, jokerStats, voucherStats);

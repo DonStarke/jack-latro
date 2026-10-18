@@ -1,4 +1,4 @@
-﻿/* ==========================================================
+/* ==========================================================
    main.ts - UI LAYER & PLAY FLOW
    Renders the page, runs the animated hand flow and wires buttons.
    Holds NO game rules and NO state of its own: it reads via
@@ -26,11 +26,15 @@ let lastSimFilename = 'jack-latro-telemetry.txt';
 function getJokerFullDesc(j: JokerInstance): string {
   if (j.id === 'daredevil') {
     const cur = j.bonusMult || 0;
-    return `Permanently gains +3 Mult for the rest of the run every time you Hit on 14+ without busting. (Currently: +${cur} Mult)`;
+    return `Permanently gains +1 Mult on safe Hit on 14+ (+2 Mult on 16+) for the rest of run. (Currently: +${cur} Mult)`;
   }
   if (j.id === 'chip_stacker') {
     const cur = j.bonusChips || 0;
-    return `Permanently gains +15 Chips for the rest of the run every time you win with a Double Down. (Currently: +${cur} Chips)`;
+    return `Permanently gains +30 Chips for the rest of run every time you win with a Double Down or Exact 21. (Currently: +${cur} Chips)`;
+  }
+  if (j.id === 'compound_edge') {
+    const sets = Math.floor(getState().money / 5);
+    return `+20 Chips for every $5 you currently hold. (Currently: +${sets * 20} Chips with $${getState().money})`;
   }
   return j.desc;
 }
@@ -38,15 +42,32 @@ function getJokerFullDesc(j: JokerInstance): string {
 function getJokerMiniSubHTML(j: JokerInstance): string {
   if (j.id === 'daredevil') {
     const cur = j.bonusMult || 0;
-    return `<span style="color:var(--mult);font-weight:900;">+${cur}m</span> (+3m/Hit 14+)`;
+    return `<span style="color:var(--mult);font-weight:900;">+${cur}m</span> (+1/+2m on Hit)`;
   }
   if (j.id === 'chip_stacker') {
     const cur = j.bonusChips || 0;
-    return `<span style="color:var(--chips);font-weight:900;">+${cur}c</span> (+15c/Dbl Win)`;
+    return `<span style="color:var(--chips);font-weight:900;">+${cur}c</span> (+30c/Dbl/21)`;
   }
-  if (j.id === 'bust_cushion') {
-    return `22 = 21! (Bust 23+)`;
+  if (j.id === 'compound_edge') {
+    const sets = Math.floor(getState().money / 5);
+    return `<span style="color:var(--chips);font-weight:900;">+${sets * 20}c</span> (+20c/$5)`;
   }
+  if (j.id === 'bust_cushion') return `22 = 21! (Bust 23+)`;
+  if (j.id === 'card_counter') return `+40c / low (2-6)`;
+  if (j.id === 'vip_high_roller') return `+10c, +5m / Face`;
+  if (j.id === 'ace_up_sleeve') return `+50c, +5m on Ace`;
+  if (j.id === 'sweet_16') return `+50c, +15m (≤16 Stand)`;
+  if (j.id === 'lucky_sevens') return `+77c/+7m (7s), +7m`;
+  if (j.id === 'hit_me_baby') return `+5m / card > 2`;
+  if (j.id === 'golden_parachute') return `+$3, +40c on dBust`;
+  if (j.id === 'push_it_good') return `+30c / +100c,+6m Push`;
+  if (j.id === 'blackjack_tycoon') return `×2m, +$2 on 21`;
+  if (j.id === 'the_shark') return `×1.5m (Win ≥3/dBust)`;
+  if (j.id === 'safety_net') return `Bust = 50c × 2m`;
+  if (j.id === 'even_steven') return `+10c, +4m / Even`;
+  if (j.id === 'red_velvet') return `+35c / ♥♦`;
+  if (j.id === 'dark_knight') return `+10c, +3m / ♠♣`;
+  if (j.id === 'minimalist') return `×1.75m 2-Card Win`;
   return j.desc;
 }
 
@@ -65,6 +86,9 @@ function showOutcomeHeadline(text: string, styleType: 'WIN' | 'LOSS'): void {
 
 /* ---------- Score popups ---------- */
 
+let scoringSpeedMultiplier = 0.10; // Default to 10% speed as requested
+let skipScoringAnimation = false;
+
 function popPlayerCard(cardIdx: number, text: string): void {
   const row = $('ui-player-cards');
   const cardEl = row.children[cardIdx];
@@ -77,7 +101,7 @@ function popPlayerCard(cardIdx: number, text: string): void {
   setTimeout(() => {
     cardEl.classList.remove('scoring-pop');
     if (pop.parentNode) pop.remove();
-  }, 360);
+  }, Math.round(220 / scoringSpeedMultiplier));
 }
 
 function popJokerCard(jokerIdx: number): void {
@@ -85,7 +109,108 @@ function popJokerCard(jokerIdx: number): void {
   const jEl = row.children[jokerIdx];
   if (!jEl) return;
   jEl.classList.add('active-pop');
-  setTimeout(() => jEl.classList.remove('active-pop'), 320);
+  setTimeout(() => jEl.classList.remove('active-pop'), Math.round(240 / scoringSpeedMultiplier));
+}
+
+function updateScoringSpeed(multiplier: number): void {
+  scoringSpeedMultiplier = Math.max(0.05, multiplier);
+  const lbl = document.getElementById('ui-lbl-anim-speed');
+  if (lbl) {
+    if (multiplier <= 0.12) lbl.textContent = `${multiplier.toFixed(2)}× (Slow / Educational)`;
+    else if (multiplier <= 0.3) lbl.textContent = `${multiplier.toFixed(2)}× (Relaxed)`;
+    else if (multiplier <= 0.6) lbl.textContent = `${multiplier.toFixed(2)}× (Medium)`;
+    else lbl.textContent = `${multiplier.toFixed(2)}× (Brisk)`;
+  }
+}
+
+async function sleepScore(ms: number): Promise<void> {
+  if (skipScoringAnimation) return;
+  const scaledMs = Math.round(ms / scoringSpeedMultiplier);
+  await sleep(scaledMs);
+}
+
+function animateNumberRoll(el: HTMLElement, fromVal: number, toVal: number, durationMs: number = 700): Promise<void> {
+  return new Promise(resolve => {
+    if (fromVal === toVal || durationMs <= 0 || typeof window === 'undefined') {
+      el.textContent = String(toVal);
+      resolve();
+      return;
+    }
+    const start = performance.now();
+    const tick = (now: number) => {
+      if (skipScoringAnimation) {
+        el.textContent = String(toVal);
+        resolve();
+        return;
+      }
+      const progress = Math.min(1, (now - start) / durationMs);
+      const ease = 1 - Math.pow(1 - progress, 3);
+      const cur = Math.round(fromVal + (toVal - fromVal) * ease);
+      el.textContent = String(cur);
+      if (progress < 1) {
+        const raf = typeof requestAnimationFrame !== 'undefined' ? requestAnimationFrame : (cb: any) => setTimeout(cb, 16);
+        raf(tick);
+      } else {
+        el.textContent = String(toVal);
+        resolve();
+      }
+    };
+    const raf = typeof requestAnimationFrame !== 'undefined' ? requestAnimationFrame : (cb: any) => setTimeout(cb, 16);
+    raf(tick);
+  });
+}
+
+function spawnFloatingToken(
+  fromEl: HTMLElement | { x: number; y: number },
+  toEl: HTMLElement,
+  type: 'chip' | 'mult-plus' | 'mult-x' | 'cash',
+  text: string,
+  onArrival?: () => void
+): void {
+  try {
+    const fromRect = fromEl instanceof HTMLElement ? fromEl.getBoundingClientRect() : { left: fromEl.x, top: fromEl.y, width: 0, height: 0 };
+    const toRect = toEl.getBoundingClientRect();
+    const startX = fromRect.left + (fromRect.width ? fromRect.width / 2 : 0);
+    const startY = fromRect.top + (fromRect.height ? fromRect.height / 2 : 0);
+    const endX = toRect.left + (toRect.width ? toRect.width / 2 : 0);
+    const endY = toRect.top + (toRect.height ? toRect.height / 2 : 0);
+
+    const token = document.createElement('div');
+    token.className = `floating-token token-${type}`;
+    token.textContent = text;
+    token.style.left = `${startX}px`;
+    token.style.top = `${startY}px`;
+    document.body.appendChild(token);
+
+    if (skipScoringAnimation) {
+      token.remove();
+      if (onArrival) onArrival();
+      return;
+    }
+
+    const duration = Math.min(2600, Math.round(360 / scoringSpeedMultiplier));
+
+    if (typeof (token as any).animate === 'function') {
+      const anim = (token as any).animate([
+        { transform: 'translate(-50%, -50%) scale(0.6)', opacity: 0 },
+        { offset: 0.16, transform: 'translate(-50%, -50%) scale(1.15)', opacity: 1 },
+        { offset: 0.84, transform: `translate(${endX - startX}px, ${endY - startY}px) scale(1.0)`, opacity: 1 },
+        { transform: `translate(${endX - startX}px, ${endY - startY}px) scale(0.2)`, opacity: 0 }
+      ], {
+        duration,
+        easing: 'cubic-bezier(0.22, 0.9, 0.36, 1)'
+      });
+      anim.onfinish = () => {
+        token.remove();
+        if (onArrival) onArrival();
+      };
+    } else {
+      token.remove();
+      if (onArrival) onArrival();
+    }
+  } catch (e) {
+    if (onArrival) onArrival();
+  }
 }
 
 /* ---------- Inspectors ---------- */
@@ -785,16 +910,17 @@ async function playerHit(): Promise<void> {
 
   if (preHitEval.total >= 14 && postHitEval.total <= 21) {
     let scaledAny = false;
+    const gain = preHitEval.total >= 16 ? 2 : 1;
     state.jokers.forEach((j, idx) => {
       if (j.id === 'daredevil') {
-        patchJoker('daredevil', { bonusMult: (j.bonusMult || 0) + 3 });
+        patchJoker('daredevil', { bonusMult: (j.bonusMult || 0) + gain });
         scaledAny = true;
         popJokerCard(idx);
       }
     });
     if (scaledAny) {
       playScoreTickSound(6);
-      setBanner('Daredevil scaled! (+3 Mult permanently added)', '');
+      setBanner(`Daredevil scaled! (+${gain} Mult permanently added)`, '');
       updateAllUI();
       await sleep(180);
     }
@@ -869,7 +995,8 @@ async function resolveRound(): Promise<void> {
     baseWinMultBonus: state.baseWinMultBonus,
     tempBonusChips: state.tempBonusChips,
     doubledDown: state.doubledDown,
-    anteHandScaling: getBalanceConfig().anteHandScaling
+    anteHandScaling: getBalanceConfig().anteHandScaling,
+    vouchers: state.vouchersBought
   });
 
   if (res.rawOutcomeType === 'PUSH' && getBalanceConfig().pushRefundsDeal) {
@@ -881,31 +1008,213 @@ async function resolveRound(): Promise<void> {
     updateAllUI();
   }
 
+  skipScoringAnimation = false;
+
   if (res.isScoring) {
     let tickStep = 0;
+    const chipsEl = $('ui-chips');
+    const multEl = $('ui-mult');
+    const moneyEl = $('ui-money');
+    const plaqueEl = $('ui-tier-plaque');
+    const jRow = $('ui-joker-row');
+    const pCardsRow = $('ui-player-cards');
+
+    let curDisplayChips = 0;
+    let curDisplayMult = 0;
+
+    // Reset equation UI to 0 x 0 initially so the player sees the count-up from scratch!
+    setEquationUI(0, 0);
+
     for (const step of res.steps) {
-      const shownMult = Math.round(step.mult * 10) / 10;
+      if (skipScoringAnimation) break;
+      const targetMult = Math.round(step.mult * 10) / 10;
+      const targetChips = Math.round(step.chips);
+
       if (step.kind === 'base') {
-        setEquationUI(step.chips, step.mult, true);
-        setBanner(`${res.outcomeLabel} — Counting score...`, '');
-        playScoreTickSound(tickStep++);
-        await sleep(140);
+        $('ui-tier-plaque-title').textContent = res.outcomeLabel;
+        $('ui-tier-plaque-chips').textContent = `+${step.deltaChips || step.chips}c`;
+        $('ui-tier-plaque-mult').textContent = `+${step.deltaMult || step.mult}m`;
+        plaqueEl.classList.remove('hidden');
+        setBanner(`${res.outcomeLabel} — Baseline established!`, 'Tap table felt to skip');
+        await sleepScore(200);
+
+        // Spawn chips token from plaque to ui-chips
+        spawnFloatingToken(
+          $('ui-tier-plaque-chips'),
+          chipsEl,
+          'chip',
+          `+${step.deltaChips || step.chips}c`,
+          () => {
+            void animateNumberRoll(chipsEl, curDisplayChips, targetChips, Math.round(300 / scoringSpeedMultiplier));
+            curDisplayChips = targetChips;
+            chipsEl.classList.remove('chip-absorbed');
+            void chipsEl.offsetWidth;
+            chipsEl.classList.add('chip-absorbed');
+            playChipSound();
+          }
+        );
+
+        // Spawn mult token from plaque to ui-mult
+        spawnFloatingToken(
+          $('ui-tier-plaque-mult'),
+          multEl,
+          'mult-plus',
+          `+${step.deltaMult || step.mult}m`,
+          () => {
+            void animateNumberRoll(multEl, curDisplayMult, targetMult, Math.round(300 / scoringSpeedMultiplier));
+            curDisplayMult = targetMult;
+            multEl.classList.remove('mult-absorbed-plus');
+            void multEl.offsetWidth;
+            multEl.classList.add('mult-absorbed-plus');
+            playMultPlusSound(tickStep++);
+          }
+        );
+
+        await sleepScore(250);
+        plaqueEl.classList.add('hidden');
+        await sleepScore(80);
+
       } else if (step.kind === 'card') {
-        popPlayerCard(step.cardIndex as number, step.popLabel as string);
-        setEquationUI(Math.round(step.chips), shownMult, true);
-        playScoreTickSound(tickStep++);
-        await sleep(125);
+        const cardEl = pCardsRow.children[step.cardIndex as number] as HTMLElement | undefined;
+        if (cardEl) {
+          popPlayerCard(step.cardIndex as number, step.popLabel as string);
+
+          if (step.deltaChips && step.deltaChips > 0) {
+            spawnFloatingToken(
+              cardEl,
+              chipsEl,
+              'chip',
+              `+${step.deltaChips}c`,
+              () => {
+                void animateNumberRoll(chipsEl, curDisplayChips, targetChips, Math.round(300 / scoringSpeedMultiplier));
+                curDisplayChips = targetChips;
+                chipsEl.classList.remove('chip-absorbed');
+                void chipsEl.offsetWidth;
+                chipsEl.classList.add('chip-absorbed');
+                playChipSound();
+              }
+            );
+          }
+
+          if (step.deltaMult && step.deltaMult > 0) {
+            const isX = step.isXMult;
+            spawnFloatingToken(
+              cardEl,
+              multEl,
+              isX ? 'mult-x' : 'mult-plus',
+              isX ? `×${step.deltaMult}m` : `+${step.deltaMult}m`,
+              () => {
+                void animateNumberRoll(multEl, curDisplayMult, targetMult, Math.round(300 / scoringSpeedMultiplier));
+                curDisplayMult = targetMult;
+                multEl.classList.remove(isX ? 'mult-absorbed-x' : 'mult-absorbed-plus');
+                void multEl.offsetWidth;
+                multEl.classList.add(isX ? 'mult-absorbed-x' : 'mult-absorbed-plus');
+                if (isX) playMultXSound();
+                else playMultPlusSound(tickStep++);
+              }
+            );
+          }
+
+          if (step.deltaMoney && step.deltaMoney > 0) {
+            spawnFloatingToken(cardEl, moneyEl, 'cash', `+$${step.deltaMoney}`, () => playMoneyCoinSound());
+          }
+        } else {
+          setEquationUI(targetChips, targetMult, true);
+          curDisplayChips = targetChips;
+          curDisplayMult = targetMult;
+        }
+        await sleepScore(220);
+
       } else if (step.kind === 'joker') {
-        popJokerCard(step.jokerIndex as number);
-        setEquationUI(Math.round(step.chips), shownMult, true);
-        playScoreTickSound(tickStep++);
-        await sleep(130);
-      } else {
-        setEquationUI(Math.round(step.chips), shownMult, true);
-        playScoreTickSound(tickStep++);
-        await sleep(120);
+        const jEl = jRow.children[step.jokerIndex as number] as HTMLElement | undefined;
+        if (jEl) {
+          // Dim other jokers and highlight active joker
+          jRow.classList.add('joker-row-scoring');
+          jEl.classList.add('scoring-focus');
+
+          // Smoothly scroll active joker into view so player can look up and see it!
+          if (typeof jEl.scrollIntoView === 'function') {
+            jEl.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+          }
+          playCardSlideSound();
+
+          setBanner(`${step.sourceName || 'Joker'} triggered!`, 'Tap table felt to skip');
+          await sleepScore(180);
+
+          if (step.deltaChips && step.deltaChips > 0) {
+            spawnFloatingToken(
+              jEl,
+              chipsEl,
+              'chip',
+              `+${step.deltaChips}c`,
+              () => {
+                void animateNumberRoll(chipsEl, curDisplayChips, targetChips, Math.round(300 / scoringSpeedMultiplier));
+                curDisplayChips = targetChips;
+                chipsEl.classList.remove('chip-absorbed');
+                void chipsEl.offsetWidth;
+                chipsEl.classList.add('chip-absorbed');
+                playChipSound();
+              }
+            );
+          }
+
+          if (step.deltaMult && step.deltaMult > 0) {
+            const isX = step.isXMult;
+            spawnFloatingToken(
+              jEl,
+              multEl,
+              isX ? 'mult-x' : 'mult-plus',
+              isX ? `×${step.deltaMult}m` : `+${step.deltaMult}m`,
+              () => {
+                void animateNumberRoll(multEl, curDisplayMult, targetMult, Math.round(300 / scoringSpeedMultiplier));
+                curDisplayMult = targetMult;
+                multEl.classList.remove(isX ? 'mult-absorbed-x' : 'mult-absorbed-plus');
+                void multEl.offsetWidth;
+                multEl.classList.add(isX ? 'mult-absorbed-x' : 'mult-absorbed-plus');
+                if (isX) playMultXSound();
+                else playMultPlusSound(tickStep++);
+              }
+            );
+          }
+
+          if (step.deltaMoney && step.deltaMoney > 0) {
+            spawnFloatingToken(jEl, moneyEl, 'cash', `+$${step.deltaMoney}`, () => playMoneyCoinSound());
+          }
+
+          await sleepScore(240);
+          jEl.classList.remove('scoring-focus');
+          jRow.classList.remove('joker-row-scoring');
+        } else {
+          setEquationUI(targetChips, targetMult, true);
+          curDisplayChips = targetChips;
+          curDisplayMult = targetMult;
+          await sleepScore(150);
+        }
+
+      } else if (step.kind === 'double') {
+        setBanner('Double Down: ×2 Mult!', 'Tap table felt to skip');
+        spawnFloatingToken(
+          $('ui-table-felt'),
+          multEl,
+          'mult-x',
+          '×2m',
+          () => {
+            void animateNumberRoll(multEl, curDisplayMult, targetMult, Math.round(300 / scoringSpeedMultiplier));
+            curDisplayMult = targetMult;
+            multEl.classList.remove('mult-absorbed-x');
+            void multEl.offsetWidth;
+            multEl.classList.add('mult-absorbed-x');
+            playMultXSound();
+          }
+        );
+        await sleepScore(240);
       }
     }
+
+    $('ui-joker-row').classList.remove('joker-row-scoring');
+    $('ui-tier-plaque').classList.add('hidden');
+    setEquationUI(res.chips, res.mult, true);
+    await sleepScore(140);
   } else {
     setEquationUI(0, 0);
   }
@@ -967,4 +1276,11 @@ async function resolveRound(): Promise<void> {
 /* ==========================================================
    BOOT
 ========================================================== */
+$('ui-table-felt').addEventListener('click', () => {
+  const s = getState();
+  if (!s.inHand && s.isDealing) {
+    skipScoringAnimation = true;
+  }
+});
+
 startNewRun();

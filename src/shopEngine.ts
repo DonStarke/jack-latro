@@ -1,4 +1,4 @@
-﻿/* ==========================================================
+/* ==========================================================
    shopEngine.ts - ECONOMY, SHOP, CONSUMABLES & BLIND PROGRESSION
    Pricing, interest, payouts, buying/selling, Tarot effects and the
    state-side of moving between Blinds. No DOM, no audio, no alerts:
@@ -28,8 +28,8 @@ function computeBlindBoss(ante: number, blindIndex: number): BossBlindDef | null
   return blindIndex >= 2 ? BOSS_BLINDS[(ante - 1) % BOSS_BLINDS.length] : null;
 }
 
-function computeInterest(money: number): number {
-  return Math.min(INTEREST_CAP, Math.floor(money / INTEREST_PER));
+function computeInterest(money: number, maxInterest: number = INTEREST_CAP): number {
+  return Math.min(maxInterest, Math.floor(money / INTEREST_PER));
 }
 
 function getJokerSellValue(j: { cost: number }): number {
@@ -37,17 +37,18 @@ function getJokerSellValue(j: { cost: number }): number {
 }
 
 /** Pure payout math (shared with simulator). */
-function calcBlindPayout(blindIndex: number, dealsLeft: number, money: number, unusedDealCashCap: number): PendingPayout {
+function calcBlindPayout(blindIndex: number, dealsLeft: number, money: number, unusedDealCashCap: number, maxInterest: number = INTEREST_CAP): PendingPayout {
   const blindReward = BLIND_REWARDS[Math.min(blindIndex, 2)];
   const handBonus = Math.min(unusedDealCashCap, dealsLeft);
-  const interest = computeInterest(money);
+  const interest = computeInterest(money, maxInterest);
   return { blindReward, handBonus, interest, totalEarned: blindReward + handBonus + interest };
 }
 
 /** Payout for clearing the current Blind, from current state. Does not modify state. */
 function computeBlindPayout(): PendingPayout {
   const s = getState();
-  return calcBlindPayout(s.blindIndex, s.handsLeft, s.money, getBalanceConfig().unusedDealCashCap);
+  const maxInterest = s.vouchersBought.includes('deep_pockets') ? 8 : INTEREST_CAP;
+  return calcBlindPayout(s.blindIndex, s.handsLeft, s.money, getBalanceConfig().unusedDealCashCap, maxInterest);
 }
 
 /* ---------- Blind progression (state side only) ---------- */
@@ -268,8 +269,8 @@ function useConsumable(index: number): ConsumableResult {
 
   let message = '';
   if (c.id === 'x_ray') {
-    patchState({ dealerHoleRevealed: true, tempBonusChips: s.tempBonusChips + 50 });
-    message = 'X-Ray Specs: Hole card revealed & +50 Chips!';
+    patchState({ dealerHoleRevealed: true, tempBonusChips: s.tempBonusChips + 75 });
+    message = 'X-Ray Specs: Hole card revealed & +75 Chips!';
   } else if (c.id === 'loaded_ace') {
     addCardToPlayerHand({ uid: takeNextCardUid(), rank: 'A', suit: '♠', enhancement: 'foil' });
     message = 'Loaded Ace drawn into hand!';
@@ -284,6 +285,15 @@ function useConsumable(index: number): ConsumableResult {
     if (lastCard) {
       setCardEnhancement(lastCard, 'gold');
       message = `${lastCard.rank}${lastCard.suit} turned Gold!`;
+    }
+  } else if (c.id === 'double_vision') {
+    patchState({ doubledDown: true });
+    message = 'Double Vision: Hand Doubled Down (×2 Mult)!';
+  } else if (c.id === 'polychrome_dice') {
+    const firstCard = s.playerHand[0];
+    if (firstCard) {
+      setCardEnhancement(firstCard, 'poly');
+      message = `${firstCard.rank}${firstCard.suit} enhanced to Polychrome (×1.5 Mult)!`;
     }
   }
 

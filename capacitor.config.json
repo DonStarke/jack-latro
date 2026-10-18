@@ -1,0 +1,8 @@
+{
+  "appId": "com.jacklatro.game",
+  "appName": "Jack-latro",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}

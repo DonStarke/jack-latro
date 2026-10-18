@@ -1,4 +1,4 @@
-﻿/* ==========================================================
+/* ==========================================================
    gameState.ts - SINGLE SOURCE OF TRUTH
    All mutable game state lives here. Other modules must use the
    exported functions below; they must never hold their own copies
@@ -128,8 +128,8 @@ const DEFAULT_BALANCE_CONFIG: BalanceConfig = {
   startingDeals: 7,
   targetScalePct: 100,
   unusedDealCashCap: 6,
-  pushRefundsDeal: false,
-  anteHandScaling: false
+  pushRefundsDeal: true,
+  anteHandScaling: true
 };
 
 let _balanceConfig: BalanceConfig = { ...DEFAULT_BALANCE_CONFIG };

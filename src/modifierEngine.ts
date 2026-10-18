@@ -9,43 +9,47 @@
 /* ---------- Catalogs ---------- */
 const JOKER_CATALOG: ReadonlyArray<JokerDef> = [
   { id: 'bust_cushion', name: 'Bust Cushion', cost: 6, isXMult: false, desc: 'Rubber Table: You only bust on 23+ (a total of 22 is treated as a valid 21!).' },
-  { id: 'daredevil', name: 'Daredevil', cost: 5, isXMult: false, bonusMult: 0, desc: 'Permanently gains +3 Mult for the rest of the run every time you Hit on 14+ without busting.' },
-  { id: 'chip_stacker', name: 'Chip Stacker', cost: 5, isXMult: false, bonusChips: 0, desc: 'Permanently gains +15 Chips for the rest of the run every time you win with a Double Down.' },
-  { id: 'card_counter', name: 'Card Counter', cost: 4, isXMult: false, desc: '+25 Chips for each low card (2-6) in your hand.' },
-  { id: 'vip_high_roller', name: 'VIP High Roller', cost: 5, isXMult: false, desc: '+4 Mult for each Face Card (J, Q, K) in your hand.' },
-  { id: 'ace_up_sleeve', name: 'Ace Up Sleeve', cost: 6, isXMult: false, desc: '+40 Chips & +4 Mult if your hand contains an Ace.' },
-  { id: 'sweet_16', name: 'Sweet Sixteen', cost: 5, isXMult: false, desc: 'Standing on 16 or less grants +10 Mult.' },
-  { id: 'lucky_sevens', name: 'Lucky Sevens', cost: 6, isXMult: false, desc: 'Each 7 in your hand grants +77 Chips & +7 Mult.' },
-  { id: 'hit_me_baby', name: 'Hit Me Baby', cost: 5, isXMult: false, desc: '+4 Mult for every card in your hand beyond 2.' },
-  { id: 'golden_parachute', name: 'Gold Parachute', cost: 5, isXMult: false, desc: 'Earn +$3 whenever the Dealer busts.' },
-  { id: 'push_it_good', name: 'Push It Good', cost: 4, isXMult: false, desc: 'Ties (Pushes) count as Wins and grant +80 Chips & +5 Mult.' },
+  { id: 'daredevil', name: 'Daredevil', cost: 6, isXMult: false, bonusMult: 0, desc: 'Permanently gains +1 Mult on safe Hit on 14+ (+2 Mult on 16+) for the rest of run.' },
+  { id: 'chip_stacker', name: 'Chip Stacker', cost: 5, isXMult: false, bonusChips: 0, desc: 'Permanently gains +30 Chips for the rest of run every time you win with a Double Down or Exact 21.' },
+  { id: 'card_counter', name: 'Card Counter', cost: 4, isXMult: false, desc: '+40 Chips for each low card (2-6) in your hand.' },
+  { id: 'vip_high_roller', name: 'VIP High Roller', cost: 5, isXMult: false, desc: '+10 Chips & +5 Mult for each Face Card (J, Q, K) in your hand.' },
+  { id: 'ace_up_sleeve', name: 'Ace Up Sleeve', cost: 6, isXMult: false, desc: '+50 Chips & +5 Mult if your hand contains an Ace.' },
+  { id: 'sweet_16', name: 'Sweet Sixteen', cost: 5, isXMult: false, desc: 'Standing on 16 or less grants +50 Chips & +15 Mult on a Win or Push.' },
+  { id: 'lucky_sevens', name: 'Lucky Sevens', cost: 5, isXMult: false, desc: 'Each 7 in hand grants +77 Chips & +7 Mult. Standing on 17 or 21 grants an extra +7 Mult.' },
+  { id: 'hit_me_baby', name: 'Hit Me Baby', cost: 5, isXMult: false, desc: '+5 Mult for every card in your hand beyond 2.' },
+  { id: 'golden_parachute', name: 'Gold Parachute', cost: 4, isXMult: false, desc: 'Earn +$3 and gain +40 Chips whenever the Dealer busts.' },
+  { id: 'push_it_good', name: 'Push It Good', cost: 4, isXMult: false, desc: '+30 Chips on all scoring hands. Ties (Pushes) count as Wins and grant +100 Chips & +6 Mult.' },
   { id: 'blackjack_tycoon', name: 'BJ Tycoon', cost: 7, isXMult: true, desc: 'Scoring 21 or Natural BJ applies ×2 Mult and grants +$2.' },
-  { id: 'the_shark', name: 'The Shark', cost: 7, isXMult: true, desc: '×1.5 Mult if your final total beats the Dealer by 3 or more.' },
+  { id: 'the_shark', name: 'The Shark', cost: 7, isXMult: true, desc: '×1.5 Mult if your final total beats the Dealer by 3 or more, or if the Dealer busts.' },
   { id: 'safety_net', name: 'Safety Net', cost: 5, isXMult: false, desc: 'Busting still scores 50 Chips × 2 Mult instead of 0.' },
-  { id: 'even_steven', name: 'Even Steven', cost: 4, isXMult: false, desc: '+3 Mult for each even-numbered card (2,4,6,8,10) in hand.' },
-  { id: 'red_velvet', name: 'Red Velvet', cost: 5, isXMult: false, desc: '+20 Chips for each ♥ or ♦ in your hand.' },
-  { id: 'dark_knight', name: 'Dark Knight', cost: 5, isXMult: false, desc: '+3 Mult for each ♠ or ♣ in your hand.' },
+  { id: 'even_steven', name: 'Even Steven', cost: 4, isXMult: false, desc: '+10 Chips & +4 Mult for each even-numbered card (2,4,6,8,10) in hand.' },
+  { id: 'red_velvet', name: 'Red Velvet', cost: 5, isXMult: false, desc: '+35 Chips for each ♥ or ♦ in your hand.' },
+  { id: 'dark_knight', name: 'Dark Knight', cost: 5, isXMult: false, desc: '+10 Chips & +3 Mult for each ♠ or ♣ in your hand.' },
   { id: 'compound_edge', name: 'Compound Edge', cost: 6, isXMult: false, desc: '+20 Chips for every $5 you currently hold.' },
   { id: 'minimalist', name: 'Minimalist', cost: 6, isXMult: true, desc: '×1.75 Mult if you Win with exactly 2 cards.' }
 ];
 
 const TAROT_CATALOG: ReadonlyArray<TarotDef> = [
-  { id: 'x_ray', name: 'X-Ray Specs', cost: 3, desc: 'Reveal Dealer hole card and gain +50 Chips this hand.' },
+  { id: 'x_ray', name: 'X-Ray Specs', cost: 3, desc: 'Reveal Dealer hole card and gain +75 Chips this hand.' },
   { id: 'loaded_ace', name: 'Loaded Ace', cost: 4, desc: 'Draw a Foil Ace of Spades directly into your hand.' },
   { id: 'card_shave', name: 'Card Shave', cost: 3, desc: 'Reduce your highest non-Ace card rank by 3.' },
-  { id: 'midas_touch', name: 'Midas Touch', cost: 3, desc: 'Enhance rightmost card in hand to Gold (+$3 when scored).' }
+  { id: 'midas_touch', name: 'Midas Touch', cost: 3, desc: 'Enhance rightmost card in hand to Gold (+$3 when scored).' },
+  { id: 'double_vision', name: 'Double Vision', cost: 3, desc: 'Apply Double Down (×2 Mult) to your active hand without forcing a Stand.' },
+  { id: 'polychrome_dice', name: 'Polychrome Dice', cost: 4, desc: 'Enhance leftmost card in hand to Polychrome (×1.5 Mult).' }
 ];
 
 const VOUCHER_CATALOG: ReadonlyArray<VoucherDef> = [
   { id: 'extra_hand', name: 'Extra Cushion', cost: 7, desc: '+1 Max Deal per Blind permanently.' },
   { id: 'table_leverage', name: 'Table Leverage', cost: 6, desc: '+1 Base Mult on all Winning & Push hands permanently.' },
   { id: 'joker_slot', name: 'VIP Lounge Pass', cost: 8, desc: '+1 Max Joker Slot permanently.' },
-  { id: 'base_boost', name: 'High Stakes Table', cost: 7, desc: '+30 Base Chips on all Winning & Push hands.' }
+  { id: 'base_boost', name: 'High Stakes Table', cost: 7, desc: '+30 Base Chips on all Winning & Push hands.' },
+  { id: 'deep_pockets', name: 'High Roller Credit', cost: 7, desc: 'Raises interest cap from $5 to $8 (earn interest up to $40).' },
+  { id: 'card_sharp', name: 'Precision Edge', cost: 7, desc: '+30 Chips & +2 Mult on all Natural Blackjacks and Exact 21s.' }
 ];
 
 const BOSS_BLINDS: ReadonlyArray<BossBlindDef> = [
   { id: 'the_house', name: 'The House', desc: 'Ties (Pushes) go to the Dealer unless you have Push It Good.' },
-  { id: 'the_pit_boss', name: 'The Pit Boss', desc: 'Face cards (J, Q, K) contribute 0 Chips when scored.' },
+  { id: 'the_pit_boss', name: 'The Pit Boss', desc: 'Face cards (J, Q, K) contribute half chips (5 chips) when scored.' },
   { id: 'the_cooler', name: 'The Cooler', desc: 'Start this Blind with -1 Deal.' },
   { id: 'the_anchor', name: 'The Anchor', desc: 'Double Down is disabled during this Blind.' }
 ];
@@ -64,6 +68,7 @@ interface ScoreContext {
   tempBonusChips: number;
   doubledDown: boolean;
   anteHandScaling: boolean;
+  vouchers?: ReadonlyArray<string>;
 }
 
 type ScoreStepKind = 'base' | 'card' | 'joker' | 'double';
@@ -76,6 +81,11 @@ interface ScoreStep {
   cardIndex?: number;
   jokerIndex?: number;
   popLabel?: string;
+  deltaChips?: number;
+  deltaMult?: number;
+  isXMult?: boolean;
+  deltaMoney?: number;
+  sourceName?: string;
 }
 
 interface ScoreResult {
@@ -137,18 +147,18 @@ function scoreHand(ctx: ScoreContext): ScoreResult {
 
   if (outcomeType === 'PUSH' && owns('push_it_good')) {
     outcomeType = 'WIN';
-    baseChips += 80; baseMult += 5;
+    baseChips += 100; baseMult += 6;
     outcomeLabel = 'PUSH IT GOOD WIN!';
-    logs.push('Push It Good (+80c, +5m)');
+    logs.push('Push It Good (+100c, +6m)');
   }
 
   const isWin = WIN_TIERS.includes(outcomeType);
 
   let chipStackerNewBonus: number | null = null;
   const stacker = ctx.jokers.find(j => j.id === 'chip_stacker');
-  if (ctx.doubledDown && isWin && stacker) {
-    chipStackerNewBonus = (stacker.bonusChips || 0) + 15;
-    logs.push(`Chip Stacker Scaled (+15c ➔ +${chipStackerNewBonus}c)`);
+  if ((ctx.doubledDown || outcomeType === 'EXACT21') && isWin && stacker) {
+    chipStackerNewBonus = (stacker.bonusChips || 0) + 30;
+    logs.push(`Chip Stacker Scaled (+30c ➔ +${chipStackerNewBonus}c)`);
   }
 
   const result: ScoreResult = {
@@ -167,24 +177,50 @@ function scoreHand(ctx: ScoreContext): ScoreResult {
   let chips = baseChips + ctx.baseWinChipBonus + ctx.tempBonusChips;
   let mult = baseMult + ctx.baseWinMultBonus;
   let money = ctx.money;
-  steps.push({ kind: 'base', chips, mult });
+
+  // Precision Edge voucher bonus on Natural & Exact 21
+  if (ctx.vouchers && ctx.vouchers.includes('card_sharp') && (outcomeType === 'NATURAL' || outcomeType === 'EXACT21')) {
+    chips += 30;
+    mult += 2;
+    logs.push('Precision Edge (+30c, +2m)');
+  }
+
+  steps.push({ kind: 'base', chips, mult, deltaChips: chips, deltaMult: mult, sourceName: outcomeLabel });
 
   // Cards, left to right
   ctx.playerHand.forEach((c, i) => {
+    const prevChips = chips;
+    const prevMult = mult;
+    const prevMoney = money;
     const cVal = getCardChipValue(c, ctx.bossBlind);
     chips += cVal;
     let popLabel = `+${cVal}c`;
+    let isX = false;
     if (c.enhancement === 'foil') { chips += 30; popLabel = `+${cVal + 30}c`; logs.push(`${c.rank}${c.suit} +30c`); }
     if (c.enhancement === 'holo') { mult += 4; popLabel += ' +4m'; logs.push(`${c.rank}${c.suit} +4m`); }
-    if (c.enhancement === 'poly') { mult = round1(mult * 1.5); popLabel += ' ×1.5m'; logs.push(`${c.rank}${c.suit} ×1.5m`); }
+    if (c.enhancement === 'poly') { mult = round1(mult * 1.5); isX = true; popLabel += ' ×1.5m'; logs.push(`${c.rank}${c.suit} ×1.5m`); }
     if (c.enhancement === 'gold') { money += 3; popLabel += ' +$3'; logs.push(`${c.rank}${c.suit} +$3`); }
-    steps.push({ kind: 'card', cardIndex: i, chips, mult, popLabel });
+    steps.push({
+      kind: 'card',
+      cardIndex: i,
+      chips,
+      mult,
+      popLabel,
+      deltaChips: chips - prevChips,
+      deltaMult: isX ? 1.5 : (mult - prevMult),
+      isXMult: isX,
+      deltaMoney: money - prevMoney,
+      sourceName: `${c.rank}${c.suit}`
+    });
   });
 
   // Jokers, left to right
   const hand = ctx.playerHand;
   ctx.jokers.forEach((j, jIdx) => {
     let triggered = false;
+    const prevChips = chips;
+    const prevMult = mult;
+    const prevMoney = money;
     switch (j.id) {
       case 'daredevil': {
         const bm = j.bonusMult || 0;
@@ -198,32 +234,36 @@ function scoreHand(ctx: ScoreContext): ScoreResult {
       }
       case 'card_counter': {
         const lows = hand.filter(c => ['2', '3', '4', '5', '6'].includes(c.rank)).length;
-        if (lows > 0) { chips += lows * 25; logs.push(`Counter +${lows * 25}c`); triggered = true; }
+        if (lows > 0) { chips += lows * 40; logs.push(`Counter +${lows * 40}c`); triggered = true; }
         break;
       }
       case 'vip_high_roller': {
         const faces = hand.filter(c => FACE_RANKS.includes(c.rank)).length;
-        if (faces > 0) { mult += faces * 4; logs.push(`VIP +${faces * 4}m`); triggered = true; }
+        if (faces > 0) { mult += faces * 5; chips += faces * 10; logs.push(`VIP +${faces * 10}c/+${faces * 5}m`); triggered = true; }
         break;
       }
       case 'ace_up_sleeve':
-        if (hand.some(c => c.rank === 'A')) { chips += 40; mult += 4; logs.push('Ace Sleeve +40c/+4m'); triggered = true; }
+        if (hand.some(c => c.rank === 'A')) { chips += 50; mult += 5; logs.push('Ace Sleeve +50c/+5m'); triggered = true; }
         break;
       case 'sweet_16':
-        if (pTotal <= 16 && !pBust) { mult += 10; logs.push('Sweet 16 +10m'); triggered = true; }
+        if (pTotal <= 16 && !pBust && (isWin || outcomeType === 'PUSH')) { chips += 50; mult += 15; logs.push('Sweet 16 +50c/+15m'); triggered = true; }
         break;
       case 'lucky_sevens': {
         const sevens = hand.filter(c => c.rank === '7').length;
         if (sevens > 0) { chips += sevens * 77; mult += sevens * 7; logs.push(`7s +${sevens * 77}c/+${sevens * 7}m`); triggered = true; }
+        if (pTotal === 17 || pTotal === 21) { mult += 7; logs.push('Lucky Total +7m'); triggered = true; }
         break;
       }
       case 'hit_me_baby': {
         const extra = Math.max(0, hand.length - 2);
-        if (extra > 0) { mult += extra * 4; logs.push(`Hit Me +${extra * 4}m`); triggered = true; }
+        if (extra > 0) { mult += extra * 5; logs.push(`Hit Me +${extra * 5}m`); triggered = true; }
         break;
       }
       case 'golden_parachute':
-        if (dBust) { money += 3; logs.push('Parachute +$3'); triggered = true; }
+        if (dBust) { money += 3; chips += 40; logs.push('Parachute +40c/+$3'); triggered = true; }
+        break;
+      case 'push_it_good':
+        chips += 30; logs.push('Push It Good +30c'); triggered = true;
         break;
       case 'blackjack_tycoon':
         if (pTotal === 21) { mult *= 2; money += 2; logs.push('Tycoon ×2m/+$2'); triggered = true; }
@@ -233,17 +273,17 @@ function scoreHand(ctx: ScoreContext): ScoreResult {
         break;
       case 'even_steven': {
         const evens = hand.filter(c => ['2', '4', '6', '8', '10'].includes(c.rank)).length;
-        if (evens > 0) { mult += evens * 3; logs.push(`Even +${evens * 3}m`); triggered = true; }
+        if (evens > 0) { mult += evens * 4; chips += evens * 10; logs.push(`Even +${evens * 10}c/+${evens * 4}m`); triggered = true; }
         break;
       }
       case 'red_velvet': {
         const reds = hand.filter(c => c.suit === '♥' || c.suit === '♦').length;
-        if (reds > 0) { chips += reds * 20; logs.push(`Red +${reds * 20}c`); triggered = true; }
+        if (reds > 0) { chips += reds * 35; logs.push(`Red +${reds * 35}c`); triggered = true; }
         break;
       }
       case 'dark_knight': {
         const blacks = hand.filter(c => c.suit === '♠' || c.suit === '♣').length;
-        if (blacks > 0) { mult += blacks * 3; logs.push(`Dark +${blacks * 3}m`); triggered = true; }
+        if (blacks > 0) { mult += blacks * 3; chips += blacks * 10; logs.push(`Dark +${blacks * 10}c/+${blacks * 3}m`); triggered = true; }
         break;
       }
       case 'compound_edge': {
@@ -255,13 +295,27 @@ function scoreHand(ctx: ScoreContext): ScoreResult {
         if (hand.length === 2 && outcomeType !== 'PUSH') { mult = round1(mult * 1.75); logs.push('Minimalist ×1.75m'); triggered = true; }
         break;
     }
-    if (triggered) steps.push({ kind: 'joker', jokerIndex: jIdx, chips, mult });
+    if (triggered) {
+      const isX = j.isXMult || ['the_shark', 'blackjack_tycoon', 'minimalist'].includes(j.id);
+      const dMult = isX ? (prevMult > 0 ? round1(mult / prevMult) : mult) : (mult - prevMult);
+      steps.push({
+        kind: 'joker',
+        jokerIndex: jIdx,
+        chips,
+        mult,
+        deltaChips: chips - prevChips,
+        deltaMult: dMult,
+        isXMult: isX,
+        deltaMoney: money - prevMoney,
+        sourceName: j.name
+      });
+    }
   });
 
   if (ctx.doubledDown) {
     mult *= 2;
     logs.push('Double Down ×2m');
-    steps.push({ kind: 'double', chips, mult });
+    steps.push({ kind: 'double', chips, mult, deltaMult: 2, isXMult: true, sourceName: 'Double Down' });
   }
 
   result.chips = chips;
