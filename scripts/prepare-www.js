@@ -9,9 +9,17 @@ const distDir = path.join(rootDir, 'dist');
 // Ensure www and www/dist exist
 fs.mkdirSync(wwwDistDir, { recursive: true });
 
-// Copy index.html and styles.css
-fs.copyFileSync(path.join(rootDir, 'index.html'), path.join(wwwDir, 'index.html'));
-fs.copyFileSync(path.join(rootDir, 'styles.css'), path.join(wwwDir, 'styles.css'));
+// Copy root web assets
+const assets = ['index.html', 'styles.css', 'manifest.json', 'favicon.svg', 'apple-touch-icon.png', 'icon-192.png'];
+for (const asset of assets) {
+  const p = path.join(rootDir, asset);
+  if (fs.existsSync(p)) {
+    fs.copyFileSync(p, path.join(wwwDir, asset));
+  }
+}
+
+// Ensure .nojekyll exists for GitHub Pages
+fs.writeFileSync(path.join(wwwDir, '.nojekyll'), '');
 
 // Copy dist/*.js
 if (fs.existsSync(distDir)) {
@@ -21,4 +29,4 @@ if (fs.existsSync(distDir)) {
   }
 }
 
-console.log('Successfully prepared www/ directory for Capacitor.');
+console.log('Successfully prepared www/ directory for Capacitor & GitHub Pages.');
