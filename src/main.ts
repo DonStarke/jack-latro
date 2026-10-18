@@ -567,7 +567,21 @@ function toggleBlindModal(show: boolean): void {
 }
 
 function toggleCogModal(show: boolean): void {
-  $('ui-cog-modal').classList.toggle('hidden', !show);
+  const modal = $('ui-cog-modal');
+  if (show) {
+    const splash = $('ui-splash-screen');
+    const isFromSplash = splash && !splash.classList.contains('hidden');
+    const newRunBtn = document.getElementById('btn-modal-new-run');
+    const mainMenuBtn = document.getElementById('btn-modal-main-menu');
+    const actionsGrid = document.getElementById('ui-cog-modal-actions');
+
+    if (newRunBtn) newRunBtn.style.display = isFromSplash ? 'none' : '';
+    if (mainMenuBtn) mainMenuBtn.style.display = isFromSplash ? 'none' : '';
+    if (actionsGrid) {
+      actionsGrid.style.gridTemplateColumns = isFromSplash ? '1fr' : '1fr 1fr 1fr';
+    }
+  }
+  modal.classList.toggle('hidden', !show);
 }
 
 function toggleSimModal(show: boolean): void {
@@ -1398,10 +1412,14 @@ function showMainMenu(): void {
 
   const splash = $('ui-splash-screen');
   if (splash) splash.classList.remove('hidden');
+  if (!musicMuted && !isMusicPlaying) {
+    startMusic();
+  }
   updateMusicUI();
 }
 
 function uiStartGameFromMenu(): void {
+  toggleCogModal(false);
   const splash = $('ui-splash-screen');
   if (splash) splash.classList.add('hidden');
   playCardDealSound();

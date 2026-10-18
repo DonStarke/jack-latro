@@ -12,7 +12,24 @@
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="styles.css?v=2.0">
+<style>
+  /* Critical fallback layout: ensures splash screen and modals are immediately fixed and centered */
+  .splash-screen {
+    position: fixed; inset: 0; z-index: 800;
+    background: radial-gradient(circle at 50% 28%, #143527 0%, #091a13 52%, #050d09 100%);
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px 16px; overflow-y: auto; text-align: center;
+  }
+  .splash-screen.hidden { display: none !important; }
+  .modal-backdrop {
+    position: fixed; inset: 0; z-index: 950;
+    background: rgba(0,0,0,0.86);
+    display: flex; align-items: center; justify-content: center;
+    padding: 10px;
+  }
+  .modal-backdrop.hidden { display: none !important; }
+</style>
 </head>
 <body>
 
@@ -232,10 +249,10 @@
       <button class="btn btn-secondary" onclick="toggleCogModal(false)">Close</button>
     </div>
 
-    <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:6px;">
-      <button class="btn btn-redeal" style="padding:10px 4px; font-size:12px;" onclick="toggleCogModal(false); startNewRun();">↻ New Run</button>
-      <button class="btn btn-secondary" style="padding:10px 4px; font-size:12px;" onclick="toggleCogModal(false); showMainMenu();">🏠 Main Menu</button>
-      <button class="btn btn-double" style="padding:10px 4px; font-size:12px;" onclick="toggleCogModal(false); toggleSimModal(true);">📊 Sim Lab</button>
+    <div id="ui-cog-modal-actions" style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:6px;">
+      <button class="btn btn-redeal" id="btn-modal-new-run" style="padding:10px 4px; font-size:12px;" onclick="toggleCogModal(false); startNewRun();">↻ New Run</button>
+      <button class="btn btn-secondary" id="btn-modal-main-menu" style="padding:10px 4px; font-size:12px;" onclick="toggleCogModal(false); showMainMenu();">🏠 Main Menu</button>
+      <button class="btn btn-double" id="btn-modal-sim" style="padding:10px 4px; font-size:12px;" onclick="toggleCogModal(false); toggleSimModal(true);">📊 Sim Lab</button>
     </div>
 
     <div style="display:flex; justify-content:space-between; align-items:center; background:#111622; padding:7px 10px; border-radius:6px; border:1px solid #222938; margin: 6px 0;">
@@ -480,12 +497,12 @@
 </div>
 
 <!-- Compiled TypeScript (npx.cmd tsc: src/*.ts -> dist/*.js). Plain global scripts; order matters. -->
-<script src="dist/gameState.js"></script>
-<script src="dist/deckEngine.js"></script>
-<script src="dist/modifierEngine.js"></script>
-<script src="dist/shopEngine.js"></script>
-<script src="dist/simulator.js"></script>
-<script src="dist/uiFx.js"></script>
-<script src="dist/main.js"></script>
+<script src="dist/gameState.js?v=2.0"></script>
+<script src="dist/deckEngine.js?v=2.0"></script>
+<script src="dist/modifierEngine.js?v=2.0"></script>
+<script src="dist/shopEngine.js?v=2.0"></script>
+<script src="dist/simulator.js?v=2.0"></script>
+<script src="dist/uiFx.js?v=2.0"></script>
+<script src="dist/main.js?v=2.0"></script>
 </body>
 </html>

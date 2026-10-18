@@ -89,13 +89,18 @@ function animateConfetti(): void {
    SYNTHESIZED WEBAUDIO SOUND ENGINE
 ========================================================== */
 let audioCtx: AudioContext | null = null;
+let masterCompressor: DynamicsCompressorNode | null = null;
 
 function getAudioCtx(): AudioContext | null {
   try {
     if (!audioCtx) {
       const Ctor: typeof AudioContext = (typeof window !== 'undefined' && ((window as any).AudioContext || (window as any).webkitAudioContext));
       if (!Ctor) return null;
-      audioCtx = new Ctor();
+      try {
+        audioCtx = new Ctor({ latencyHint: 'balanced' });
+      } catch (e) {
+        audioCtx = new Ctor();
+      }
     }
     if (audioCtx && audioCtx.state === 'suspended') {
       audioCtx.resume().catch(() => {});
@@ -106,12 +111,25 @@ function getAudioCtx(): AudioContext | null {
   }
 }
 
+function getMasterOutput(ctx: AudioContext): AudioNode {
+  if (!masterCompressor) {
+    masterCompressor = ctx.createDynamicsCompressor();
+    masterCompressor.threshold.setValueAtTime(-14, ctx.currentTime);
+    masterCompressor.knee.setValueAtTime(16, ctx.currentTime);
+    masterCompressor.ratio.setValueAtTime(5, ctx.currentTime);
+    masterCompressor.attack.setValueAtTime(0.003, ctx.currentTime);
+    masterCompressor.release.setValueAtTime(0.12, ctx.currentTime);
+    masterCompressor.connect(ctx.destination);
+  }
+  return masterCompressor;
+}
+
 function playCardDealSound(): void {
   try {
     const ctx = getAudioCtx();
     if (!ctx) return;
     const now = ctx.currentTime;
-    const bufferSize = ctx.sampleRate * 0.045;
+    const bufferSize = Math.floor(ctx.sampleRate * 0.045);
     const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     const data = buffer.getChannelData(0);
     for (let i = 0; i < bufferSize; i++) {
@@ -127,29 +145,37 @@ function playCardDealSound(): void {
 
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(0.28, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.045);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.045);
 
     noise.connect(filter);
     filter.connect(gain);
-    gain.connect(ctx.destination);
+    gain.connect(getMasterOutput(ctx));
+    noise.onended = () => {
+      try { noise.disconnect(); filter.disconnect(); gain.disconnect(); } catch (_) {}
+    };
     noise.start(now);
+    noise.stop(now + 0.048);
   } catch (e) {}
 }
 
 function playTone(freq: number, type: OscillatorType, startTime: number, duration: number, peakGain: number = 0.14): void {
   const ctx = getAudioCtx();
   if (!ctx) return;
+  const t = Math.max(ctx.currentTime, startTime);
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
   osc.type = type;
-  osc.frequency.setValueAtTime(freq, startTime);
-  gain.gain.setValueAtTime(0.001, startTime);
-  gain.gain.linearRampToValueAtTime(peakGain, startTime + 0.015);
-  gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+  osc.frequency.setValueAtTime(freq, t);
+  gain.gain.setValueAtTime(0.0001, t);
+  gain.gain.linearRampToValueAtTime(peakGain, t + 0.015);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t + duration);
   osc.connect(gain);
-  gain.connect(ctx.destination);
-  osc.start(startTime);
-  osc.stop(startTime + duration);
+  gain.connect(getMasterOutput(ctx));
+  osc.onended = () => {
+    try { osc.disconnect(); gain.disconnect(); } catch (_) {}
+  };
+  osc.start(t);
+  osc.stop(t + duration);
 }
 
 function playScoreTickSound(stepIndex: number): void {
@@ -183,11 +209,15 @@ function playCardSlideSound(): void {
     filter.Q.setValueAtTime(2.2, now);
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(0.18, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + duration);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
     noise.connect(filter);
     filter.connect(gain);
-    gain.connect(ctx.destination);
+    gain.connect(getMasterOutput(ctx));
+    noise.onended = () => {
+      try { noise.disconnect(); filter.disconnect(); gain.disconnect(); } catch (_) {}
+    };
     noise.start(now);
+    noise.stop(now + duration + 0.01);
   } catch (e) {}
 }
 
@@ -340,7 +370,7 @@ function ensureMusicBus(ctx: AudioContext): GainNode {
     musicFilterNode.Q.setValueAtTime(0.7, ctx.currentTime);
 
     musicMasterGain.connect(musicFilterNode);
-    musicFilterNode.connect(ctx.destination);
+    musicFilterNode.connect(getMasterOutput(ctx));
   }
   return musicMasterGain;
 }
@@ -362,6 +392,9 @@ function playHat(ctx: AudioContext, time: number, isAccent: boolean): void {
     noise.connect(filter);
     filter.connect(gain);
     gain.connect(musicMasterGain!);
+    noise.onended = () => {
+      try { noise.disconnect(); filter.disconnect(); gain.disconnect(); } catch (_) {}
+    };
     noise.start(time);
     noise.stop(time + 0.032);
   } catch (e) {}
@@ -383,6 +416,9 @@ function playSnare(ctx: AudioContext, time: number): void {
     noise.connect(filter);
     filter.connect(gain);
     gain.connect(musicMasterGain!);
+    noise.onended = () => {
+      try { noise.disconnect(); filter.disconnect(); gain.disconnect(); } catch (_) {}
+    };
     noise.start(time);
     noise.stop(time + 0.052);
 
@@ -394,6 +430,9 @@ function playSnare(ctx: AudioContext, time: number): void {
     oscGain.gain.exponentialRampToValueAtTime(0.0001, time + 0.04);
     osc.connect(oscGain);
     oscGain.connect(musicMasterGain!);
+    osc.onended = () => {
+      try { osc.disconnect(); oscGain.disconnect(); } catch (_) {}
+    };
     osc.start(time);
     osc.stop(time + 0.045);
   } catch (e) {}
@@ -410,6 +449,9 @@ function playKick(ctx: AudioContext, time: number): void {
     gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.08);
     osc.connect(gain);
     gain.connect(musicMasterGain!);
+    osc.onended = () => {
+      try { osc.disconnect(); gain.disconnect(); } catch (_) {}
+    };
     osc.start(time);
     osc.stop(time + 0.085);
   } catch (e) {}
@@ -441,6 +483,10 @@ function playBass(ctx: AudioContext, time: number, noteName: string, duration: n
     osc2.connect(filter);
     filter.connect(gain);
     gain.connect(musicMasterGain!);
+
+    osc1.onended = () => {
+      try { osc1.disconnect(); osc2.disconnect(); filter.disconnect(); gain.disconnect(); } catch (_) {}
+    };
 
     osc1.start(time);
     osc2.start(time);
@@ -480,6 +526,10 @@ function playRhodesChord(ctx: AudioContext, time: number, noteNames: string[], d
       osc2.connect(g);
       g.connect(filter);
 
+      osc1.onended = () => {
+        try { osc1.disconnect(); osc2.disconnect(); g.disconnect(); } catch (_) {}
+      };
+
       osc1.start(time);
       osc2.start(time);
       osc1.stop(time + duration);
@@ -487,6 +537,9 @@ function playRhodesChord(ctx: AudioContext, time: number, noteNames: string[], d
     }
 
     filter.connect(musicMasterGain!);
+    setTimeout(() => {
+      try { filter.disconnect(); } catch (_) {}
+    }, Math.round((duration + 0.08) * 1000));
   } catch (e) {}
 }
 
@@ -510,6 +563,10 @@ function playRhodesLead(ctx: AudioContext, time: number, noteName: string, durat
     osc.connect(filter);
     filter.connect(gain);
     gain.connect(musicMasterGain!);
+
+    osc.onended = () => {
+      try { osc.disconnect(); filter.disconnect(); gain.disconnect(); } catch (_) {}
+    };
 
     osc.start(time);
     osc.stop(time + duration);
@@ -597,8 +654,14 @@ function scheduleMusicStep(step: number, time: number): void {
 
 function musicScheduler(): void {
   if (!audioCtx || !isMusicPlaying) return;
-  // Lookahead: schedule notes up to 130ms ahead of current audio time
-  while (nextMusicStepTime < audioCtx.currentTime + 0.13) {
+  // If clock drifted behind current audio time due to background or CPU stall, resync immediately to prevent burst
+  if (nextMusicStepTime < audioCtx.currentTime) {
+    const missedSteps = Math.ceil((audioCtx.currentTime - nextMusicStepTime) / SECONDS_PER_STEP);
+    currentMusicStep = (currentMusicStep + missedSteps) % TOTAL_MUSIC_STEPS;
+    nextMusicStepTime = audioCtx.currentTime + 0.03;
+  }
+  // Lookahead: schedule notes up to 280ms ahead of current audio time to eliminate underrun crackles
+  while (nextMusicStepTime < audioCtx.currentTime + 0.28) {
     scheduleMusicStep(currentMusicStep, nextMusicStepTime);
     nextMusicStepTime += SECONDS_PER_STEP;
     currentMusicStep = (currentMusicStep + 1) % TOTAL_MUSIC_STEPS;
@@ -621,7 +684,7 @@ function startMusic(): void {
     musicMasterGain!.gain.linearRampToValueAtTime(MUSIC_MASTER_VOLUME, now + 0.35);
 
     if (musicSchedulerTimer) clearInterval(musicSchedulerTimer);
-    musicSchedulerTimer = setInterval(musicScheduler, 35);
+    musicSchedulerTimer = setInterval(musicScheduler, 25);
     updateMusicUI();
   } catch (e) {}
 }
@@ -665,6 +728,10 @@ function playVictoryLead(ctx: AudioContext, time: number, noteName: string, dura
     filter.connect(gain);
     gain.connect(musicMasterGain!);
 
+    osc1.onended = () => {
+      try { osc1.disconnect(); osc2.disconnect(); filter.disconnect(); gain.disconnect(); } catch (_) {}
+    };
+
     osc1.start(time);
     osc2.start(time);
     osc1.stop(time + duration);
@@ -694,10 +761,18 @@ function playVictoryBrassChord(ctx: AudioContext, time: number, noteNames: strin
 
       osc.connect(g);
       g.connect(filter);
+
+      osc.onended = () => {
+        try { osc.disconnect(); g.disconnect(); } catch (_) {}
+      };
+
       osc.start(time);
       osc.stop(time + duration);
     }
     filter.connect(musicMasterGain!);
+    setTimeout(() => {
+      try { filter.disconnect(); } catch (_) {}
+    }, Math.round((duration + 0.08) * 1000));
   } catch (e) {}
 }
 
@@ -772,7 +847,12 @@ function scheduleVictoryStep(step: number, time: number): void {
 
 function victoryMusicScheduler(): void {
   if (!audioCtx || !isVictoryMusicPlaying) return;
-  while (nextVictoryStepTime < audioCtx.currentTime + 0.12) {
+  if (nextVictoryStepTime < audioCtx.currentTime) {
+    const missedSteps = Math.ceil((audioCtx.currentTime - nextVictoryStepTime) / VICTORY_SECONDS_PER_STEP);
+    currentVictoryStep = (currentVictoryStep + missedSteps) % TOTAL_VICTORY_STEPS;
+    nextVictoryStepTime = audioCtx.currentTime + 0.03;
+  }
+  while (nextVictoryStepTime < audioCtx.currentTime + 0.28) {
     scheduleVictoryStep(currentVictoryStep, nextVictoryStepTime);
     nextVictoryStepTime += VICTORY_SECONDS_PER_STEP;
     currentVictoryStep = (currentVictoryStep + 1) % TOTAL_VICTORY_STEPS;
@@ -886,10 +966,10 @@ function duckMusic(durationSec: number = 0.8): void {
 
 function updateMusicUI(): void {
   try {
-    const isPlaying = !musicMuted && (isMusicPlaying || isVictoryMusicPlaying);
+    const isEnabled = !musicMuted;
     const btnHeader = document.getElementById('btn-music-toggle');
     if (btnHeader) {
-      if (!isPlaying) {
+      if (!isEnabled) {
         btnHeader.textContent = '🔇';
         btnHeader.title = 'Music: OFF (Tap to play)';
         btnHeader.classList.add('muted');
@@ -903,8 +983,8 @@ function updateMusicUI(): void {
     }
     const btnModal = document.getElementById('btn-modal-music-toggle');
     if (btnModal) {
-      btnModal.textContent = !isPlaying ? 'MUSIC: OFF' : 'MUSIC: ON';
-      if (!isPlaying) {
+      btnModal.textContent = !isEnabled ? 'MUSIC: OFF' : 'MUSIC: ON';
+      if (!isEnabled) {
         btnModal.classList.remove('btn-deal');
         btnModal.classList.add('btn-secondary');
       } else {
@@ -914,16 +994,92 @@ function updateMusicUI(): void {
     }
     const btnSplash = document.getElementById('btn-splash-music');
     if (btnSplash) {
-      btnSplash.innerHTML = isPlaying
+      btnSplash.innerHTML = isEnabled
         ? '<span id="splash-music-icon">🎵</span> MUSIC: ON'
         : '<span id="splash-music-icon">🔇</span> MUSIC: OFF';
-      if (isPlaying) {
+      if (isEnabled) {
         btnSplash.classList.remove('muted');
       } else {
         btnSplash.classList.add('muted');
       }
     }
   } catch (e) {}
+}
+
+/* ==========================================================
+   APP LIFECYCLE & BACKGROUND PAUSE / RESUME ENGINE
+   Suspends audio and timers when hidden/backgrounded to prevent
+   stutter, memory leaks, and battery drain. Resumes seamlessly.
+========================================================== */
+let wasMusicPlayingBeforePause = false;
+let wasVictoryMusicPlayingBeforePause = false;
+
+function handleVisibilityOrPause(isBackground: boolean): void {
+  try {
+    if (isBackground) {
+      // App or tab is hidden/backgrounded
+      wasMusicPlayingBeforePause = isMusicPlaying;
+      wasVictoryMusicPlayingBeforePause = isVictoryMusicPlaying;
+
+      if (musicSchedulerTimer) {
+        clearInterval(musicSchedulerTimer);
+        musicSchedulerTimer = null;
+      }
+      if (victorySchedulerTimer) {
+        clearInterval(victorySchedulerTimer);
+        victorySchedulerTimer = null;
+      }
+      isMusicPlaying = false;
+      isVictoryMusicPlaying = false;
+
+      // Suspend audio context to release audio hardware and zero CPU
+      if (audioCtx && audioCtx.state === 'running') {
+        audioCtx.suspend().catch(() => {});
+      }
+
+      // Stop confetti animation loop to save battery
+      if (confettiAnimId) {
+        const caf = typeof cancelAnimationFrame !== 'undefined' ? cancelAnimationFrame : (typeof window !== 'undefined' && window.cancelAnimationFrame ? window.cancelAnimationFrame.bind(window) : clearTimeout);
+        caf(confettiAnimId);
+        confettiAnimId = null;
+      }
+    } else {
+      // App or tab returned to foreground
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(() => {});
+      }
+
+      if (!musicMuted) {
+        if (wasVictoryMusicPlayingBeforePause) {
+          startVictoryMusic();
+        } else if (wasMusicPlayingBeforePause) {
+          startMusic();
+        }
+      }
+
+      // Resume confetti if particles still linger
+      if (confettiParticles.length > 0 && !confettiAnimId) {
+        const raf = typeof requestAnimationFrame !== 'undefined' ? requestAnimationFrame : (typeof window !== 'undefined' && window.requestAnimationFrame ? window.requestAnimationFrame.bind(window) : (cb: FrameRequestCallback) => setTimeout(cb, 16));
+        confettiAnimId = raf(animateConfetti);
+      }
+    }
+  } catch (e) {}
+}
+
+function tryAutostartMusic(): void {
+  if (musicMuted) return;
+  const ctx = getAudioCtx();
+  if (ctx) {
+    if (ctx.state === 'running') {
+      startMusic();
+    } else {
+      ctx.resume().then(() => {
+        if (!musicMuted && !isMusicPlaying) startMusic();
+      }).catch(() => {
+        // Autoplay policy prevented immediate start; will start on first user gesture
+      });
+    }
+  }
 }
 
 function initMusicOnFirstGesture(): void {
@@ -934,20 +1090,59 @@ function initMusicOnFirstGesture(): void {
     } else {
       getAudioCtx();
     }
-    window.removeEventListener('pointerdown', onGesture);
-    window.removeEventListener('keydown', onGesture);
   };
   window.addEventListener('pointerdown', onGesture, { once: true });
+  window.addEventListener('touchstart', onGesture, { once: true, passive: true });
   window.addEventListener('keydown', onGesture, { once: true });
+  window.addEventListener('click', onGesture, { once: true });
+}
+
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    handleVisibilityOrPause(document.hidden);
+  });
+  // Cordova / Capacitor lifecycle events
+  document.addEventListener('pause', () => handleVisibilityOrPause(true));
+  document.addEventListener('resume', () => handleVisibilityOrPause(false));
 }
 
 if (typeof window !== 'undefined') {
+  window.addEventListener('pagehide', () => handleVisibilityOrPause(true));
+  window.addEventListener('pageshow', () => handleVisibilityOrPause(false));
+  window.addEventListener('freeze', () => handleVisibilityOrPause(true));
+
+  // Capacitor Native App plugin if available
+  try {
+    const capApp = (window as any).Capacitor?.Plugins?.App;
+    if (capApp && typeof capApp.addListener === 'function') {
+      capApp.addListener('appStateChange', (state: { isActive: boolean }) => {
+        handleVisibilityOrPause(!state.isActive);
+      });
+    }
+  } catch (_) {}
+
+  // Full cleanup on unload/destroy
+  window.addEventListener('beforeunload', () => {
+    try {
+      if (musicSchedulerTimer) clearInterval(musicSchedulerTimer);
+      if (victorySchedulerTimer) clearInterval(victorySchedulerTimer);
+      if (audioCtx) audioCtx.close().catch(() => {});
+    } catch (_) {}
+  });
+
   initMusicOnFirstGesture();
+  tryAutostartMusic();
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => updateMusicUI());
+    document.addEventListener('DOMContentLoaded', () => {
+      updateMusicUI();
+      tryAutostartMusic();
+    });
   } else {
     updateMusicUI();
+    tryAutostartMusic();
   }
 }
+
 
 

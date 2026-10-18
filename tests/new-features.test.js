@@ -63,17 +63,35 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
 
   // Test Settings from splash screen
   const cogModal = $('ui-cog-modal');
+  const btnNewRun = $('btn-modal-new-run');
+  const btnMainMenu = $('btn-modal-main-menu');
   splash.querySelector('button[onclick*="toggleCogModal"]').click();
   await sleep(50);
   ck('Settings modal opens from splash screen', !isHidden(cogModal));
+  ck('Settings modal from splash hides New Run button', btnNewRun && btnNewRun.style.display === 'none');
+  ck('Settings modal from splash hides Main Menu button', btnMainMenu && btnMainMenu.style.display === 'none');
   w.toggleCogModal(false);
   await sleep(50);
   ck('Settings modal closes cleanly', isHidden(cogModal));
+
+  // Test Startup Music UI is ON and not muted
+  const splashMusicBtn = $('btn-splash-music');
+  const modalMusicBtn = $('btn-modal-music-toggle');
+  ck('Splash screen music shows ON', splashMusicBtn && splashMusicBtn.textContent.includes('MUSIC: ON'));
+  ck('Splash screen music is not muted by default', splashMusicBtn && !splashMusicBtn.classList.contains('muted'));
+  ck('Settings modal music shows ON', modalMusicBtn && modalMusicBtn.textContent.includes('MUSIC: ON'));
 
   // Test New Game button hides splash screen
   click('btn-splash-new-game');
   await sleep(100);
   ck('Clicking New Game hides splash screen', isHidden(splash));
+
+  // Test Settings from in-game shows New Run & Main Menu buttons
+  w.toggleCogModal(true);
+  await sleep(50);
+  ck('Settings modal in-game shows New Run button', btnNewRun && btnNewRun.style.display !== 'none');
+  ck('Settings modal in-game shows Main Menu button', btnMainMenu && btnMainMenu.style.display !== 'none');
+  w.toggleCogModal(false);
 
   // Test returning to Main Menu
   w.showMainMenu();
