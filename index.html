@@ -26,6 +26,7 @@
       <div class="meta-right">
         <div class="stat-pill stat-cash" id="ui-money">$6</div>
         <div class="stat-pill stat-ante" id="ui-ante">Ante 1/8</div>
+        <button class="cog-btn music-btn" id="btn-music-toggle" onclick="toggleMusic()" title="Toggle Background Music">🎵</button>
         <button class="cog-btn" onclick="toggleCogModal(true)" title="Menu, Rules & Simulator">⚙️</button>
       </div>
     </div>
@@ -117,7 +118,7 @@
       <div class="shop-header">
         <div>
           <div class="shop-title">PIT BOSS SHOP</div>
-          <div style="font-size:10px; color:#94a3b8;" id="ui-shop-payout-note">Prep for the upcoming Blind shown above!</div>
+          <div style="font-size:12px; color:#94a3b8;" id="ui-shop-payout-note">Prep for the upcoming Blind shown above!</div>
         </div>
         <div style="display:flex; gap:6px;">
           <button class="btn btn-redeal" style="padding:7px 10px;" id="btn-reroll" onclick="uiRerollShop()">Reroll ($2)</button>
@@ -125,10 +126,10 @@
         </div>
       </div>
 
-      <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; font-weight:bold;">Jokers & Tarots</div>
+      <div style="font-size:12px; color:#94a3b8; text-transform:uppercase; font-weight:bold;">Jokers & Tarots</div>
       <div class="shop-grid" id="ui-shop-jokers"></div>
 
-      <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; font-weight:bold;">Shoe Cards & Vouchers</div>
+      <div style="font-size:12px; color:#94a3b8; text-transform:uppercase; font-weight:bold;">Shoe Cards & Vouchers</div>
       <div class="shop-grid" id="ui-shop-extras"></div>
     </div>
   </main>
@@ -163,7 +164,18 @@
       <button class="btn btn-double" style="padding:10px;" onclick="toggleCogModal(false); toggleSimModal(true);">📊 Balance Simulator</button>
     </div>
 
-    <p style="font-size:11px; color:#cbd5e1; line-height:1.35;">
+    <div style="display:flex; justify-content:space-between; align-items:center; background:#111622; padding:7px 10px; border-radius:6px; border:1px solid #222938; margin: 6px 0;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="font-size:16px;">🎵</span>
+        <div>
+          <div style="font-size:12px; font-weight:700; color:#e2e8f0;">Background Music</div>
+          <div style="font-size:11px; color:#94a3b8;">Synthesized Lo-Fi Groove</div>
+        </div>
+      </div>
+      <button class="btn btn-deal" id="btn-modal-music-toggle" onclick="toggleMusic()" style="padding:4px 10px; font-size:12px;">MUSIC: ON</button>
+    </div>
+
+    <p style="font-size:13px; color:#cbd5e1; line-height:1.4;">
       You get <strong id="ui-rules-deals-count">7</strong> Deals per Blind. Every card in your final hand adds its Blackjack value to your <strong>Chips</strong> (2–10 = face value, J/Q/K = 10, Ace = 11), plus Enhancements and Jokers. Tap any Joker to reorder it!
     </p>
 
@@ -183,18 +195,18 @@
         <tr><td><strong>Loss / Bust</strong></td><td>0 (unless <em>Safety Net</em>)</td></tr>
       </tbody>
     </table>
-    <div style="font-size:10px; color:#94a3b8; line-height:1.4;">
+    <div style="font-size:12px; color:#94a3b8; line-height:1.4;">
       • <strong>Double Down:</strong> Initial 2 cards only. Draw 1 card, Stand, and multiply final score by <strong>×2</strong>.<br>
       • <strong>Push Deal Refund:</strong> Pushing against the Dealer refunds your deal counter.<br>
       • <strong>Economy:</strong> Clear a Blind to earn Base Cash + $1 per unused Deal + $1 interest per $5 held (max $5, or $8 with High Roller Credit).
     </div>
 
     <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid #334155;">
-      <label style="font-size: 11px; color: var(--gold); font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
+      <label style="font-size: 12px; color: var(--gold); font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
         <span>Scoring Animation Pace</span>
-        <span id="ui-lbl-anim-speed" style="font-size:10px; color:#38bdf8;">0.10× (Slow / Educational)</span>
+        <span id="ui-lbl-anim-speed" style="font-size:12px; color:#38bdf8;">0.10× (Slow / Educational)</span>
       </label>
-      <select id="setting-anim-speed" style="width:100%; margin-top:4px; padding:6px; background:#0b0e14; color:#fff; border:1px solid #334155; border-radius:4px; font-size:11px;" onchange="updateScoringSpeed(parseFloat(this.value))">
+      <select id="setting-anim-speed" style="width:100%; margin-top:4px; padding:6px; background:#0b0e14; color:#fff; border:1px solid #334155; border-radius:4px; font-size:12px;" onchange="updateScoringSpeed(parseFloat(this.value))">
         <option value="0.10" selected>0.10× (Slow / Educational - 10% Speed)</option>
         <option value="0.25">0.25× (Relaxed - 25% Speed)</option>
         <option value="0.50">0.50× (Medium - 50% Speed)</option>
@@ -210,7 +222,7 @@
     <div style="display:flex; justify-content:space-between; align-items:center;">
       <div>
         <h3 style="color:var(--gold); font-size:16px;">📊 MONTE CARLO BALANCE LAB (v1.7)</h3>
-        <div style="font-size:10px; color:#94a3b8;">Simulate 3,000 to 20,000 runs and export a full telemetry .TXT file for analysis.</div>
+        <div style="font-size:12px; color:#94a3b8;">Simulate 3,000 to 20,000 runs and export a full telemetry .TXT file for analysis.</div>
       </div>
       <button class="btn btn-secondary" onclick="toggleSimModal(false)">Close</button>
     </div>
@@ -294,8 +306,8 @@
   <div class="modal-box wide-deck" onclick="event.stopPropagation()">
     <div style="display:flex; justify-content:space-between; align-items:center;">
       <div>
-        <h3 style="color:var(--gold); font-size:15px;" id="ui-deck-modal-title">FULL DECK VIEW</h3>
-        <div style="font-size:10px; color:#94a3b8;">Ordered by Suit & Rank (Dimmed = Revealed face-up cards)</div>
+        <h3 style="color:var(--gold); font-size:16px;" id="ui-deck-modal-title">FULL DECK VIEW</h3>
+        <div style="font-size:12px; color:#94a3b8;">Ordered by Suit & Rank (Dimmed = Revealed face-up cards)</div>
       </div>
       <button class="btn btn-secondary" onclick="toggleDeckModal(false)">Close</button>
     </div>

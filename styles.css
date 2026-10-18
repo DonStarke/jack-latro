@@ -103,9 +103,9 @@
   }
 
   .blind-badge {
-    font-size: 9px;
+    font-size: 11px;
     font-weight: 900;
-    padding: 2px 5px;
+    padding: 2px 6px;
     border-radius: 4px;
     background: var(--gold);
     color: #000;
@@ -114,7 +114,7 @@
   }
 
   .blind-name {
-    font-size: 13px;
+    font-size: 15px;
     font-weight: 900;
     color: var(--gold);
     white-space: nowrap;
@@ -123,14 +123,14 @@
   }
 
   .blind-tap-hint {
-    font-size: 9px;
+    font-size: 11px;
     color: #64748b;
     margin-left: auto;
     flex-shrink: 0;
   }
 
   .blind-desc {
-    font-size: 10px;
+    font-size: 12px;
     color: #94a3b8;
     white-space: nowrap;
     overflow: hidden;
@@ -150,7 +150,7 @@
     border: 1px solid #334155;
     border-radius: 6px;
     padding: 4px 8px;
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 900;
     display: flex;
     align-items: center;
@@ -172,6 +172,22 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
+  }
+
+  .music-btn {
+    transition: transform 0.15s ease, opacity 0.15s ease, border-color 0.15s ease;
+    user-select: none;
+  }
+  .music-btn:hover {
+    filter: brightness(1.15);
+  }
+  .music-btn.muted {
+    opacity: 0.55;
+    filter: grayscale(0.8);
+  }
+  .music-btn.playing {
+    border-color: #3b82f6;
+    box-shadow: 0 0 6px rgba(59, 130, 246, 0.4);
   }
 
   .hud-row-bottom {
@@ -199,7 +215,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 900;
   }
 
@@ -228,11 +244,11 @@
   }
 
   .chips-pill, .mult-pill {
-    min-width: 44px;
+    min-width: 48px;
     text-align: center;
-    padding: 3px 6px;
+    padding: 3px 7px;
     border-radius: 5px;
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 900;
     color: #fff;
     transition: transform 0.12s ease;
@@ -241,7 +257,7 @@
   .chips-pill { background: var(--chips); }
   .mult-pill { background: var(--mult); }
   .pill-pop { transform: scale(1.22); }
-  .eq-x { font-size: 13px; font-weight: 900; color: #64748b; }
+  .eq-x { font-size: 15px; font-weight: 900; color: #64748b; }
 
   /* 2. COMPACT JOKER & TAROT STRIP */
   .shelf-strip {
@@ -259,14 +275,14 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    min-height: 54px;
+    min-height: 58px;
     overflow-x: auto;
   }
 
   .strip-label {
     writing-mode: vertical-rl;
     transform: rotate(180deg);
-    font-size: 9px;
+    font-size: 11px;
     font-weight: 900;
     color: #64748b;
     text-transform: uppercase;
@@ -286,9 +302,9 @@
     border: 2px solid var(--gold);
     border-radius: 6px;
     padding: 4px 6px;
-    min-width: 92px;
-    max-width: 115px;
-    height: 44px;
+    min-width: 98px;
+    max-width: 120px;
+    height: 48px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -306,11 +322,11 @@
 
   .mini-card.tarot {
     border-color: var(--purple);
-    min-width: 74px;
+    min-width: 80px;
   }
 
   .mini-card-name {
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 900;
     color: var(--gold);
     white-space: nowrap;
@@ -323,7 +339,7 @@
   }
 
   .mini-card-sub {
-    font-size: 8px;
+    font-size: 10px;
     color: #cbd5e1;
     white-space: nowrap;
     overflow: hidden;
@@ -363,6 +379,8 @@
     justify-content: center;
     position: relative;
     min-height: 100px;
+    padding-left: 70px;
+    padding-right: 14px;
   }
 
   .shoe-widget {
@@ -370,8 +388,8 @@
     left: 4px;
     top: 50%;
     transform: translateY(-50%);
-    width: 48px;
-    height: 68px;
+    width: 60px;
+    height: 84px;
     background: repeating-linear-gradient(
       45deg,
       #1e3a8a,
@@ -381,7 +399,7 @@
     );
     border: 2px solid #f8fafc;
     border-radius: 6px;
-    box-shadow: -3px 3px 0 #cbd5e1, -6px 6px 0 #64748b, 0 6px 12px rgba(0,0,0,0.65);
+    box-shadow: -3px 3px 0 #cbd5e1, -6px 6px 0 #64748b, 0 6px 14px rgba(0,0,0,0.65);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -395,12 +413,12 @@
   }
 
   .shoe-count {
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 900;
     background: rgba(0,0,0,0.85);
     border: 1px solid rgba(255,255,255,0.25);
     color: #fff;
-    padding: 2px 5px;
+    padding: 2px 6px;
     border-radius: 4px;
   }
 
@@ -416,7 +434,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 11px;
+    font-size: 13px;
     font-weight: bold;
     color: #cbd5e1;
     background: rgba(0,0,0,0.5);
@@ -431,7 +449,7 @@
     padding: 1px 6px;
     border-radius: 8px;
     font-weight: 900;
-    font-size: 11px;
+    font-size: 13px;
   }
 
   .cards-row {
@@ -441,6 +459,13 @@
     align-items: center;
     min-height: 84px;
     flex-wrap: wrap;
+  }
+
+  #ui-dealer-cards {
+    max-width: 330px;
+    flex-wrap: wrap;
+    justify-content: center;
+    row-gap: 6px;
   }
 
   /* PLAYING CARDS */
@@ -475,9 +500,9 @@
     background: #0f172a;
     border: 1.5px solid var(--gold);
     color: var(--gold);
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 900;
-    padding: 1px 5px;
+    padding: 1px 6px;
     border-radius: 6px;
     white-space: nowrap;
     z-index: 25;
@@ -531,7 +556,7 @@
   }
 
   .card-corner-top {
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1;
     text-align: left;
   }
@@ -541,7 +566,7 @@
     line-height: 1;
   }
   .card-corner-bottom {
-    font-size: 9px;
+    font-size: 11px;
     text-align: right;
     color: #475569;
   }
@@ -550,8 +575,8 @@
     bottom: 16px;
     left: 50%;
     transform: translateX(-50%);
-    font-size: 7px;
-    padding: 1px 3px;
+    font-size: 9px;
+    padding: 1px 4px;
     border-radius: 3px;
     background: rgba(0,0,0,0.8);
     color: #fff;
@@ -635,26 +660,48 @@
 
   .center-banner-wrap {
     width: 100%;
-    background: rgba(0,0,0,0.58);
+    background: rgba(0,0,0,0.65);
     border-top: 1px solid rgba(255,255,255,0.12);
     border-bottom: 1px solid rgba(255,255,255,0.12);
-    padding: 5px 8px;
+    padding: 6px 10px;
     text-align: center;
+    border-radius: 6px;
   }
 
   .center-banner {
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 900;
     color: var(--gold);
+    line-height: 1.4;
+    word-break: break-word;
   }
 
   .scoring-breakdown {
-    font-size: 10px;
+    font-size: 12px;
     color: #cbd5e1;
-    margin-top: 2px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    margin-top: 3px;
+    line-height: 1.35;
+    word-break: break-word;
+  }
+
+  .eq-c {
+    color: var(--chips);
+    font-weight: 900;
+  }
+
+  .eq-m {
+    color: var(--mult);
+    font-weight: 900;
+  }
+
+  .suit-red {
+    color: #f87171;
+    font-weight: 900;
+  }
+
+  .suit-black {
+    color: #f1f5f9;
+    font-weight: 900;
   }
 
   /* 4. BOTTOM ACTION CONTROLS */
@@ -668,7 +715,7 @@
 
   .btn {
     padding: 11px 6px;
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 900;
     font-family: inherit;
     text-transform: uppercase;
@@ -715,7 +762,7 @@
   .btn-stand { background: var(--gold); color: #0f172a; box-shadow: 0 3px 0 #b38600; }
   .btn-double { background: var(--purple); box-shadow: 0 3px 0 #66269b; }
   .btn-redeal { background: var(--mult); box-shadow: 0 3px 0 #a31c1c; }
-  .btn-secondary { background: #334155; box-shadow: 0 3px 0 #1e293b; padding: 8px 12px; font-size: 12px; }
+  .btn-secondary { background: #334155; box-shadow: 0 3px 0 #1e293b; padding: 8px 12px; font-size: 13px; }
 
   /* SHOP OVERLAY */
   .overlay-panel {
@@ -742,7 +789,7 @@
   }
 
   .shop-title {
-    font-size: 15px;
+    font-size: 17px;
     font-weight: 900;
     color: var(--gold);
   }
@@ -769,9 +816,9 @@
   .shop-item.type-tarot { border-color: var(--purple); }
   .shop-item.type-card { border-color: var(--chips); }
 
-  .shop-item-title { font-size: 11px; font-weight: 900; color: #fff; }
-  .shop-item-sub { font-size: 8px; text-transform: uppercase; color: var(--gold); }
-  .shop-item-desc { font-size: 10px; color: #cbd5e1; line-height: 1.2; }
+  .shop-item-title { font-size: 13px; font-weight: 900; color: #fff; }
+  .shop-item-sub { font-size: 10px; text-transform: uppercase; color: var(--gold); }
+  .shop-item-desc { font-size: 12px; color: #cbd5e1; line-height: 1.25; }
 
   /* MODALS */
   .modal-backdrop {
@@ -807,7 +854,7 @@
   .rules-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 11px;
+    font-size: 12px;
   }
   .rules-table th, .rules-table td {
     border: 1px solid #334155;
@@ -834,7 +881,7 @@
     display: flex;
     flex-direction: column;
     gap: 3px;
-    font-size: 11px;
+    font-size: 12px;
     color: #cbd5e1;
   }
 
@@ -852,7 +899,7 @@
     border-radius: 4px;
     padding: 4px;
     font-family: inherit;
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .sim-btn-row {
@@ -882,7 +929,7 @@
   }
 
   .sim-kpi-lbl {
-    font-size: 9px;
+    font-size: 11px;
     color: #94a3b8;
     text-transform: uppercase;
   }
@@ -891,7 +938,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 11px;
+    font-size: 12px;
     margin-bottom: 4px;
   }
 

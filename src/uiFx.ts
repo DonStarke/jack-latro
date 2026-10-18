@@ -90,20 +90,26 @@ function animateConfetti(): void {
 ========================================================== */
 let audioCtx: AudioContext | null = null;
 
-function getAudioCtx(): AudioContext {
-  if (!audioCtx) {
-    const Ctor: typeof AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-    audioCtx = new Ctor();
+function getAudioCtx(): AudioContext | null {
+  try {
+    if (!audioCtx) {
+      const Ctor: typeof AudioContext = (typeof window !== 'undefined' && ((window as any).AudioContext || (window as any).webkitAudioContext));
+      if (!Ctor) return null;
+      audioCtx = new Ctor();
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(() => {});
+    }
+    return audioCtx;
+  } catch (e) {
+    return null;
   }
-  if (audioCtx.state === 'suspended') {
-    audioCtx.resume();
-  }
-  return audioCtx;
 }
 
 function playCardDealSound(): void {
   try {
     const ctx = getAudioCtx();
+    if (!ctx) return;
     const now = ctx.currentTime;
     const bufferSize = ctx.sampleRate * 0.045;
     const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
@@ -132,6 +138,7 @@ function playCardDealSound(): void {
 
 function playTone(freq: number, type: OscillatorType, startTime: number, duration: number, peakGain: number = 0.14): void {
   const ctx = getAudioCtx();
+  if (!ctx) return;
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
   osc.type = type;
@@ -148,6 +155,7 @@ function playTone(freq: number, type: OscillatorType, startTime: number, duratio
 function playScoreTickSound(stepIndex: number): void {
   try {
     const ctx = getAudioCtx();
+    if (!ctx) return;
     const freq = 370 * Math.pow(1.075, Math.min(stepIndex, 14));
     playTone(freq, 'triangle', ctx.currentTime, 0.09, 0.14);
   } catch (e) {}
@@ -157,6 +165,7 @@ function playScoreTickSound(stepIndex: number): void {
 function playCardSlideSound(): void {
   try {
     const ctx = getAudioCtx();
+    if (!ctx) return;
     const now = ctx.currentTime;
     const duration = 0.16;
     const bufferSize = Math.floor(ctx.sampleRate * duration);
@@ -186,6 +195,7 @@ function playCardSlideSound(): void {
 function playChipSound(): void {
   try {
     const ctx = getAudioCtx();
+    if (!ctx) return;
     const now = ctx.currentTime;
     playTone(2100, 'sine', now, 0.045, 0.16);
     playTone(2850, 'triangle', now + 0.008, 0.04, 0.12);
@@ -196,6 +206,7 @@ function playChipSound(): void {
 function playMultPlusSound(stepIndex: number = 0): void {
   try {
     const ctx = getAudioCtx();
+    if (!ctx) return;
     const now = ctx.currentTime;
     const freq = 440 * Math.pow(1.065, Math.min(stepIndex, 12));
     playTone(freq, 'triangle', now, 0.10, 0.15);
@@ -206,7 +217,9 @@ function playMultPlusSound(stepIndex: number = 0): void {
 /** Dramatic punch: deep bass thud and heavy resonant gong when Red xMult slams down. */
 function playMultXSound(): void {
   try {
+    duckMusic(0.7);
     const ctx = getAudioCtx();
+    if (!ctx) return;
     const now = ctx.currentTime;
     playTone(130, 'sawtooth', now, 0.22, 0.22);
     playTone(520, 'triangle', now + 0.02, 0.28, 0.18);
@@ -218,6 +231,7 @@ function playMultXSound(): void {
 function playMoneyCoinSound(): void {
   try {
     const ctx = getAudioCtx();
+    if (!ctx) return;
     const now = ctx.currentTime;
     playTone(987.77, 'sine', now, 0.07, 0.16);
     playTone(1318.51, 'sine', now + 0.06, 0.14, 0.18);
@@ -226,7 +240,11 @@ function playMoneyCoinSound(): void {
 
 function playOutcomeSound(kind: 'WIN' | 'BLIND_WIN' | 'PUSH' | 'LOSS' | 'BUST'): void {
   try {
+    if (kind === 'WIN' || kind === 'BLIND_WIN') {
+      duckMusic(1.1);
+    }
     const ctx = getAudioCtx();
+    if (!ctx) return;
     const now = ctx.currentTime;
     if (kind === 'WIN') {
       playTone(523.25, 'triangle', now, 0.14, 0.16);
@@ -255,4 +273,455 @@ function playOutcomeSound(kind: 'WIN' | 'BLIND_WIN' | 'PUSH' | 'LOSS' | 'BUST'):
 
 const sleep = (ms: number): Promise<void> => new Promise(res => setTimeout(res, ms));
 const DEAL_DELAY_MS = 170;
+
+/* ==========================================================
+   SYNTHESIZED WEBAUDIO BACKGROUND MUSIC (LO-FI CHILL GROOVE)
+========================================================== */
+const NOTE_SEMITONES: Record<string, number> = {
+  'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3, 'E': 4, 'F': 5,
+  'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8, 'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11
+};
+
+function parseMusicNote(name: string): number {
+  const m = name.match(/^([A-G][b#]?)(-?\d+)$/);
+  if (!m) return 440;
+  const semi = NOTE_SEMITONES[m[1]] + (parseInt(m[2], 10) + 1) * 12;
+  return 440 * Math.pow(2, (semi - 69) / 12);
+}
+
+let musicMasterGain: GainNode | null = null;
+let musicFilterNode: BiquadFilterNode | null = null;
+let isMusicPlaying: boolean = false;
+let musicMuted: boolean = false;
+try {
+  musicMuted = typeof localStorage !== 'undefined' && localStorage.getItem('jacklatro_bgm_muted') === 'true';
+} catch (e) {}
+
+const MUSIC_MASTER_VOLUME = 0.22;
+const BGM_TEMPO = 74; // Relaxed lo-fi lounge tempo
+const SECONDS_PER_BEAT = 60 / BGM_TEMPO;
+const SECONDS_PER_STEP = SECONDS_PER_BEAT / 4; // 16th note steps (0.2027s)
+const TOTAL_MUSIC_STEPS = 128; // 8 bars @ 16 steps/bar = 25.95s loop
+
+let musicSchedulerTimer: any = null;
+let currentMusicStep = 0;
+let nextMusicStepTime = 0;
+
+let sharedNoiseBuffer: AudioBuffer | null = null;
+function getSharedNoiseBuffer(ctx: AudioContext): AudioBuffer {
+  if (!sharedNoiseBuffer || sharedNoiseBuffer.sampleRate !== ctx.sampleRate) {
+    const size = Math.floor(ctx.sampleRate * 0.8);
+    sharedNoiseBuffer = ctx.createBuffer(1, size, ctx.sampleRate);
+    const data = sharedNoiseBuffer.getChannelData(0);
+    for (let i = 0; i < size; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+  }
+  return sharedNoiseBuffer;
+}
+
+function ensureMusicBus(ctx: AudioContext): GainNode {
+  if (!musicMasterGain) {
+    musicMasterGain = ctx.createGain();
+    musicMasterGain.gain.setValueAtTime(0.0001, ctx.currentTime);
+
+    musicFilterNode = ctx.createBiquadFilter();
+    musicFilterNode.type = 'lowpass';
+    musicFilterNode.frequency.setValueAtTime(3200, ctx.currentTime); // mellow tape rolloff
+    musicFilterNode.Q.setValueAtTime(0.7, ctx.currentTime);
+
+    musicMasterGain.connect(musicFilterNode);
+    musicFilterNode.connect(ctx.destination);
+  }
+  return musicMasterGain;
+}
+
+function playHat(ctx: AudioContext, time: number, isAccent: boolean): void {
+  try {
+    const noise = ctx.createBufferSource();
+    noise.buffer = getSharedNoiseBuffer(ctx);
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(6800, time);
+    filter.Q.setValueAtTime(2.2, time);
+
+    const gain = ctx.createGain();
+    const peak = isAccent ? 0.038 : 0.018;
+    gain.gain.setValueAtTime(peak, time);
+    gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.028);
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(musicMasterGain!);
+    noise.start(time);
+    noise.stop(time + 0.032);
+  } catch (e) {}
+}
+
+function playSnare(ctx: AudioContext, time: number): void {
+  try {
+    const noise = ctx.createBufferSource();
+    noise.buffer = getSharedNoiseBuffer(ctx);
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(1650, time);
+    filter.Q.setValueAtTime(1.4, time);
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.065, time);
+    gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.048);
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(musicMasterGain!);
+    noise.start(time);
+    noise.stop(time + 0.052);
+
+    const osc = ctx.createOscillator();
+    const oscGain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(175, time);
+    oscGain.gain.setValueAtTime(0.035, time);
+    oscGain.gain.exponentialRampToValueAtTime(0.0001, time + 0.04);
+    osc.connect(oscGain);
+    oscGain.connect(musicMasterGain!);
+    osc.start(time);
+    osc.stop(time + 0.045);
+  } catch (e) {}
+}
+
+function playKick(ctx: AudioContext, time: number): void {
+  try {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(108, time);
+    osc.frequency.exponentialRampToValueAtTime(40, time + 0.075);
+    gain.gain.setValueAtTime(0.17, time);
+    gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.08);
+    osc.connect(gain);
+    gain.connect(musicMasterGain!);
+    osc.start(time);
+    osc.stop(time + 0.085);
+  } catch (e) {}
+}
+
+function playBass(ctx: AudioContext, time: number, noteName: string, duration: number): void {
+  try {
+    const freq = parseMusicNote(noteName);
+    const osc1 = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    const filter = ctx.createBiquadFilter();
+    const gain = ctx.createGain();
+
+    osc1.type = 'triangle';
+    osc1.frequency.setValueAtTime(freq, time);
+
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(freq * 0.5, time); // sub octave warmth
+
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(260, time);
+
+    gain.gain.setValueAtTime(0.0001, time);
+    gain.gain.linearRampToValueAtTime(0.16, time + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.08, time + 0.16);
+    gain.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+
+    osc1.connect(filter);
+    osc2.connect(filter);
+    filter.connect(gain);
+    gain.connect(musicMasterGain!);
+
+    osc1.start(time);
+    osc2.start(time);
+    osc1.stop(time + duration);
+    osc2.stop(time + duration);
+  } catch (e) {}
+}
+
+function playRhodesChord(ctx: AudioContext, time: number, noteNames: string[], duration: number, gainLevel: number): void {
+  try {
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(1150, time);
+    filter.Q.setValueAtTime(0.75, time);
+
+    const voiceGain = gainLevel / noteNames.length;
+
+    for (const n of noteNames) {
+      const freq = parseMusicNote(n);
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      const g = ctx.createGain();
+
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(freq, time);
+
+      osc2.type = 'triangle';
+      osc2.frequency.setValueAtTime(freq, time);
+      osc2.detune.setValueAtTime(3.5, time); // subtle warm chorus tine
+
+      g.gain.setValueAtTime(0.0001, time);
+      g.gain.linearRampToValueAtTime(voiceGain, time + 0.015);
+      g.gain.exponentialRampToValueAtTime(voiceGain * 0.45, time + 0.35);
+      g.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+
+      osc1.connect(g);
+      osc2.connect(g);
+      g.connect(filter);
+
+      osc1.start(time);
+      osc2.start(time);
+      osc1.stop(time + duration);
+      osc2.stop(time + duration);
+    }
+
+    filter.connect(musicMasterGain!);
+  } catch (e) {}
+}
+
+function playRhodesLead(ctx: AudioContext, time: number, noteName: string, duration: number): void {
+  try {
+    const freq = parseMusicNote(noteName);
+    const osc = ctx.createOscillator();
+    const filter = ctx.createBiquadFilter();
+    const gain = ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, time);
+
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(1900, time);
+
+    gain.gain.setValueAtTime(0.0001, time);
+    gain.gain.linearRampToValueAtTime(0.075, time + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(musicMasterGain!);
+
+    osc.start(time);
+    osc.stop(time + duration);
+  } catch (e) {}
+}
+
+// Melodic lead flourishes for Section B (Bars 4-7, steps 64-127)
+const LEAD_MOTIF_STEPS: Record<number, string> = {
+  68: 'G4', 72: 'Bb4', 76: 'D5', 80: 'C5',
+  84: 'Eb5', 88: 'D5', 92: 'C5',
+  100: 'Ab4', 104: 'C5', 108: 'G5', 112: 'F5',
+  116: 'Eb5', 120: 'D5', 124: 'B4'
+};
+
+function scheduleMusicStep(step: number, time: number): void {
+  if (!audioCtx || !musicMasterGain) return;
+
+  const bar = Math.floor(step / 16);
+  const localStep = step % 16;
+
+  // 1. Drums
+  // Kick: beats 1 & 3 (steps 0, 8) + syncopated kick on step 14 on even bars
+  if (localStep === 0 || localStep === 8 || (localStep === 14 && bar % 2 === 0)) {
+    playKick(audioCtx, time);
+  }
+  // Brushed Snare: beats 2 & 4 (steps 4, 12)
+  if (localStep === 4 || localStep === 12) {
+    playSnare(audioCtx, time);
+  }
+  // Hi-Hat: 8th notes (every 2 steps) with swing accent on offbeats (2, 6, 10, 14)
+  if (localStep % 2 === 0) {
+    playHat(audioCtx, time, localStep % 4 === 2);
+  }
+
+  // 2. Chords & Bass
+  const chordBar = bar % 4;
+  if (chordBar === 0) {
+    // Cm9
+    if (localStep === 0) playRhodesChord(audioCtx, time, ['Eb3', 'G3', 'Bb3', 'D4'], 0.70, 0.16);
+    if (localStep === 6) playRhodesChord(audioCtx, time, ['Eb3', 'G3', 'Bb3', 'D4'], 0.35, 0.12);
+    if (localStep === 10) playRhodesChord(audioCtx, time, ['Eb3', 'G3', 'Bb3', 'D4'], 0.45, 0.13);
+
+    if (localStep === 0) playBass(audioCtx, time, 'C2', 0.50);
+    if (localStep === 6) playBass(audioCtx, time, bar >= 4 ? 'Eb2' : 'C2', 0.30);
+    if (localStep === 8) playBass(audioCtx, time, 'G2', 0.40);
+    if (localStep === 14) playBass(audioCtx, time, 'Bb2', 0.35);
+  } else if (chordBar === 1) {
+    // Abmaj9
+    if (localStep === 0) playRhodesChord(audioCtx, time, ['C3', 'Eb3', 'G3', 'C4'], 0.65, 0.16);
+    if (localStep === 6) playRhodesChord(audioCtx, time, ['C3', 'Eb3', 'G3', 'C4'], 0.35, 0.12);
+    if (localStep === 12) playRhodesChord(audioCtx, time, ['C3', 'Eb3', 'G3', 'C4'], 0.45, 0.13);
+
+    if (localStep === 0) playBass(audioCtx, time, 'Ab1', 0.50);
+    if (localStep === 6) playBass(audioCtx, time, bar >= 4 ? 'C2' : 'Eb2', 0.30);
+    if (localStep === 8) playBass(audioCtx, time, bar >= 4 ? 'Eb2' : 'Ab2', 0.40);
+    if (localStep === 14) playBass(audioCtx, time, 'G2', 0.35);
+  } else if (chordBar === 2) {
+    // Fm9
+    if (localStep === 0) playRhodesChord(audioCtx, time, ['Eb3', 'Ab3', 'C4', 'G4'], 0.70, 0.16);
+    if (localStep === 6) playRhodesChord(audioCtx, time, ['Eb3', 'Ab3', 'C4', 'G4'], 0.35, 0.12);
+    if (localStep === 10) playRhodesChord(audioCtx, time, ['Eb3', 'Ab3', 'C4', 'G4'], 0.45, 0.13);
+
+    if (localStep === 0) playBass(audioCtx, time, 'F1', 0.50);
+    if (localStep === 6) playBass(audioCtx, time, bar >= 4 ? 'Ab1' : 'F1', 0.30);
+    if (localStep === 8) playBass(audioCtx, time, 'C2', 0.40);
+    if (localStep === 14) playBass(audioCtx, time, 'Eb2', 0.35);
+  } else if (chordBar === 3) {
+    // G7alt
+    if (localStep === 0) playRhodesChord(audioCtx, time, ['F3', 'B3', 'Eb4', 'Ab4'], 0.65, 0.16);
+    if (localStep === 6) playRhodesChord(audioCtx, time, ['F3', 'B3', 'Eb4', 'Ab4'], 0.35, 0.12);
+    if (localStep === 10) playRhodesChord(audioCtx, time, ['F3', 'B3', 'Eb4', 'Ab4'], 0.40, 0.13);
+    if (localStep === 14) playRhodesChord(audioCtx, time, ['F3', 'B3', 'D4', 'G4'], 0.35, 0.12);
+
+    if (localStep === 0) playBass(audioCtx, time, 'G1', 0.50);
+    if (localStep === 6) playBass(audioCtx, time, 'D2', 0.30);
+    if (localStep === 8) playBass(audioCtx, time, 'F2', 0.40);
+    if (localStep === 14) playBass(audioCtx, time, 'B1', 0.35); // Leading half-step back into C
+  }
+
+  // 3. Melodic touches in Section B
+  if (LEAD_MOTIF_STEPS[step]) {
+    playRhodesLead(audioCtx, time, LEAD_MOTIF_STEPS[step], 0.45);
+  }
+}
+
+function musicScheduler(): void {
+  if (!audioCtx || !isMusicPlaying) return;
+  // Lookahead: schedule notes up to 130ms ahead of current audio time
+  while (nextMusicStepTime < audioCtx.currentTime + 0.13) {
+    scheduleMusicStep(currentMusicStep, nextMusicStepTime);
+    nextMusicStepTime += SECONDS_PER_STEP;
+    currentMusicStep = (currentMusicStep + 1) % TOTAL_MUSIC_STEPS;
+  }
+}
+
+function startMusic(): void {
+  try {
+    const ctx = getAudioCtx();
+    if (!ctx || musicMuted || isMusicPlaying) return;
+
+    ensureMusicBus(ctx);
+    isMusicPlaying = true;
+    currentMusicStep = 0;
+    nextMusicStepTime = ctx.currentTime + 0.05;
+
+    const now = ctx.currentTime;
+    musicMasterGain!.gain.cancelScheduledValues(now);
+    musicMasterGain!.gain.setValueAtTime(0.0001, now);
+    musicMasterGain!.gain.linearRampToValueAtTime(MUSIC_MASTER_VOLUME, now + 0.35);
+
+    if (musicSchedulerTimer) clearInterval(musicSchedulerTimer);
+    musicSchedulerTimer = setInterval(musicScheduler, 35);
+    updateMusicUI();
+  } catch (e) {}
+}
+
+function stopMusic(immediate: boolean = false): void {
+  try {
+    if (!isMusicPlaying) return;
+    isMusicPlaying = false;
+    if (musicSchedulerTimer) {
+      clearInterval(musicSchedulerTimer);
+      musicSchedulerTimer = null;
+    }
+    if (musicMasterGain && audioCtx) {
+      const now = audioCtx.currentTime;
+      if (immediate) {
+        musicMasterGain.gain.setValueAtTime(0.0001, now);
+      } else {
+        musicMasterGain.gain.cancelScheduledValues(now);
+        musicMasterGain.gain.linearRampToValueAtTime(0.0001, now + 0.25);
+      }
+    }
+    updateMusicUI();
+  } catch (e) {}
+}
+
+function toggleMusic(): void {
+  musicMuted = !musicMuted;
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('jacklatro_bgm_muted', musicMuted ? 'true' : 'false');
+    }
+  } catch (e) {}
+
+  if (musicMuted) {
+    stopMusic();
+  } else {
+    const ctx = getAudioCtx();
+    if (ctx && ctx.state === 'suspended') {
+      ctx.resume().then(() => startMusic()).catch(() => startMusic());
+    } else {
+      startMusic();
+    }
+  }
+  updateMusicUI();
+}
+
+function duckMusic(durationSec: number = 0.8): void {
+  try {
+    if (!isMusicPlaying || !musicMasterGain || !audioCtx) return;
+    const now = audioCtx.currentTime;
+    musicMasterGain.gain.cancelScheduledValues(now);
+    musicMasterGain.gain.setValueAtTime(musicMasterGain.gain.value, now);
+    musicMasterGain.gain.linearRampToValueAtTime(MUSIC_MASTER_VOLUME * 0.28, now + 0.04);
+    musicMasterGain.gain.exponentialRampToValueAtTime(MUSIC_MASTER_VOLUME, now + durationSec);
+  } catch (e) {}
+}
+
+function updateMusicUI(): void {
+  try {
+    const btnHeader = document.getElementById('btn-music-toggle');
+    if (btnHeader) {
+      if (musicMuted || !isMusicPlaying) {
+        btnHeader.textContent = '🔇';
+        btnHeader.title = 'Music: OFF (Tap to play)';
+        btnHeader.classList.add('muted');
+        btnHeader.classList.remove('playing');
+      } else {
+        btnHeader.textContent = '🎵';
+        btnHeader.title = 'Music: ON (Tap to mute)';
+        btnHeader.classList.remove('muted');
+        btnHeader.classList.add('playing');
+      }
+    }
+    const btnModal = document.getElementById('btn-modal-music-toggle');
+    if (btnModal) {
+      btnModal.textContent = (musicMuted || !isMusicPlaying) ? 'MUSIC: OFF' : 'MUSIC: ON';
+      if (musicMuted || !isMusicPlaying) {
+        btnModal.classList.remove('btn-deal');
+        btnModal.classList.add('btn-secondary');
+      } else {
+        btnModal.classList.add('btn-deal');
+        btnModal.classList.remove('btn-secondary');
+      }
+    }
+  } catch (e) {}
+}
+
+function initMusicOnFirstGesture(): void {
+  if (typeof window === 'undefined') return;
+  const onGesture = () => {
+    if (!musicMuted && !isMusicPlaying) {
+      startMusic();
+    } else {
+      getAudioCtx();
+    }
+    window.removeEventListener('pointerdown', onGesture);
+    window.removeEventListener('keydown', onGesture);
+  };
+  window.addEventListener('pointerdown', onGesture, { once: true });
+  window.addEventListener('keydown', onGesture, { once: true });
+}
+
+if (typeof window !== 'undefined') {
+  initMusicOnFirstGesture();
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => updateMusicUI());
+  } else {
+    updateMusicUI();
+  }
+}
+
 

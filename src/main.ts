@@ -227,7 +227,7 @@ function inspectJoker(index: number): void {
       <button class="btn btn-secondary" onclick="closeInspector()">Close</button>
     </div>
     <div style="font-size:13px; color:#e2e8f0; line-height:1.4;">${getJokerFullDesc(j)}</div>
-    <div style="font-size:10px; color:#94a3b8;">Tip: Jokers trigger Left ➔ Right. Put +Mult Jokers to the left of ×Mult Jokers!</div>
+    <div style="font-size:12px; color:#94a3b8;">Tip: Jokers trigger Left ➔ Right. Put +Mult Jokers to the left of ×Mult Jokers!</div>
     <div style="display:flex; gap:6px;">
       <button class="btn btn-secondary" style="flex:1;" onclick="uiMoveJoker(${index}, -1)" ${index === 0 ? 'disabled' : ''}>◀ Move Left</button>
       <button class="btn btn-secondary" style="flex:1;" onclick="uiMoveJoker(${index}, 1)" ${index === state.jokers.length - 1 ? 'disabled' : ''}>Move Right ▶</button>
@@ -299,8 +299,84 @@ function setEquationUI(chips: number, mult: number, pop: boolean = false): void 
 }
 
 function setBanner(msg: string, sub?: string): void {
-  $('ui-banner').textContent = msg;
-  $('ui-breakdown').textContent = sub || '';
+  $('ui-banner').innerHTML = msg;
+  $('ui-breakdown').innerHTML = sub || '';
+}
+
+function buildScoreEquationHTML(res: ScoreResult, playerHand: ReadonlyArray<Card>): string {
+  if (!res.isScoring) {
+    return `${res.outcomeLabel} → 0 pts`;
+  }
+
+  const parts: string[] = [];
+
+  // 1. Base outcome tier: e.g. "PUSH (TIE)[30c+1m]"
+  const baseStep = res.steps.find(s => s.kind === 'base');
+  const baseChips = baseStep ? (baseStep.deltaChips !== undefined ? baseStep.deltaChips : baseStep.chips) : 0;
+  const baseMult = baseStep ? (baseStep.deltaMult !== undefined ? baseStep.deltaMult : baseStep.mult) : 0;
+  parts.push(
+    `${res.outcomeLabel}[${baseChips}<span class="eq-c">c</span>+${baseMult}<span class="eq-m">m</span>]`
+  );
+
+  // 2. Card contributions: e.g. "10♣[10]" or "7♠[7]"
+  const cardSteps = res.steps.filter(s => s.kind === 'card');
+  for (const step of cardSteps) {
+    const card = playerHand[step.cardIndex as number];
+    if (!card) continue;
+    const isRed = ['♥', '♦'].includes(card.suit);
+    const suitClass = isRed ? 'suit-red' : 'suit-black';
+    const cardSymbol = `${card.rank}<span class="${suitClass}">${card.suit}</span>`;
+
+    let bracketContent = '';
+    const dChips = step.deltaChips || 0;
+    const dMult = step.deltaMult || 0;
+
+    if (card.enhancement === 'foil') {
+      bracketContent = `${dChips}<span class="eq-c">c</span>`;
+    } else if (card.enhancement === 'holo') {
+      const baseCardVal = getCardChipValue(card);
+      bracketContent = `${baseCardVal}<span class="eq-c">c</span>+${dMult}<span class="eq-m">m</span>`;
+    } else if (card.enhancement === 'poly') {
+      const baseCardVal = getCardChipValue(card);
+      bracketContent = `${baseCardVal}<span class="eq-c">c</span> ×${dMult}<span class="eq-m">m</span>`;
+    } else if (card.enhancement === 'gold') {
+      bracketContent = `${dChips}<span class="eq-c">c</span>+$3`;
+    } else {
+      bracketContent = `${dChips}`;
+    }
+
+    parts.push(`${cardSymbol}[${bracketContent}]`);
+  }
+
+  // 3. Jokers: e.g. "VIP[+10c/+5m]"
+  const jokerSteps = res.steps.filter(s => s.kind === 'joker');
+  for (const step of jokerSteps) {
+    const name = step.sourceName || 'Joker';
+    let bracket = '';
+    if (step.isXMult) {
+      bracket = `×${step.deltaMult}<span class="eq-m">m</span>`;
+    } else if (step.deltaChips && step.deltaMult) {
+      bracket = `+${step.deltaChips}<span class="eq-c">c</span>+${step.deltaMult}<span class="eq-m">m</span>`;
+    } else if (step.deltaChips) {
+      bracket = `+${step.deltaChips}<span class="eq-c">c</span>`;
+    } else if (step.deltaMult) {
+      bracket = `+${step.deltaMult}<span class="eq-m">m</span>`;
+    }
+    if (bracket) {
+      parts.push(`${name}[${bracket}]`);
+    }
+  }
+
+  // 4. Double Down:
+  const doubleStep = res.steps.find(s => s.kind === 'double');
+  if (doubleStep) {
+    parts.push(`Double Down[×2<span class="eq-m">m</span>]`);
+  }
+
+  const leftHandSide = parts.join(' + ');
+  const rightHandSide = `${res.chips}<span class="eq-c">c</span> × ${res.mult}<span class="eq-m">m</span> = ${res.handScore.toLocaleString()} Total Hand Score`;
+
+  return `${leftHandSide} = ${rightHandSide}`;
 }
 
 function renderCardHTML(card: Card, faceDown: boolean = false, extraClasses: string = ''): string {
@@ -333,7 +409,7 @@ function renderShop() {
         <div class="shop-item-title">${item.name}</div>
         <div class="shop-item-desc">${item.shopType === 'joker' ? getJokerFullDesc(item) : item.desc}</div>
       </div>
-      <button class="btn btn-deal" style="padding:6px; font-size:10px;"
+      <button class="btn btn-deal" style="padding:6px; font-size:12px;"
         onclick="uiBuyShopItem('shopJokers', ${idx})"
         ${item.bought || state.money < item.cost ? 'disabled' : ''}>
         ${item.bought ? 'SOLD' : 'BUY $' + item.cost}
@@ -348,7 +424,7 @@ function renderShop() {
         <div class="shop-item-title">${item.name}</div>
         <div class="shop-item-desc">${item.desc}</div>
       </div>
-      <button class="btn btn-hit" style="padding:6px; font-size:10px;"
+      <button class="btn btn-hit" style="padding:6px; font-size:12px;"
         onclick="uiBuyShopItem('shopExtras', ${idx})"
         ${item.bought || state.money < item.cost ? 'disabled' : ''}>
         ${item.bought ? 'SOLD' : 'BUY $' + item.cost}
@@ -395,7 +471,7 @@ function updateAllUI() {
   $('ui-joker-slots').textContent = `JOKERS ${state.jokers.length}/${state.maxJokers}`;
   const jRow = $('ui-joker-row');
   if (state.jokers.length === 0) {
-    jRow.innerHTML = `<span style="font-size:10px; color:#64748b;">No active Jokers</span>`;
+    jRow.innerHTML = `<span style="font-size:12px; font-weight:700; color:#94a3b8;">No active Jokers</span>`;
   } else {
     jRow.innerHTML = state.jokers.map((j, i) => `
       <div class="mini-card" onclick="inspectJoker(${i})" title="${getJokerFullDesc(j)}">
@@ -408,7 +484,7 @@ function updateAllUI() {
   $('ui-consumable-slots').textContent = `TAROT ${state.consumables.length}/${state.maxConsumables}`;
   const cRow = $('ui-consumable-row');
   if (state.consumables.length === 0) {
-    cRow.innerHTML = `<span style="font-size:10px; color:#64748b;">Empty</span>`;
+    cRow.innerHTML = `<span style="font-size:12px; font-weight:700; color:#94a3b8;">Empty</span>`;
   } else {
     cRow.innerHTML = state.consumables.map((c, i) => `
       <div class="mini-card tarot" onclick="inspectConsumable(${i})">
@@ -1225,6 +1301,8 @@ async function resolveRound(): Promise<void> {
   patchState({ isDealing: false });
 
   const handScore = res.handScore;
+  const eqHTML = buildScoreEquationHTML(res, state.playerHand);
+
   if (state.roundScore >= state.targetScore) {
     const payout = computeBlindPayout();
     patchState({ blindClearedReady: true, pendingPayout: payout });
@@ -1235,7 +1313,7 @@ async function resolveRound(): Promise<void> {
     playOutcomeSound('BLIND_WIN');
 
     setBanner(
-      `${res.outcomeLabel} (+${handScore.toLocaleString()} pts) — BLIND CLEARED!`,
+      `${eqHTML} — <span style="color:var(--gold);">BLIND CLEARED!</span>`,
       `Tap CASH OUT (+$${payout.totalEarned}) below when you're ready to visit the Shop.`
     );
     updateAllUI();
@@ -1250,7 +1328,7 @@ async function resolveRound(): Promise<void> {
     felt.classList.add('shake-loss');
 
     setBanner(
-      `${res.outcomeLabel} (+${handScore.toLocaleString()} pts) — Target Missed (${state.roundScore.toLocaleString()}/${state.targetScore.toLocaleString()})`,
+      `${res.isScoring ? eqHTML : res.outcomeLabel + ' → 0 pts'} — Target Missed (${state.roundScore.toLocaleString()}/${state.targetScore.toLocaleString()})`,
       `Out of Deals on Ante ${state.ante}. Tap NEW RUN below whenever you're ready.`
     );
     updateAllUI();
@@ -1266,8 +1344,8 @@ async function resolveRound(): Promise<void> {
     }
 
     setBanner(
-      `${res.outcomeLabel} → +${handScore.toLocaleString()} pts`,
-      res.logs.length ? res.logs.join(' • ') : 'Tap DEAL for your next hand.'
+      eqHTML,
+      res.logs.length ? `${res.logs.join(' • ')} — Tap DEAL for your next hand.` : 'Tap DEAL for your next hand.'
     );
     updateAllUI();
   }
