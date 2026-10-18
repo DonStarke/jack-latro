@@ -247,10 +247,12 @@ function playOutcomeSound(kind: 'WIN' | 'BLIND_WIN' | 'PUSH' | 'LOSS' | 'BUST'):
     if (!ctx) return;
     const now = ctx.currentTime;
     if (kind === 'WIN') {
-      playTone(523.25, 'triangle', now, 0.14, 0.16);
-      playTone(659.25, 'triangle', now + 0.08, 0.14, 0.16);
-      playTone(783.99, 'triangle', now + 0.16, 0.22, 0.18);
-      playTone(1046.50, 'sine', now + 0.24, 0.30, 0.15);
+      // Crisp, uplifting ascending chime
+      playTone(523.25, 'triangle', now, 0.12, 0.18); // C5
+      playTone(659.25, 'triangle', now + 0.06, 0.12, 0.18); // E5
+      playTone(783.99, 'triangle', now + 0.12, 0.16, 0.19); // G5
+      playTone(1046.50, 'sine', now + 0.18, 0.28, 0.22); // C6
+      playTone(2093.00, 'sine', now + 0.19, 0.15, 0.08); // sparkle harmonic
     } else if (kind === 'BLIND_WIN') {
       playTone(523.25, 'triangle', now, 0.12, 0.18);
       playTone(659.25, 'triangle', now + 0.09, 0.12, 0.18);
@@ -258,15 +260,22 @@ function playOutcomeSound(kind: 'WIN' | 'BLIND_WIN' | 'PUSH' | 'LOSS' | 'BUST'):
       playTone(1046.50, 'triangle', now + 0.27, 0.16, 0.20);
       playTone(1318.51, 'sine', now + 0.38, 0.42, 0.20);
     } else if (kind === 'PUSH') {
-      playTone(440.0, 'sine', now, 0.14, 0.13);
-      playTone(440.0, 'triangle', now + 0.14, 0.20, 0.13);
+      // Distinctly neutral 2-tone ping (even marimba notes, level pitch, neither happy nor sad)
+      playTone(392.00, 'sine', now, 0.11, 0.15); // G4
+      playTone(392.00, 'triangle', now, 0.11, 0.11);
+      playTone(392.00, 'sine', now + 0.11, 0.16, 0.14); // G4 second tap
+      playTone(392.00, 'triangle', now + 0.11, 0.16, 0.10);
     } else if (kind === 'LOSS') {
-      playTone(349.23, 'sawtooth', now, 0.18, 0.10);
-      playTone(277.18, 'sawtooth', now + 0.16, 0.30, 0.11);
+      // Muted descending defeat tone
+      playTone(329.63, 'sawtooth', now, 0.14, 0.13); // E4
+      playTone(261.63, 'sawtooth', now + 0.11, 0.24, 0.14); // C4
+      playTone(130.81, 'triangle', now + 0.12, 0.24, 0.10); // low support
     } else if (kind === 'BUST') {
-      playTone(220.0, 'sawtooth', now, 0.16, 0.13);
-      playTone(164.81, 'sawtooth', now + 0.13, 0.18, 0.13);
-      playTone(123.47, 'sawtooth', now + 0.26, 0.34, 0.14);
+      // Deep descending bust buzz thud
+      playTone(220.00, 'sawtooth', now, 0.14, 0.16); // A3
+      playTone(164.81, 'sawtooth', now + 0.10, 0.16, 0.16); // E3
+      playTone(110.00, 'sawtooth', now + 0.20, 0.30, 0.19); // A2
+      playTone(55.00, 'sine', now + 0.20, 0.30, 0.22); // sub-bass thump
     }
   } catch (e) {}
 }
@@ -617,6 +626,200 @@ function startMusic(): void {
   } catch (e) {}
 }
 
+/* ==========================================================
+   VICTORY / CELEBRATION MUSIC LOOP (UPBEAT FANFARE GROOVE)
+========================================================== */
+let isVictoryMusicPlaying: boolean = false;
+let victorySchedulerTimer: any = null;
+let currentVictoryStep = 0;
+let nextVictoryStepTime = 0;
+const VICTORY_BPM = 118;
+const VICTORY_SECONDS_PER_BEAT = 60 / VICTORY_BPM;
+const VICTORY_SECONDS_PER_STEP = VICTORY_SECONDS_PER_BEAT / 4; // 16th note steps (0.127s)
+const TOTAL_VICTORY_STEPS = 64; // 4 bars @ 16 steps/bar = 8.13s loop
+
+function playVictoryLead(ctx: AudioContext, time: number, noteName: string, duration: number): void {
+  try {
+    const freq = parseMusicNote(noteName);
+    const osc1 = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    const filter = ctx.createBiquadFilter();
+    const gain = ctx.createGain();
+
+    osc1.type = 'sawtooth';
+    osc1.frequency.setValueAtTime(freq, time);
+
+    osc2.type = 'triangle';
+    osc2.frequency.setValueAtTime(freq * 1.004, time); // detuned shimmer
+
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(3400, time);
+    filter.frequency.exponentialRampToValueAtTime(1600, time + duration);
+
+    gain.gain.setValueAtTime(0.0001, time);
+    gain.gain.linearRampToValueAtTime(0.13, time + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+
+    osc1.connect(filter);
+    osc2.connect(filter);
+    filter.connect(gain);
+    gain.connect(musicMasterGain!);
+
+    osc1.start(time);
+    osc2.start(time);
+    osc1.stop(time + duration);
+    osc2.stop(time + duration);
+  } catch (e) {}
+}
+
+function playVictoryBrassChord(ctx: AudioContext, time: number, noteNames: string[], duration: number): void {
+  try {
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(2600, time);
+    filter.Q.setValueAtTime(1.1, time);
+
+    const voiceGain = 0.16 / noteNames.length;
+    for (const n of noteNames) {
+      const freq = parseMusicNote(n);
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, time);
+
+      g.gain.setValueAtTime(0.0001, time);
+      g.gain.linearRampToValueAtTime(voiceGain, time + 0.012);
+      g.gain.exponentialRampToValueAtTime(voiceGain * 0.45, time + 0.18);
+      g.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+
+      osc.connect(g);
+      g.connect(filter);
+      osc.start(time);
+      osc.stop(time + duration);
+    }
+    filter.connect(musicMasterGain!);
+  } catch (e) {}
+}
+
+function scheduleVictoryStep(step: number, time: number): void {
+  if (!audioCtx || !musicMasterGain) return;
+
+  const bar = Math.floor(step / 16);
+  const localStep = step % 16;
+
+  // 1. Upbeat celebration drums: 4-on-the-floor kick, snappy snare on 2 & 4, bouncy hi-hats
+  if (localStep % 4 === 0) {
+    playKick(audioCtx, time);
+  }
+  if (localStep === 4 || localStep === 12) {
+    playSnare(audioCtx, time);
+  }
+  if (localStep % 2 === 0) {
+    playHat(audioCtx, time, localStep % 4 === 2);
+  }
+
+  // 2. Chords & Bassline
+  if (bar === 0) {
+    // C Major: triumphant root
+    if (localStep === 0 || localStep === 6 || localStep === 10) {
+      playVictoryBrassChord(audioCtx, time, ['G3', 'C4', 'E4', 'G4'], 0.32);
+    }
+    if (localStep === 0 || localStep === 4 || localStep === 8 || localStep === 12) {
+      playBass(audioCtx, time, 'C2', 0.22);
+    }
+  } else if (bar === 1) {
+    // F Major: bright subdominant lift
+    if (localStep === 0 || localStep === 6 || localStep === 10) {
+      playVictoryBrassChord(audioCtx, time, ['A3', 'C4', 'F4', 'A4'], 0.32);
+    }
+    if (localStep === 0 || localStep === 4 || localStep === 8 || localStep === 12) {
+      playBass(audioCtx, time, 'F2', 0.22);
+    }
+  } else if (bar === 2) {
+    // G Major: dominant driving anticipation
+    if (localStep === 0 || localStep === 6 || localStep === 10) {
+      playVictoryBrassChord(audioCtx, time, ['B3', 'D4', 'G4', 'B4'], 0.32);
+    }
+    if (localStep === 0 || localStep === 4 || localStep === 8 || localStep === 12) {
+      playBass(audioCtx, time, 'G2', 0.22);
+    }
+  } else if (bar === 3) {
+    // Am -> G turnaround
+    if (localStep === 0 || localStep === 6) {
+      playVictoryBrassChord(audioCtx, time, ['A3', 'C4', 'E4', 'A4'], 0.30);
+    } else if (localStep === 10 || localStep === 14) {
+      playVictoryBrassChord(audioCtx, time, ['G3', 'B3', 'D4', 'G4'], 0.28);
+    }
+    if (localStep === 0 || localStep === 4) {
+      playBass(audioCtx, time, 'A2', 0.22);
+    } else if (localStep === 8 || localStep === 12) {
+      playBass(audioCtx, time, 'G2', 0.22);
+    }
+  }
+
+  // 3. Triumphant Fanfare Lead Melody
+  const VICTORY_MELODY: Record<number, string> = {
+    0: 'C5', 4: 'E5', 8: 'G5', 12: 'C6',
+    16: 'A5', 20: 'C6', 24: 'G5', 28: 'F5',
+    32: 'G5', 36: 'B5', 40: 'D6', 44: 'G5',
+    48: 'E6', 52: 'D6', 56: 'C6', 60: 'G5'
+  };
+
+  if (VICTORY_MELODY[step]) {
+    playVictoryLead(audioCtx, time, VICTORY_MELODY[step], 0.26);
+  }
+}
+
+function victoryMusicScheduler(): void {
+  if (!audioCtx || !isVictoryMusicPlaying) return;
+  while (nextVictoryStepTime < audioCtx.currentTime + 0.12) {
+    scheduleVictoryStep(currentVictoryStep, nextVictoryStepTime);
+    nextVictoryStepTime += VICTORY_SECONDS_PER_STEP;
+    currentVictoryStep = (currentVictoryStep + 1) % TOTAL_VICTORY_STEPS;
+  }
+}
+
+function startVictoryMusic(): void {
+  try {
+    const ctx = getAudioCtx();
+    if (!ctx || musicMuted) return;
+
+    // Stop normal BGM first
+    stopMusic(true);
+
+    ensureMusicBus(ctx);
+    isVictoryMusicPlaying = true;
+    currentVictoryStep = 0;
+    nextVictoryStepTime = ctx.currentTime + 0.05;
+
+    const now = ctx.currentTime;
+    musicMasterGain!.gain.cancelScheduledValues(now);
+    musicMasterGain!.gain.setValueAtTime(0.0001, now);
+    musicMasterGain!.gain.linearRampToValueAtTime(MUSIC_MASTER_VOLUME * 1.15, now + 0.25);
+
+    if (victorySchedulerTimer) clearInterval(victorySchedulerTimer);
+    victorySchedulerTimer = setInterval(victoryMusicScheduler, 25);
+    updateMusicUI();
+  } catch (e) {}
+}
+
+function stopVictoryMusic(): void {
+  try {
+    if (!isVictoryMusicPlaying) return;
+    isVictoryMusicPlaying = false;
+    if (victorySchedulerTimer) {
+      clearInterval(victorySchedulerTimer);
+      victorySchedulerTimer = null;
+    }
+    if (musicMasterGain && audioCtx) {
+      const now = audioCtx.currentTime;
+      musicMasterGain.gain.cancelScheduledValues(now);
+      musicMasterGain.gain.linearRampToValueAtTime(0.0001, now + 0.2);
+    }
+    updateMusicUI();
+  } catch (e) {}
+}
+
 function stopMusic(immediate: boolean = false): void {
   try {
     if (!isMusicPlaying) return;
@@ -648,12 +851,22 @@ function toggleMusic(): void {
 
   if (musicMuted) {
     stopMusic();
+    stopVictoryMusic();
   } else {
     const ctx = getAudioCtx();
+    const resumeFn = () => {
+      const vicModal = document.getElementById('ui-victory-modal');
+      const isVicActive = vicModal && !vicModal.classList.contains('hidden');
+      if (isVicActive) {
+        startVictoryMusic();
+      } else {
+        startMusic();
+      }
+    };
     if (ctx && ctx.state === 'suspended') {
-      ctx.resume().then(() => startMusic()).catch(() => startMusic());
+      ctx.resume().then(resumeFn).catch(resumeFn);
     } else {
-      startMusic();
+      resumeFn();
     }
   }
   updateMusicUI();
@@ -661,7 +874,8 @@ function toggleMusic(): void {
 
 function duckMusic(durationSec: number = 0.8): void {
   try {
-    if (!isMusicPlaying || !musicMasterGain || !audioCtx) return;
+    const active = isMusicPlaying || isVictoryMusicPlaying;
+    if (!active || !musicMasterGain || !audioCtx) return;
     const now = audioCtx.currentTime;
     musicMasterGain.gain.cancelScheduledValues(now);
     musicMasterGain.gain.setValueAtTime(musicMasterGain.gain.value, now);
@@ -672,9 +886,10 @@ function duckMusic(durationSec: number = 0.8): void {
 
 function updateMusicUI(): void {
   try {
+    const isPlaying = !musicMuted && (isMusicPlaying || isVictoryMusicPlaying);
     const btnHeader = document.getElementById('btn-music-toggle');
     if (btnHeader) {
-      if (musicMuted || !isMusicPlaying) {
+      if (!isPlaying) {
         btnHeader.textContent = '🔇';
         btnHeader.title = 'Music: OFF (Tap to play)';
         btnHeader.classList.add('muted');
@@ -688,13 +903,24 @@ function updateMusicUI(): void {
     }
     const btnModal = document.getElementById('btn-modal-music-toggle');
     if (btnModal) {
-      btnModal.textContent = (musicMuted || !isMusicPlaying) ? 'MUSIC: OFF' : 'MUSIC: ON';
-      if (musicMuted || !isMusicPlaying) {
+      btnModal.textContent = !isPlaying ? 'MUSIC: OFF' : 'MUSIC: ON';
+      if (!isPlaying) {
         btnModal.classList.remove('btn-deal');
         btnModal.classList.add('btn-secondary');
       } else {
         btnModal.classList.add('btn-deal');
         btnModal.classList.remove('btn-secondary');
+      }
+    }
+    const btnSplash = document.getElementById('btn-splash-music');
+    if (btnSplash) {
+      btnSplash.innerHTML = isPlaying
+        ? '<span id="splash-music-icon">🎵</span> MUSIC: ON'
+        : '<span id="splash-music-icon">🔇</span> MUSIC: OFF';
+      if (isPlaying) {
+        btnSplash.classList.remove('muted');
+      } else {
+        btnSplash.classList.add('muted');
       }
     }
   } catch (e) {}
@@ -703,7 +929,7 @@ function updateMusicUI(): void {
 function initMusicOnFirstGesture(): void {
   if (typeof window === 'undefined') return;
   const onGesture = () => {
-    if (!musicMuted && !isMusicPlaying) {
+    if (!musicMuted && !isMusicPlaying && !isVictoryMusicPlaying) {
       startMusic();
     } else {
       getAudioCtx();

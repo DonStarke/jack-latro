@@ -19,7 +19,13 @@ const SHOP_BASE_REROLL = 2;
 
 /* ---------- Pure economy helpers (shared with simulator) ---------- */
 function computeBlindTarget(ante: number, blindIndex: number, targetScalePct: number): number {
-  const rawBase = ANTE_TARGETS[Math.min(ante - 1, ANTE_TARGETS.length - 1)];
+  let rawBase: number;
+  if (ante <= ANTE_TARGETS.length) {
+    rawBase = ANTE_TARGETS[ante - 1];
+  } else {
+    const maxBase = ANTE_TARGETS[ANTE_TARGETS.length - 1]; // 10,500
+    rawBase = Math.round(maxBase * Math.pow(1.6, ante - ANTE_TARGETS.length));
+  }
   const base = Math.round(rawBase * (targetScalePct / 100));
   return Math.round(base * BLIND_TARGET_MULTS[Math.min(blindIndex, 2)]);
 }

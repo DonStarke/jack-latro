@@ -1,4 +1,4 @@
-﻿# 🗃️ JACK-LATRO GLOBAL SYSTEM LOG
+# 🗃️ JACK-LATRO GLOBAL SYSTEM LOG
 
 ## 🧩 Active Codebase Map
 * `index.html` - PLAYABLE shell (293 lines): original head + `<link styles.css>` + original body markup + script tags in order gameState, deckEngine, modifierEngine, shopEngine, simulator, uiFx, main (all `dist/*.js`). Only markup change vs original: Reroll button now calls `uiRerollShop()`.
@@ -22,20 +22,27 @@
   * Boss Blinds: The House (pushes lose unless Push It Good), The Pit Boss (faces = 0 chips), The Cooler (-1 deal), The Anchor (no double).
   * Consumables (max 2): X-Ray Specs, Loaded Ace, Card Shave, Midas Touch.
 
+* `index.html` - PLAYABLE shell: includes `#ui-splash-screen` (animated card fan, foil/holo shimmer, floating suits, New Game, Settings), `#ui-defeat-modal` (New Game, Main Menu), `#ui-victory-modal` (Continue into Endless, New Game, Main Menu), updated `#ui-cog-modal` with Main Menu button.
+* `styles.css` - Full styling and keyframe animations for Splash Screen, floating suits, Defeat Modal, and Ante 8 Victory Modal.
+* `gameState.ts` - Added `endlessMode` state flag.
+* `shopEngine.ts` - Updated `computeBlindTarget` with smooth exponential scaling for Ante > 8 (Endless Mode).
+* `uiFx.ts` - Refined hand outcome tones (bright win chime, level neutral push marimba ping, loss defeat tone, bust low buzz/thump); synthesized WebAudio upbeat Fanfare Victory Music loop (`startVictoryMusic()` / `stopVictoryMusic()`); updated music UI synchronization.
+* `main.ts` - Immediate hand outcome sound dispatch at round resolution start before scoring cascade; Ante 8 boss celebration flow with score reveal pause, victory music loop, and victory modal; defeat screen flow with run stats and options; endless mode continuation and HUD formatting; main menu navigation.
+* `tests/new-features.test.js` - Automated suite validating splash screen, defeat flow, victory flow, endless mode, and immediate sound mappings (30/30 checks pass).
+
+## 📈 Current Mechanical Systems Balance
+* Active Hand Tiers (Chips x Mult, before card/joker bonuses): 5-Card Charlie (5+ cards, not bust) 160 x 5; Natural Blackjack 120 x 4; Exact 21 (win) 75 x 3; Win 40 x 2; Push 25 x 1; Loss/Bust 0 (Safety Net: Bust = 50 x 2). Dealer natural vs player natural = Push. Double Down = final mult x2.
+* Passive Systems:
+  * Blind structure: 8 Antes x 3 Blinds + Endless Mode (Ante 9+ scaling). Targets `[300,600,1100,1800,2900,4500,7000,10500]` x (1.0 / 1.45 / 2.0 for Small/Big/Boss), then scaled by $1.6^{\text{ante}-8}$ in endless mode.
+  * Config (`balanceConfig`): startingDeals 7, targetScalePct 100, unusedDealCashCap 6, pushRefundsDeal true, anteHandScaling true.
+
 ## 🛠️ Last Modification & Structural Changes
-* Created `src/uiFx.ts` (original L1209-1381) and `src/main.ts` (render blocks L1408-1433, 1563-1572, 1785-1806, 2235-2305, 2349-2609, 2614-2653, 3271-3387 extracted programmatically then typed, plus hand-written flow). Inside render functions a local `const state = getState();` shadows the old global, so template code is unchanged; writes were rewritten to engine/state APIs (`applySimConfigToLiveGame` now uses `patchBalanceConfig`).
-* Naming: UI wrappers are `ui*` because all scripts share one global scope (engine `rerollShop/buyShopItem/sellJoker/...` must not collide). Inline `onclick` strings in templates and the Reroll button were renamed accordingly.
-* `resolveRound` now calls the pure `scoreHand()` and animates `result.steps`; cash earned during scoring (Gold cards, Parachute, Tycoon) is added after the animation but BEFORE the payout is computed (original added it mid-animation; only the on-screen money tick timing differs).
-* Type-only fixes while compiling: `String(...)` around numeric `textContent` (3 places) and `!!anchorBoss` for a boolean|null. No behavior change.
-* Tooling: added `jsdom` devDependency and `tests/ui-smoke.js` (headless: boots index.html, real button clicks through deal/hit/stand/win/cash-out/shop buy+reroll/next blind, deck+blind modals, sim lab run, apply-to-game, new run). Run: `node tests\ui-smoke.js`.
-* Validation: `tsc` exits 0. Smoke test: 21/21 checks pass with zero script/console errors, including the win path (confetti, cash out, shop). NOT yet verified: look/feel and audio in a real browser, joker/tarot inspector clicks (their engine logic is unit-tested).
-* Earlier: all engines + simulator validated vs original (scoring differential test 60k hands; sim win rates within noise), tsconfig `module: es2020`, Node v24 (`npm.cmd`/`npx.cmd`). `Jack-latro6Sim.html` untouched as reference.
-
-## 🏁 Immediate Roadmap & Next Strategic Goals
-1. Designer playtest of `index.html` in a real browser (visuals, audio, animations, inspectors); report anything that looks or plays differently from `Jack-latro6Sim.html`.
-2. After sign-off, retire `Jack-latro6Sim.html` (or keep as archive), then begin new feature design work on top of the modular codebase.
-
----
+* **Splash Screen Main Menu**: Created interactive splash overlay with glowing 3D fanned cards (Jack of Spades + Ace of Spades) featuring foil/holo sweep shimmer, floating neon suit particles, and options for "New Game" and "Settings".
+* **Defeat / Run Over Flow**: Added dedicated defeat modal with run recap statistics and two clear options: "New Game" and "Main Menu".
+* **Ante 8 Conquered Victory Flow**: Upon conquering Ante 8 Boss, the game pauses for 1.5 seconds allowing the final hand scoring to be appreciated, then launches festive confetti, starts a synthesized WebAudio Victory Music Loop (`startVictoryMusic()`), and opens the Victory Modal with three options: "Continue into endless", "New Game", and "Main Menu".
+* **Endless Mode**: Full progression beyond Ante 8 with scaled blind targets and HUD updates (`Ante X (Endless)`).
+* **Hand Outcome Sound Timing & Mapping**: Moved outcome sound dispatch to execute immediately after cards/dealer are settled, before the scoring animation cascade starts. Mapped outcomes: player win -> uplifting chime, push -> level neutral two-tone marimba ping (even when scoring), bust/loss -> fail/defeat sounds.
+* **Testing & Build**: Built via `tsc` and `prepare-www.js` (syncing `www/` and `android/` assets). Both `ui-smoke.js` (21/21) and `new-features.test.js` (30/30) pass with zero errors.
 
 
 

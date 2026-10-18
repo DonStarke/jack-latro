@@ -465,7 +465,7 @@ function updateAllUI() {
   $('ui-score-bar').style.width = pct + '%';
 
   $('ui-money').textContent = '$' + state.money;
-  $('ui-ante').textContent = `Ante ${state.ante}/8`;
+  $('ui-ante').textContent = state.ante > 8 ? `Ante ${state.ante} (Endless)` : `Ante ${state.ante}/8`;
   $('ui-shoe-count').textContent = `${state.shoe.length}/${state.deck.length}`;
 
   $('ui-joker-slots').textContent = `JOKERS ${state.jokers.length}/${state.maxJokers}`;
@@ -831,6 +831,9 @@ function refreshBlindStartUI(): void {
 
 function startNewRun(): void {
   stopConfetti();
+  hideDefeatModal();
+  hideVictoryModal();
+  stopVictoryMusic();
   startNewRunState();
   $('ui-rules-deals-count').textContent = String(getBalanceConfig().startingDeals);
   $('ui-shop-overlay').classList.add('hidden');
@@ -864,6 +867,10 @@ function uiCashOut(): void {
 function handlePrimaryDealBtn(): void {
   const state = getState();
   if (state.isDealing) return;
+  const splash = $('ui-splash-screen');
+  if (splash && !splash.classList.contains('hidden')) {
+    splash.classList.add('hidden');
+  }
   if (state.blindClearedReady) {
     uiCashOut();
   } else if (state.blindFailedReady) {
@@ -1074,6 +1081,19 @@ async function resolveRound(): Promise<void> {
     anteHandScaling: getBalanceConfig().anteHandScaling,
     vouchers: state.vouchersBought
   });
+
+  // Hand outcome sound plays IMMEDIATELY after player and dealer finish playing, just before scoring
+  if (res.rawOutcomeType === 'BUST') {
+    playOutcomeSound('BUST');
+  } else if (res.rawOutcomeType === 'LOSS') {
+    playOutcomeSound('LOSS');
+  } else if (res.rawOutcomeType === 'PUSH' && !res.isWin) {
+    playOutcomeSound('PUSH');
+  } else if (res.isWin) {
+    playOutcomeSound('WIN');
+  } else {
+    playOutcomeSound('LOSS');
+  }
 
   if (res.rawOutcomeType === 'PUSH' && getBalanceConfig().pushRefundsDeal) {
     patchState({ handsLeft: state.handsLeft + 1 });
@@ -1307,16 +1327,31 @@ async function resolveRound(): Promise<void> {
     const payout = computeBlindPayout();
     patchState({ blindClearedReady: true, pendingPayout: payout });
 
-    const winTitle = (state.ante >= 8 && state.blindIndex === 2) ? 'ANTE 8 CONQUERED!' : 'YOU WON!';
+    const isAnte8Victory = (state.ante === 8 && state.blindIndex === 2 && !state.endlessMode);
+    const winTitle = isAnte8Victory ? 'ANTE 8 CONQUERED!' : 'YOU WON!';
     showOutcomeHeadline(winTitle, 'WIN');
     launchConfetti();
-    playOutcomeSound('BLIND_WIN');
 
-    setBanner(
-      `${eqHTML} — <span style="color:var(--gold);">BLIND CLEARED!</span>`,
-      `Tap CASH OUT (+$${payout.totalEarned}) below when you're ready to visit the Shop.`
-    );
-    updateAllUI();
+    if (isAnte8Victory) {
+      setBanner(
+        `${eqHTML} — <span style="color:var(--gold);">ANTE 8 CONQUERED! VICTORY!</span>`,
+        `Boss Blind Defeated! Taking in the victory...`
+      );
+      updateAllUI();
+
+      // Give the player a moment to see the last hand and scoring animations!
+      await sleep(1500);
+
+      startVictoryMusic();
+      showVictoryModal();
+    } else {
+      playOutcomeSound('BLIND_WIN');
+      setBanner(
+        `${eqHTML} — <span style="color:var(--gold);">BLIND CLEARED!</span>`,
+        `Tap CASH OUT (+$${payout.totalEarned}) below when you're ready to visit the Shop.`
+      );
+      updateAllUI();
+    }
   } else if (state.handsLeft <= 0) {
     patchState({ blindFailedReady: true });
     showOutcomeHeadline('BUSTED OUT!', 'LOSS');
@@ -1329,20 +1364,15 @@ async function resolveRound(): Promise<void> {
 
     setBanner(
       `${res.isScoring ? eqHTML : res.outcomeLabel + ' → 0 pts'} — Target Missed (${state.roundScore.toLocaleString()}/${state.targetScore.toLocaleString()})`,
-      `Out of Deals on Ante ${state.ante}. Tap NEW RUN below whenever you're ready.`
+      `Out of Deals on Ante ${state.ante}. Choose NEW GAME or MAIN MENU.`
     );
     updateAllUI();
-  } else {
-    if (res.isWin) {
-      playOutcomeSound('WIN');
-    } else if (res.outcomeType === 'PUSH') {
-      playOutcomeSound('PUSH');
-    } else if (res.outcomeType === 'BUST') {
-      playOutcomeSound('BUST');
-    } else {
-      playOutcomeSound('LOSS');
-    }
 
+    setTimeout(() => {
+      showDefeatModal();
+    }, 1100);
+  } else {
+    // Note: Hand outcome sound was already played immediately before scoring!
     setBanner(
       eqHTML,
       res.logs.length ? `${res.logs.join(' • ')} — Tap DEAL for your next hand.` : 'Tap DEAL for your next hand.'
@@ -1350,6 +1380,139 @@ async function resolveRound(): Promise<void> {
     updateAllUI();
   }
 }
+
+/* ==========================================================
+   MAIN MENU, DEFEAT & VICTORY FLOW
+========================================================== */
+function showMainMenu(): void {
+  hideDefeatModal();
+  hideVictoryModal();
+  toggleCogModal(false);
+  toggleBlindModal(false);
+  toggleDeckModal(false);
+  toggleSimModal(false);
+  closeInspector();
+  $('ui-shop-overlay').classList.add('hidden');
+  stopConfetti();
+  stopVictoryMusic();
+
+  const splash = $('ui-splash-screen');
+  if (splash) splash.classList.remove('hidden');
+  updateMusicUI();
+}
+
+function uiStartGameFromMenu(): void {
+  const splash = $('ui-splash-screen');
+  if (splash) splash.classList.add('hidden');
+  playCardDealSound();
+  const ctx = getAudioCtx();
+  if (ctx && ctx.state === 'suspended') {
+    ctx.resume().catch(() => {});
+  }
+  startMusic();
+  startNewRun();
+}
+
+function showDefeatModal(): void {
+  const s = getState();
+  const anteEl = $('ui-defeat-stat-ante');
+  const tgtEl = $('ui-defeat-stat-target');
+  const scEl = $('ui-defeat-stat-score');
+  const mEl = $('ui-defeat-stat-money');
+  const jEl = $('ui-defeat-jokers');
+  const subEl = $('ui-defeat-sub');
+
+  if (anteEl) anteEl.textContent = s.ante > 8 ? `Ante ${s.ante} (Endless)` : `Ante ${s.ante}`;
+  if (tgtEl) tgtEl.textContent = s.targetScore.toLocaleString();
+  if (scEl) scEl.textContent = s.roundScore.toLocaleString();
+  if (mEl) mEl.textContent = '$' + s.money;
+  if (subEl) subEl.textContent = `You ran out of Deals on Ante ${s.ante} before reaching ${s.targetScore.toLocaleString()} pts.`;
+
+  if (jEl) {
+    if (s.jokers.length === 0) {
+      jEl.innerHTML = '<span style="color:#94a3b8; font-style:italic;">No Jokers in hand</span>';
+    } else {
+      jEl.innerHTML = s.jokers.map(j => `
+        <span class="joker-tag" style="background:#1e293b; border:1px solid #475569; padding:2px 8px; border-radius:4px; font-size:11px;">
+          ${j.name}
+        </span>
+      `).join('');
+    }
+  }
+
+  $('ui-defeat-modal').classList.remove('hidden');
+}
+
+function hideDefeatModal(): void {
+  const m = $('ui-defeat-modal');
+  if (m) m.classList.add('hidden');
+}
+
+function uiRestartFromDefeat(): void {
+  hideDefeatModal();
+  startNewRun();
+}
+
+function showVictoryModal(): void {
+  const s = getState();
+  const scEl = $('ui-victory-stat-score');
+  const mEl = $('ui-victory-stat-money');
+  const dealsEl = $('ui-victory-stat-deals');
+  const jEl = $('ui-victory-jokers');
+
+  if (scEl) scEl.textContent = s.roundScore.toLocaleString();
+  if (mEl) mEl.textContent = '$' + s.money;
+  if (dealsEl) dealsEl.textContent = String(s.handsLeft);
+
+  if (jEl) {
+    if (s.jokers.length === 0) {
+      jEl.innerHTML = '<span style="color:#94a3b8; font-style:italic;">No Jokers equipped</span>';
+    } else {
+      jEl.innerHTML = s.jokers.map(j => `
+        <span class="joker-tag" style="background:#1e293b; border:1px solid var(--gold); color:#fef08a; padding:3px 8px; border-radius:4px; font-size:12px; font-weight:700;">
+          🃏 ${j.name}
+        </span>
+      `).join('');
+    }
+  }
+
+  $('ui-victory-modal').classList.remove('hidden');
+}
+
+function hideVictoryModal(): void {
+  const m = $('ui-victory-modal');
+  if (m) m.classList.add('hidden');
+}
+
+function uiContinueIntoEndless(): void {
+  hideVictoryModal();
+  stopVictoryMusic();
+  patchState({ endlessMode: true });
+  startMusic();
+  const s = getState();
+  if (!s.blindClearedReady || !s.pendingPayout) {
+    const payout = computeBlindPayout();
+    patchState({ blindClearedReady: true, pendingPayout: payout });
+  }
+  uiCashOut();
+}
+
+function uiRestartFromVictory(): void {
+  hideVictoryModal();
+  stopVictoryMusic();
+  startMusic();
+  startNewRun();
+}
+
+(window as any).showMainMenu = showMainMenu;
+(window as any).uiStartGameFromMenu = uiStartGameFromMenu;
+(window as any).showDefeatModal = showDefeatModal;
+(window as any).hideDefeatModal = hideDefeatModal;
+(window as any).uiRestartFromDefeat = uiRestartFromDefeat;
+(window as any).showVictoryModal = showVictoryModal;
+(window as any).hideVictoryModal = hideVictoryModal;
+(window as any).uiContinueIntoEndless = uiContinueIntoEndless;
+(window as any).uiRestartFromVictory = uiRestartFromVictory;
 
 /* ==========================================================
    BOOT

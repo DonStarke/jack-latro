@@ -109,6 +109,7 @@ interface GameState {
   inShop: boolean;
   doubledDown: boolean;
   tempBonusChips: number;
+  endlessMode?: boolean;
 
   jokers: JokerInstance[];
   consumables: (TarotDef | ShopTarot)[];
@@ -162,6 +163,7 @@ let _state: GameState = {
   inShop: false,
   doubledDown: false,
   tempBonusChips: 0,
+  endlessMode: false,
 
   jokers: [],
   consumables: [],
@@ -310,4 +312,5 @@ function resetRunState(freshDeck: Card[]): void {
   _state.deck = freshDeck;
   _state.inShop = false;
   _state.isDealing = false;
+  _state.endlessMode = false;
 }

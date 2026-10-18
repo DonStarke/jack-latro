@@ -29,4 +29,23 @@ if (fs.existsSync(distDir)) {
   }
 }
 
+// Also sync to android public assets if present
+const androidPublicDir = path.join(rootDir, 'android', 'app', 'src', 'main', 'assets', 'public');
+const androidPublicDist = path.join(androidPublicDir, 'dist');
+if (fs.existsSync(androidPublicDir)) {
+  fs.mkdirSync(androidPublicDist, { recursive: true });
+  for (const asset of assets) {
+    const p = path.join(rootDir, asset);
+    if (fs.existsSync(p)) {
+      fs.copyFileSync(p, path.join(androidPublicDir, asset));
+    }
+  }
+  if (fs.existsSync(distDir)) {
+    const files = fs.readdirSync(distDir);
+    for (const file of files) {
+      fs.copyFileSync(path.join(distDir, file), path.join(androidPublicDist, file));
+    }
+  }
+}
+
 console.log('Successfully prepared www/ directory for Capacitor & GitHub Pages.');

@@ -18,6 +18,71 @@
 
 <canvas id="confetti-canvas"></canvas>
 
+<!-- SPLASH SCREEN / MAIN MENU -->
+<div id="ui-splash-screen" class="splash-screen">
+  <div class="splash-backdrop-fx">
+    <div class="floating-suit suit-spade">♠</div>
+    <div class="floating-suit suit-heart">♥</div>
+    <div class="floating-suit suit-club">♣</div>
+    <div class="floating-suit suit-diamond">♦</div>
+    <div class="floating-suit suit-spade2">♠</div>
+    <div class="floating-suit suit-heart2">♥</div>
+  </div>
+
+  <div class="splash-content">
+    <!-- HERO LOGO & GRAPHICS -->
+    <div class="splash-hero">
+      <div class="splash-card-fan">
+        <div class="fan-card fan-jack">
+          <div class="fan-corner top-left"><span>J</span><span>♠</span></div>
+          <div class="fan-jack-art">👑<br>J</div>
+          <div class="fan-corner bottom-right"><span>J</span><span>♠</span></div>
+          <div class="fan-foil-shine"></div>
+        </div>
+        <div class="fan-card fan-ace">
+          <div class="fan-corner top-left"><span>A</span><span>♠</span></div>
+          <div class="fan-ace-art">♠</div>
+          <div class="fan-corner bottom-right"><span>A</span><span>♠</span></div>
+          <div class="fan-holo-shine"></div>
+        </div>
+        <div class="fan-chip-badge">21</div>
+      </div>
+
+      <div class="splash-brand">
+        <div class="splash-subtitle-top">THE ROGUELIKE BLACKJACK DECKBUILDER</div>
+        <h1 class="splash-title">JACK-LATRO</h1>
+        <div class="splash-tags">
+          <span class="splash-badge badge-chips">CHIPS</span>
+          <span class="splash-mult-x">×</span>
+          <span class="splash-badge badge-mult">MULT</span>
+          <span class="splash-bullet">•</span>
+          <span class="splash-badge badge-jokers">19 JOKERS</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN MENU ACTIONS -->
+    <div class="splash-actions">
+      <button class="btn btn-splash-play" id="btn-splash-new-game" onclick="uiStartGameFromMenu()">
+        <span class="play-icon">▶</span>
+        <span class="play-text">NEW GAME</span>
+      </button>
+      <div class="splash-secondary-row">
+        <button class="btn btn-splash-secondary" onclick="toggleCogModal(true)">
+          <span>⚙️ SETTINGS</span>
+        </button>
+        <button class="btn btn-splash-secondary" id="btn-splash-music" onclick="toggleMusic()">
+          <span id="splash-music-icon">🎵</span> MUSIC: ON
+        </button>
+      </div>
+    </div>
+
+    <div class="splash-footer">
+      <span>Ante 1–8 Progression • Endless Mode • Balatro-Inspired Roguelike</span>
+    </div>
+  </div>
+</div>
+
 <div id="app">
   <!-- 1. COMPACT TOP HUD -->
   <header class="top-hud">
@@ -167,9 +232,10 @@
       <button class="btn btn-secondary" onclick="toggleCogModal(false)">Close</button>
     </div>
 
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
-      <button class="btn btn-redeal" style="padding:10px;" onclick="toggleCogModal(false); startNewRun();">Start New Run</button>
-      <button class="btn btn-double" style="padding:10px;" onclick="toggleCogModal(false); toggleSimModal(true);">📊 Balance Simulator</button>
+    <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:6px;">
+      <button class="btn btn-redeal" style="padding:10px 4px; font-size:12px;" onclick="toggleCogModal(false); startNewRun();">↻ New Run</button>
+      <button class="btn btn-secondary" style="padding:10px 4px; font-size:12px;" onclick="toggleCogModal(false); showMainMenu();">🏠 Main Menu</button>
+      <button class="btn btn-double" style="padding:10px 4px; font-size:12px;" onclick="toggleCogModal(false); toggleSimModal(true);">📊 Sim Lab</button>
     </div>
 
     <div style="display:flex; justify-content:space-between; align-items:center; background:#111622; padding:7px 10px; border-radius:6px; border:1px solid #222938; margin: 6px 0;">
@@ -320,6 +386,96 @@
       <button class="btn btn-secondary" onclick="toggleDeckModal(false)">Close</button>
     </div>
     <div id="ui-deck-list" style="display:flex; flex-direction:column; gap:6px;"></div>
+  </div>
+</div>
+
+<!-- DEFEAT / RUN OVER MODAL -->
+<div class="modal-backdrop hidden" id="ui-defeat-modal">
+  <div class="modal-box defeat-box" onclick="event.stopPropagation()">
+    <div class="defeat-header">
+      <div class="defeat-badge">RUN OVER</div>
+      <h2 class="defeat-title">BUSTED OUT!</h2>
+      <div class="defeat-sub" id="ui-defeat-sub">You ran out of Deals before reaching the Target Score.</div>
+    </div>
+
+    <div class="run-stats-grid">
+      <div class="stat-box">
+        <div class="stat-box-lbl">Ante Reached</div>
+        <div class="stat-box-val" id="ui-defeat-stat-ante">Ante 1</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-lbl">Target Score</div>
+        <div class="stat-box-val" id="ui-defeat-stat-target">300</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-lbl">Final Score</div>
+        <div class="stat-box-val" id="ui-defeat-stat-score">0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-lbl">Cash Held</div>
+        <div class="stat-box-val" id="ui-defeat-stat-money">$6</div>
+      </div>
+    </div>
+
+    <div class="defeat-jokers-area">
+      <div class="defeat-jokers-label">JOKERS HELD</div>
+      <div class="defeat-jokers-row" id="ui-defeat-jokers">None</div>
+    </div>
+
+    <div class="defeat-actions">
+      <button class="btn btn-deal btn-defeat-play" onclick="uiRestartFromDefeat()">↻ NEW GAME</button>
+      <button class="btn btn-secondary btn-defeat-menu" onclick="showMainMenu()">🏠 MAIN MENU</button>
+    </div>
+  </div>
+</div>
+
+<!-- ANTE 8 VICTORY / CONQUERED MODAL -->
+<div class="modal-backdrop hidden" id="ui-victory-modal">
+  <div class="modal-box victory-box" onclick="event.stopPropagation()">
+    <div class="victory-header">
+      <div class="victory-crown">👑</div>
+      <div class="victory-badge">VICTORY ACHIEVED</div>
+      <h1 class="victory-title">ANTE 8 CONQUERED!</h1>
+      <div class="victory-sub">You defeated the Boss and mastered the Casino!</div>
+    </div>
+
+    <div class="run-stats-grid victory-stats">
+      <div class="stat-box gold-border">
+        <div class="stat-box-lbl">Conquered</div>
+        <div class="stat-box-val gold-txt">Ante 8 Boss</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-lbl">Final Score</div>
+        <div class="stat-box-val" id="ui-victory-stat-score">0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-lbl">Total Cash</div>
+        <div class="stat-box-val" id="ui-victory-stat-money">$0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-lbl">Deals Saved</div>
+        <div class="stat-box-val" id="ui-victory-stat-deals">0</div>
+      </div>
+    </div>
+
+    <div class="victory-jokers-area">
+      <div class="victory-jokers-label">WINNING JOKER SYNERGY</div>
+      <div class="victory-jokers-row" id="ui-victory-jokers"></div>
+    </div>
+
+    <div class="victory-actions">
+      <button class="btn btn-deal btn-endless" onclick="uiContinueIntoEndless()">
+        <span>🚀 CONTINUE INTO ENDLESS</span>
+      </button>
+      <div class="victory-sub-actions">
+        <button class="btn btn-secondary" onclick="uiRestartFromVictory()">
+          <span>↻ NEW GAME</span>
+        </button>
+        <button class="btn btn-secondary" onclick="showMainMenu()">
+          <span>🏠 MAIN MENU</span>
+        </button>
+      </div>
+    </div>
   </div>
 </div>
 
