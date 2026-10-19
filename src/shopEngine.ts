@@ -376,7 +376,9 @@ function useConsumable(index: number): ConsumableResult {
     patchState({ dealerHoleRevealed: true, tempBonusChips: s.tempBonusChips + 75 });
     message = 'X-Ray Specs: Hole card revealed & +75 Chips!';
   } else if (c.id === 'loaded_ace') {
-    addCardToPlayerHand({ uid: takeNextCardUid(), rank: 'A', suit: '♠', enhancement: 'foil' });
+    const ace: Card = { uid: takeNextCardUid(), rank: 'A', suit: '♠', enhancement: 'foil' };
+    addCardToDeck({ ...ace });
+    addCardToPlayerHand(ace);
     message = 'Loaded Ace drawn into hand!';
   } else if (c.id === 'card_shave') {
     const target = s.playerHand.find(card => !['A', '2', '3'].includes(card.rank));

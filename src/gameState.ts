@@ -344,10 +344,38 @@ function addCardToDealerHand(card: Card): void { _state.dealerHand.push(card); }
 
 function setCardEnhancement(card: Card, enhancement: Enhancement): void {
   card.enhancement = enhancement;
+  const deckCard = _state.deck.find(c => c.uid === card.uid);
+  if (deckCard) {
+    deckCard.enhancement = enhancement;
+  }
+  const shoeCard = _state.shoe.find(c => c.uid === card.uid);
+  if (shoeCard) {
+    shoeCard.enhancement = enhancement;
+  }
 }
 
 function setCardRank(card: Card, rank: Rank): void {
   card.rank = rank;
+  const deckCard = _state.deck.find(c => c.uid === card.uid);
+  if (deckCard) {
+    deckCard.rank = rank;
+  }
+  const shoeCard = _state.shoe.find(c => c.uid === card.uid);
+  if (shoeCard) {
+    shoeCard.rank = rank;
+  }
+}
+
+function setCardSuit(card: Card, suit: Suit): void {
+  card.suit = suit;
+  const deckCard = _state.deck.find(c => c.uid === card.uid);
+  if (deckCard) {
+    deckCard.suit = suit;
+  }
+  const shoeCard = _state.shoe.find(c => c.uid === card.uid);
+  if (shoeCard) {
+    shoeCard.suit = suit;
+  }
 }
 
 function addCardToShoe(card: Card): void { _state.shoe.push(card); }

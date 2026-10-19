@@ -557,15 +557,15 @@ function renderScoringBanner(
   setBanner(topHTML, breakdownHTML);
 }
 
-function renderCardHTML(card: Card, faceDown: boolean = false, extraClasses: string = ''): string {
-  if (faceDown) return `<div class="playing-card face-down ${extraClasses}"></div>`;
+function renderCardHTML(card: Card, faceDown: boolean = false, extraClasses: string = '', onClickAttr: string = ''): string {
+  if (faceDown) return `<div class="playing-card face-down ${extraClasses}" ${onClickAttr}></div>`;
   const isRed = ['♥', '♦'].includes(card.suit);
   const enhClass = card.enhancement ? `enh-${card.enhancement}` : '';
   const enhLabel = card.enhancement ? `<div class="card-enh-tag">${card.enhancement.toUpperCase()}</div>` : '';
   const chipVal = getCardChipValue(card);
 
   return `
-    <div class="playing-card ${isRed ? 'red' : 'black'} ${enhClass} ${extraClasses}">
+    <div class="playing-card ${isRed ? 'red' : 'black'} ${enhClass} ${extraClasses}" ${onClickAttr}>
       <div class="card-corner-top">${card.rank}<br>${card.suit}</div>
       <div class="card-suit-center">${card.suit}</div>
       ${enhLabel}
@@ -803,13 +803,116 @@ function toggleDeckModal(show: boolean): void {
       const cardsHtml = suitCards.map(c => {
         const isUnseen = unrevealedUids.has(c.uid);
         const extraClass = `deck-mini ${isUnseen ? '' : 'dealt-out'}`;
-        return renderCardHTML(c, false, extraClass);
+        return renderCardHTML(c, false, extraClass, `onclick="inspectDeckCard(${c.uid})" title="Tap to inspect ${c.rank}${c.suit}"`);
       }).join('');
 
       return `<div class="deck-suit-row">${cardsHtml}</div>`;
     }).join('');
+  } else {
+    closeDeckCardModal();
   }
   modal.classList.toggle('hidden', !show);
+}
+
+function inspectDeckCard(uid: number): void {
+  const state = getState();
+  const card = state.deck.find(c => c.uid === uid);
+  if (!card) return;
+
+  const hiddenHoleCard = (!state.dealerHoleRevealed && state.dealerHand.length >= 2)
+    ? state.dealerHand[1]
+    : null;
+  const unrevealedUids = new Set(state.shoe.map(c => c.uid));
+  if (hiddenHoleCard) {
+    unrevealedUids.add(hiddenHoleCard.uid);
+  }
+  const isUnseen = unrevealedUids.has(card.uid);
+
+  const nameEl = $('ui-deck-zoom-card-name');
+  const stageEl = $('ui-deck-zoom-card-render');
+  const statusEl = $('ui-deck-zoom-card-status');
+  const blurbEl = $('ui-deck-zoom-card-blurb');
+
+  const suitNames: Record<Suit, string> = { '♠': 'Spades', '♥': 'Hearts', '♣': 'Clubs', '♦': 'Diamonds' };
+  const rankNames: Record<Rank, string> = {
+    'A': 'Ace', 'K': 'King', 'Q': 'Queen', 'J': 'Jack',
+    '10': '10', '9': '9', '8': '8', '7': '7', '6': '6', '5': '5', '4': '4', '3': '3', '2': '2'
+  };
+
+  const fullName = `${rankNames[card.rank] || card.rank} of ${suitNames[card.suit] || card.suit} (${card.rank}${card.suit})`;
+  if (nameEl) nameEl.textContent = fullName;
+
+  if (stageEl) {
+    // Rendered normally without dealt-out class, in enlarged card-zoomed view
+    stageEl.innerHTML = renderCardHTML(card, false, 'card-zoomed');
+  }
+
+  if (statusEl) {
+    if (isUnseen) {
+      statusEl.className = 'deck-card-status-badge status-unseen';
+      statusEl.textContent = '🟢 IN SHOE / DECK (UNSEEN)';
+    } else {
+      statusEl.className = 'deck-card-status-badge status-played';
+      statusEl.textContent = '⚪ PLAYED / IN HAND THIS BLIND';
+    }
+  }
+
+  if (blurbEl) {
+    const chipVal = getCardChipValue(card);
+    let enhHtml = '';
+    if (card.enhancement === 'foil') {
+      enhHtml = `
+        <div style="margin-top:6px; padding-top:6px; border-top:1px dashed #334155;">
+          <strong style="color:var(--chips);">✨ FOIL ENHANCEMENT</strong><br>
+          Adds <strong style="color:var(--chips);">+30 Chips</strong> permanently to this card when scored in your final hand.
+        </div>
+      `;
+    } else if (card.enhancement === 'holo') {
+      enhHtml = `
+        <div style="margin-top:6px; padding-top:6px; border-top:1px dashed #334155;">
+          <strong style="color:var(--mult);">🌈 HOLOGRAPHIC ENHANCEMENT</strong><br>
+          Adds <strong style="color:var(--mult);">+4 Mult</strong> permanently to this card when scored in your final hand.
+        </div>
+      `;
+    } else if (card.enhancement === 'poly') {
+      enhHtml = `
+        <div style="margin-top:6px; padding-top:6px; border-top:1px dashed #334155;">
+          <strong style="color:var(--purple);">🔮 POLYCHROME ENHANCEMENT</strong><br>
+          Multiplies your total Mult by <strong style="color:var(--purple);">×1.5</strong> permanently when scored in your final hand.
+        </div>
+      `;
+    } else if (card.enhancement === 'gold') {
+      enhHtml = `
+        <div style="margin-top:6px; padding-top:6px; border-top:1px dashed #334155;">
+          <strong style="color:var(--gold);">🪙 GOLD ENHANCEMENT</strong><br>
+          Earns <strong style="color:var(--gold);">+$3 bonus cash</strong> permanently whenever a scoring hand is won with this card.
+        </div>
+      `;
+    } else {
+      enhHtml = `
+        <div style="margin-top:6px; padding-top:6px; border-top:1px dashed #334155; font-size:12px; color:#94a3b8;">
+          <em>Standard card with no active enhancements. Can be permanently upgraded with Tarots from the Pit Boss Shop.</em>
+        </div>
+      `;
+    }
+
+    const bjValStr = card.rank === 'A' ? '11 or 1' : (FACE_RANKS.includes(card.rank) ? '10' : card.rank);
+
+    blurbEl.innerHTML = `
+      <div>
+        <strong>Blackjack Value:</strong> ${bjValStr} &nbsp;•&nbsp; <strong>Base Chips:</strong> +${chipVal}c
+      </div>
+      ${enhHtml}
+    `;
+  }
+
+  const modal = $('ui-deck-card-modal');
+  if (modal) modal.classList.remove('hidden');
+}
+
+function closeDeckCardModal(): void {
+  const modal = $('ui-deck-card-modal');
+  if (modal) modal.classList.add('hidden');
 }
 
 /* ---------- Sim lab DOM glue ---------- */
@@ -1683,6 +1786,7 @@ function showMainMenu(): void {
   toggleCogModal(false);
   toggleBlindModal(false);
   toggleDeckModal(false);
+  closeDeckCardModal();
   toggleSimModal(false);
   closeInspector();
   $('ui-shop-overlay').classList.add('hidden');
@@ -2085,6 +2189,8 @@ function renderRunStats(): void {
 (window as any).toggleCogModal = toggleCogModal;
 (window as any).toggleBlindModal = toggleBlindModal;
 (window as any).toggleDeckModal = toggleDeckModal;
+(window as any).inspectDeckCard = inspectDeckCard;
+(window as any).closeDeckCardModal = closeDeckCardModal;
 (window as any).toggleSimModal = toggleSimModal;
 (window as any).inspectJoker = inspectJoker;
 (window as any).inspectConsumable = inspectConsumable;

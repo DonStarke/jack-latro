@@ -614,6 +614,13 @@
     border-radius: 4px;
     animation: none;
     box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+    cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+  }
+  .playing-card.deck-mini:hover {
+    transform: translateY(-2px) scale(1.08);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.6), 0 0 6px var(--gold);
+    z-index: 5;
   }
   .playing-card.deck-mini .card-corner-top { font-size: 9px; }
   .playing-card.deck-mini .card-suit-center { font-size: 15px; }
@@ -624,8 +631,8 @@
     padding: 0 2px;
   }
   .playing-card.deck-mini.dealt-out {
-    opacity: 0.22;
-    filter: grayscale(90%);
+    opacity: 0.48;
+    filter: grayscale(65%);
     border-style: dashed;
   }
 
@@ -1870,6 +1877,10 @@
     box-shadow: 0 0 40px rgba(255, 190, 11, 0.35);
     background: #090e17 !important;
     gap: 12px;
+    padding-bottom: 24px !important;
+  }
+  .stats-box > * {
+    flex-shrink: 0;
   }
   .stats-header {
     text-align: center;
@@ -2015,6 +2026,8 @@
     border: 1px solid #1e293b;
     border-radius: 8px;
     min-height: 48px;
+    height: auto;
+    flex-shrink: 0;
   }
   .joker-trigger-empty {
     width: 100%;
@@ -2063,11 +2076,149 @@
   .stats-actions {
     display: flex;
     justify-content: center;
-    margin-top: 6px;
+    margin-top: 14px;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    flex-shrink: 0;
+    width: 100%;
   }
   .btn-stats-back {
     min-width: 160px;
     padding: 10px 20px;
     font-size: 14px;
     font-weight: 800;
+  }
+
+  /* ==========================================================
+     DECK CARD ZOOM & INSPECTION MODAL
+  ========================================================== */
+  #ui-deck-card-modal {
+    z-index: 970;
+    background: rgba(0, 0, 0, 0.78);
+    backdrop-filter: blur(4px);
+  }
+
+  .deck-card-zoom-box {
+    max-width: 320px;
+    width: 90%;
+    background: #0f172a;
+    border: 2px solid var(--gold);
+    border-radius: 14px;
+    box-shadow: 0 0 35px rgba(0, 0, 0, 0.9), 0 0 20px rgba(255, 190, 11, 0.35);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    animation: zoomCardIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes zoomCardIn {
+    0% {
+      opacity: 0;
+      transform: scale(0.82);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .deck-card-zoom-header {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #1e293b;
+    padding-bottom: 8px;
+  }
+
+  .deck-card-zoom-title {
+    font-size: 16px;
+    font-weight: 800;
+    color: #fef08a;
+    letter-spacing: 0.5px;
+  }
+
+  .btn-deck-zoom-close {
+    padding: 2px 8px;
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  .deck-card-zoom-stage {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 6px 0;
+  }
+
+  .playing-card.card-zoomed {
+    width: 96px;
+    height: 136px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.7);
+    cursor: default;
+    animation: none;
+  }
+  .playing-card.card-zoomed .card-corner-top {
+    font-size: 18px;
+    line-height: 1.1;
+  }
+  .playing-card.card-zoomed .card-suit-center {
+    font-size: 38px;
+  }
+  .playing-card.card-zoomed .card-corner-bottom {
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .playing-card.card-zoomed .card-enh-tag {
+    bottom: 22px;
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+  }
+
+  .deck-card-zoom-details {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .deck-card-status-badge {
+    align-self: center;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    padding: 3px 12px;
+    border-radius: 999px;
+  }
+
+  .status-unseen {
+    background: rgba(34, 197, 94, 0.16);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.45);
+  }
+
+  .status-played {
+    background: rgba(148, 163, 184, 0.16);
+    color: #94a3b8;
+    border: 1px solid rgba(148, 163, 184, 0.4);
+  }
+
+  .deck-card-blurb {
+    background: #0b111e;
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    line-height: 1.45;
+    color: #e2e8f0;
+  }
+  .deck-card-blurb strong {
+    color: var(--gold);
   }

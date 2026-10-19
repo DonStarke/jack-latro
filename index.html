@@ -400,11 +400,31 @@
     <div style="display:flex; justify-content:space-between; align-items:center;">
       <div>
         <h3 style="color:var(--gold); font-size:16px;" id="ui-deck-modal-title">FULL DECK VIEW</h3>
-        <div style="font-size:12px; color:#94a3b8;">Ordered by Suit & Rank (Dimmed = Revealed face-up cards)</div>
+        <div style="font-size:12px; color:#94a3b8;">Ordered by Suit & Rank (Dimmed = Revealed face-up cards • Tap any card to inspect)</div>
       </div>
       <button class="btn btn-secondary" onclick="toggleDeckModal(false)">Close</button>
     </div>
     <div id="ui-deck-list" style="display:flex; flex-direction:column; gap:6px;"></div>
+  </div>
+</div>
+
+<!-- DECK CARD INSPECTION / ZOOM MODAL -->
+<div class="modal-backdrop hidden" id="ui-deck-card-modal" onclick="closeDeckCardModal()">
+  <div class="modal-box deck-card-zoom-box" onclick="event.stopPropagation()">
+    <div class="deck-card-zoom-header">
+      <div class="deck-card-zoom-title" id="ui-deck-zoom-card-name">Card Details</div>
+      <button class="btn btn-secondary btn-deck-zoom-close" onclick="closeDeckCardModal()">✕</button>
+    </div>
+    <div class="deck-card-zoom-stage">
+      <div id="ui-deck-zoom-card-render">
+        <!-- Rendered full size card -->
+      </div>
+    </div>
+    <div class="deck-card-zoom-details">
+      <div class="deck-card-status-badge" id="ui-deck-zoom-card-status">In Deck</div>
+      <div class="deck-card-blurb" id="ui-deck-zoom-card-blurb"></div>
+    </div>
+    <button class="btn btn-secondary" style="width:100%; margin-top:2px;" onclick="closeDeckCardModal()">Close</button>
   </div>
 </div>
 
