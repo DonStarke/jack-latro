@@ -62,7 +62,7 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
     handsPlayed++;
     await sleep(150);
     cleared = /CASH OUT/.test(text('btn-deal'));
-    failed = /NEW RUN/.test(text('btn-deal'));
+    failed = !$('ui-defeat-modal').classList.contains('hidden') || w.getState().blindFailedReady;
   }
   ck('played hands without errors (' + handsPlayed + ' hands, cleared=' + cleared + ', failed=' + failed + ')', errors.length === 0 && (cleared || failed));
   ck('banner has text after play', text('ui-banner').length > 0);

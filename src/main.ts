@@ -20,6 +20,19 @@ function $<T extends HTMLElement = HTMLElement>(id: string): T {
 
 let lastSimReportText = '';
 let lastSimFilename = 'jack-latro-telemetry.txt';
+let isPlayfieldLocked = false;
+
+function setPlayfieldLocked(locked: boolean): void {
+  isPlayfieldLocked = locked;
+  const appEl = document.getElementById('app');
+  if (appEl) {
+    if (locked) {
+      appEl.classList.add('playfield-locked');
+    } else {
+      appEl.classList.remove('playfield-locked');
+    }
+  }
+}
 
 /* ---------- Joker text helpers ---------- */
 
@@ -250,6 +263,7 @@ function spawnFloatingToken(
 /* ---------- Inspectors ---------- */
 
 function inspectJoker(index: number): void {
+  if (isPlayfieldLocked) return;
   const state = getState();
   const j = state.jokers[index];
   if (!j) return;
@@ -275,6 +289,7 @@ function inspectJoker(index: number): void {
 }
 
 function inspectConsumable(index: number): void {
+  if (isPlayfieldLocked) return;
   const state = getState();
   const c = state.consumables[index];
   if (!c) return;
@@ -702,29 +717,25 @@ function updateAllUI() {
   if (state.blindClearedReady && state.pendingPayout) {
     dealBtn.className = 'btn btn-cashout';
     dealBtn.textContent = `CASH OUT (+$${state.pendingPayout.totalEarned}) ➔`;
-    dealBtn.disabled = state.isDealing;
-    hitBtn.classList.add('hidden');
-  } else if (state.blindFailedReady) {
-    dealBtn.className = 'btn btn-newrun';
-    dealBtn.textContent = `NEW RUN ↻`;
-    dealBtn.disabled = state.isDealing;
+    dealBtn.disabled = state.isDealing || isPlayfieldLocked;
     hitBtn.classList.add('hidden');
   } else {
     dealBtn.className = 'btn btn-deal';
     dealBtn.textContent = `DEAL (${state.handsLeft})`;
-    dealBtn.disabled = state.inHand || state.isDealing || state.handsLeft <= 0;
+    dealBtn.disabled = state.inHand || state.isDealing || state.handsLeft <= 0 || state.blindFailedReady || isPlayfieldLocked;
     hitBtn.classList.remove('hidden');
   }
 
-  hitBtn.disabled = !state.inHand || state.isDealing;
-  standBtn.disabled = !state.inHand || state.isDealing;
+  hitBtn.disabled = !state.inHand || state.isDealing || isPlayfieldLocked;
+  standBtn.disabled = !state.inHand || state.isDealing || isPlayfieldLocked;
   const anchorBoss = state.bossBlind && state.bossBlind.id === 'the_anchor';
-  doubleBtn.disabled = !state.inHand || state.isDealing || state.playerHand.length !== 2 || !!anchorBoss;
+  doubleBtn.disabled = !state.inHand || state.isDealing || state.playerHand.length !== 2 || !!anchorBoss || isPlayfieldLocked;
 }
 
 /* ---------- Modals ---------- */
 
 function toggleBlindModal(show: boolean): void {
+  if (isPlayfieldLocked && show) return;
   const state = getState();
   const modal = $('ui-blind-modal');
   if (show) {
@@ -740,6 +751,7 @@ function toggleBlindModal(show: boolean): void {
 }
 
 function toggleCogModal(show: boolean): void {
+  if (isPlayfieldLocked && show) return;
   const modal = $('ui-cog-modal');
   if (show) {
     const splash = $('ui-splash-screen');
@@ -758,10 +770,12 @@ function toggleCogModal(show: boolean): void {
 }
 
 function toggleSimModal(show: boolean): void {
+  if (isPlayfieldLocked && show) return;
   $('ui-sim-modal').classList.toggle('hidden', !show);
 }
 
 function toggleDeckModal(show: boolean): void {
+  if (isPlayfieldLocked && show) return;
   const state = getState();
   const modal = $('ui-deck-modal');
   if (show) {
@@ -1024,6 +1038,7 @@ function startNewRun(): void {
   hideDefeatModal();
   hideVictoryModal();
   stopVictoryMusic();
+  setPlayfieldLocked(false);
   startNewRunState();
   $('ui-rules-deals-count').textContent = String(getBalanceConfig().startingDeals);
   $('ui-shop-overlay').classList.add('hidden');
@@ -1042,6 +1057,7 @@ function startNextBlindFromShop(): void {
 }
 
 function uiCashOut(): void {
+  if (isPlayfieldLocked) return;
   const payout = cashOutAndEnterShop();
   if (!payout) return;
 
@@ -1056,15 +1072,13 @@ function uiCashOut(): void {
 
 function handlePrimaryDealBtn(): void {
   const state = getState();
-  if (state.isDealing) return;
+  if (isPlayfieldLocked || state.isDealing || state.blindFailedReady) return;
   const splash = $('ui-splash-screen');
   if (splash && !splash.classList.contains('hidden')) {
     splash.classList.add('hidden');
   }
   if (state.blindClearedReady) {
     uiCashOut();
-  } else if (state.blindFailedReady) {
-    startNewRun();
   } else {
     void dealHand();
   }
@@ -1074,12 +1088,14 @@ function handlePrimaryDealBtn(): void {
    SHOP / INVENTORY UI WRAPPERS
 ========================================================== */
 function uiRerollShop(): void {
+  if (isPlayfieldLocked) return;
   if (!rerollShop().ok) return;
   renderShop();
   updateAllUI();
 }
 
 function uiBuyShopItem(listName: 'shopJokers' | 'shopExtras', idx: number): void {
+  if (isPlayfieldLocked) return;
   const res = buyShopItem(listName, idx);
   if (!res.ok) {
     if (res.reason === 'jokers_full') alert('Joker slots full! Tap an active Joker at the top to sell it.');
@@ -1092,6 +1108,7 @@ function uiBuyShopItem(listName: 'shopJokers' | 'shopExtras', idx: number): void
 }
 
 function uiMoveJoker(index: number, dir: number): void {
+  if (isPlayfieldLocked) return;
   const target = index + dir;
   if (target < 0 || target >= getState().jokers.length) return;
   moveJokerAt(index, dir < 0 ? -1 : 1);
@@ -1100,6 +1117,7 @@ function uiMoveJoker(index: number, dir: number): void {
 }
 
 function uiSellJoker(index: number): void {
+  if (isPlayfieldLocked) return;
   if (sellJoker(index) === null) return;
   closeInspector();
   updateAllUI();
@@ -1107,12 +1125,14 @@ function uiSellJoker(index: number): void {
 }
 
 function uiSellConsumable(index: number): void {
+  if (isPlayfieldLocked) return;
   if (!sellConsumable(index)) return;
   closeInspector();
   updateAllUI();
 }
 
 function uiUseConsumable(index: number): void {
+  if (isPlayfieldLocked) return;
   const res = useConsumable(index);
   if (!res.ok) {
     if (res.warning) alert(res.warning);
@@ -1138,7 +1158,7 @@ async function dealCardAnimated(target: 'player' | 'dealer'): Promise<void> {
 
 async function dealHand(): Promise<void> {
   const state = getState();
-  if (state.inHand || state.isDealing || state.handsLeft <= 0 || state.blindClearedReady || state.blindFailedReady) return;
+  if (isPlayfieldLocked || state.inHand || state.isDealing || state.handsLeft <= 0 || state.blindClearedReady || state.blindFailedReady) return;
 
   hideOutcomeHeadline();
   patchState({
@@ -1172,7 +1192,7 @@ async function dealHand(): Promise<void> {
 
 async function playerHit(): Promise<void> {
   const state = getState();
-  if (!state.inHand || state.isDealing) return;
+  if (isPlayfieldLocked || !state.inHand || state.isDealing) return;
   patchState({ isDealing: true });
 
   const preHitEval = evaluatePlayerHand();
@@ -1212,7 +1232,7 @@ async function playerHit(): Promise<void> {
 
 async function playerStand(): Promise<void> {
   const state = getState();
-  if (!state.inHand || state.isDealing) return;
+  if (isPlayfieldLocked || !state.inHand || state.isDealing) return;
   patchState({ isDealing: true, dealerHoleRevealed: true });
   playCardDealSound();
   updateAllUI();
@@ -1227,7 +1247,7 @@ async function playerStand(): Promise<void> {
 
 async function playerDouble(): Promise<void> {
   const state = getState();
-  if (!state.inHand || state.isDealing || state.playerHand.length !== 2) return;
+  if (isPlayfieldLocked || !state.inHand || state.isDealing || state.playerHand.length !== 2) return;
   if (state.bossBlind && state.bossBlind.id === 'the_anchor') return;
 
   patchState({ isDealing: true, doubledDown: true });
@@ -1602,15 +1622,14 @@ async function resolveRound(): Promise<void> {
   }
 
   if (state.roundScore >= state.targetScore) {
-    const payout = computeBlindPayout();
-    patchState({ blindClearedReady: true, pendingPayout: payout });
-
     const isAnte8Victory = (state.ante === 8 && state.blindIndex === 2 && !state.endlessMode);
-    const winTitle = isAnte8Victory ? 'ANTE 8 CONQUERED!' : 'YOU WON!';
-    showOutcomeHeadline(winTitle, 'WIN');
-    launchConfetti();
-
     if (isAnte8Victory) {
+      setPlayfieldLocked(true);
+      const payout = computeBlindPayout();
+      patchState({ pendingPayout: payout });
+
+      showOutcomeHeadline('ANTE 8 CONQUERED!', 'WIN');
+      launchConfetti();
       renderScoringBanner(res, state.playerHand, 'ANTE8_VICTORY');
       updateAllUI();
 
@@ -1620,11 +1639,17 @@ async function resolveRound(): Promise<void> {
       startVictoryMusic();
       showVictoryModal();
     } else {
+      const payout = computeBlindPayout();
+      patchState({ blindClearedReady: true, pendingPayout: payout });
+
       playOutcomeSound('BLIND_WIN');
+      showOutcomeHeadline('YOU WON!', 'WIN');
+      launchConfetti();
       renderScoringBanner(res, state.playerHand, 'BLIND_CLEARED', payout.totalEarned);
       updateAllUI();
     }
   } else if (state.handsLeft <= 0) {
+    setPlayfieldLocked(true);
     patchState({ blindFailedReady: true });
     showOutcomeHeadline('BUSTED OUT!', 'LOSS');
     playOutcomeSound('BUST');
@@ -1654,6 +1679,7 @@ function showMainMenu(): void {
   closeTableInspection();
   hideDefeatModal();
   hideVictoryModal();
+  setPlayfieldLocked(false);
   toggleCogModal(false);
   toggleBlindModal(false);
   toggleDeckModal(false);
@@ -1674,6 +1700,7 @@ function showMainMenu(): void {
 function uiStartGameFromMenu(): void {
   closeTableInspection();
   toggleCogModal(false);
+  setPlayfieldLocked(false);
   const splash = $('ui-splash-screen');
   if (splash) splash.classList.add('hidden');
   playCardDealSound();
@@ -1686,6 +1713,7 @@ function uiStartGameFromMenu(): void {
 }
 
 function showDefeatModal(): void {
+  setPlayfieldLocked(true);
   const s = getState();
   const anteEl = $('ui-defeat-stat-ante');
   const tgtEl = $('ui-defeat-stat-target');
@@ -1727,6 +1755,7 @@ function uiRestartFromDefeat(): void {
 }
 
 function showVictoryModal(): void {
+  setPlayfieldLocked(true);
   const s = getState();
   const scEl = $('ui-victory-stat-score');
   const mEl = $('ui-victory-stat-money');
@@ -1761,6 +1790,7 @@ function uiContinueIntoEndless(): void {
   closeTableInspection();
   hideVictoryModal();
   stopVictoryMusic();
+  setPlayfieldLocked(false);
   patchState({ endlessMode: true });
   startMusic();
   const s = getState();
@@ -1895,22 +1925,45 @@ function renderRunStats(): void {
   // Hand Outcomes Table
   const outcomesTbody = $('ui-stats-outcomes-tbody');
   if (outcomesTbody) {
-    const rows = Object.entries(stats.outcomes).map(([k, o]) => {
-      const total = o.won + o.lost + o.push;
-      const pct = total > 0 ? ((o.won / total) * 100).toFixed(0) + '%' : '-';
-      const rowClass = total === 0 ? 'class="stats-row-empty"' : '';
-      return `
-        <tr ${rowClass}>
-          <td style="font-weight:600;">${o.label}</td>
-          <td class="gold-txt" style="text-align:center;">${o.won}</td>
-          <td style="text-align:center; color:#94a3b8;">${o.push}</td>
-          <td style="text-align:center; color:#f87171;">${o.lost}</td>
-          <td style="text-align:center; font-weight:700;">${total}</td>
-          <td style="text-align:right; font-weight:700;">${pct}</td>
+    if (stats.handsPlayed === 0) {
+      outcomesTbody.innerHTML = `
+        <tr>
+          <td colspan="6" style="text-align:center; color:#94a3b8; font-style:italic; padding:16px;">
+            No hands recorded for this run yet.
+          </td>
         </tr>
       `;
-    }).join('');
-    outcomesTbody.innerHTML = rows;
+    } else {
+      // Sort outcomes so active outcomes (hands played > 0) appear prominently at the top
+      const entries = Object.entries(stats.outcomes).sort((a, b) => {
+        const totalA = a[1].won + a[1].lost + a[1].push;
+        const totalB = b[1].won + b[1].lost + b[1].push;
+        return totalB - totalA;
+      });
+
+      const rows = entries.map(([k, o]) => {
+        const total = o.won + o.lost + o.push;
+        const pct = total > 0 ? ((o.won / total) * 100).toFixed(0) + '%' : '-';
+        const rowClass = total === 0 ? 'class="stats-row-empty"' : 'class="stats-row-active"';
+        const wonVal = o.won > 0 ? `<span class="gold-txt" style="font-weight:800;">${o.won}</span>` : `<span style="color:#64748b;">0</span>`;
+        const pushVal = o.push > 0 ? `<span style="color:#e2e8f0; font-weight:700;">${o.push}</span>` : `<span style="color:#64748b;">0</span>`;
+        const lostVal = o.lost > 0 ? `<span style="color:#f87171; font-weight:700;">${o.lost}</span>` : `<span style="color:#64748b;">0</span>`;
+        const totalVal = total > 0 ? `<strong>${total}</strong>` : `<span style="color:#64748b;">0</span>`;
+        const pctVal = total > 0 ? `<strong style="color:var(--gold);">${pct}</strong>` : `<span style="color:#64748b;">-</span>`;
+
+        return `
+          <tr ${rowClass}>
+            <td style="font-weight:600;">${o.label}</td>
+            <td style="text-align:center;">${wonVal}</td>
+            <td style="text-align:center;">${pushVal}</td>
+            <td style="text-align:center;">${lostVal}</td>
+            <td style="text-align:center;">${totalVal}</td>
+            <td style="text-align:right;">${pctVal}</td>
+          </tr>
+        `;
+      }).join('');
+      outcomesTbody.innerHTML = rows;
+    }
   }
 
   // Money Breakdown
@@ -1938,15 +1991,31 @@ function renderRunStats(): void {
   const jokerTriggersEl = $('ui-stats-joker-triggers');
   if (jokerTriggersEl) {
     const list = Object.values(stats.jokerTriggers).sort((a, b) => b.count - a.count);
-    if (list.length === 0) {
-      jokerTriggersEl.innerHTML = '<div style="color:#94a3b8; font-style:italic; padding:6px 0;">No Jokers triggered during this run.</div>';
+    const triggeredIds = new Set(list.map(t => t.id));
+    const unTriggeredJokers = state.jokers.filter(j => !triggeredIds.has(j.id));
+
+    if (list.length === 0 && unTriggeredJokers.length === 0) {
+      jokerTriggersEl.innerHTML = `
+        <div class="joker-trigger-empty">
+          <span>🃏 No Jokers were equipped or triggered during this run.</span>
+        </div>
+      `;
     } else {
-      jokerTriggersEl.innerHTML = list.map(jt => `
+      const activeHtml = list.map(jt => `
         <div class="joker-trigger-card">
           <div class="jt-name">🃏 ${jt.name}</div>
           <div class="jt-badge">${jt.count} trigger${jt.count === 1 ? '' : 's'}</div>
         </div>
       `).join('');
+
+      const unTriggeredHtml = unTriggeredJokers.map(j => `
+        <div class="joker-trigger-card jt-untriggered">
+          <div class="jt-name">🃏 ${j.name}</div>
+          <div class="jt-badge jt-badge-zero">0 triggers</div>
+        </div>
+      `).join('');
+
+      jokerTriggersEl.innerHTML = activeHtml + unTriggeredHtml;
     }
   }
 }
@@ -1990,11 +2059,14 @@ function renderRunStats(): void {
 (window as any).downloadLastSimReport = downloadLastSimReport;
 (window as any).copyLastSimReport = copyLastSimReport;
 (window as any).applySimConfigToLiveGame = applySimConfigToLiveGame;
+(window as any).isPlayfieldLocked = () => isPlayfieldLocked;
+(window as any).setPlayfieldLocked = setPlayfieldLocked;
 
 /* ==========================================================
    BOOT
 ========================================================== */
 $('ui-table-felt').addEventListener('click', () => {
+  if (isPlayfieldLocked) return;
   const s = getState();
   if (!s.inHand && s.isDealing) {
     skipScoringAnimation = true;

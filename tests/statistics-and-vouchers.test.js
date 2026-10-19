@@ -276,6 +276,96 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   const jtHTML = $('ui-stats-joker-triggers').innerHTML;
   ck('Stats UI shows Double or Nothing in joker activations list', jtHTML.includes('Double or Nothing') && jtHTML.includes('1 trigger'));
 
+  // -------------------------------------------------------------
+  // TEST 5: Loss & Victory Playfield Lockout + Stats Preservation
+  // -------------------------------------------------------------
+  console.log('\n--- TEST 5: LOSS & VICTORY LOCKOUT & STATS PRESERVATION ---');
+
+  // Set up a game about to lose on last hand (handsLeft = 0 after play)
+  w.startNewRun();
+  w.addJoker({ ...donJoker, bonusMult: 0, bonusChips: 0 });
+
+  w.patchState({
+    playerHand: [
+      { uid: 401, rank: '10', suit: '♠', enhancement: null },
+      { uid: 402, rank: '6', suit: '♥', enhancement: null }
+    ],
+    dealerHand: [
+      { uid: 403, rank: '10', suit: '♦', enhancement: null },
+      { uid: 404, rank: '9', suit: '♣', enhancement: null }
+    ],
+    inHand: false,
+    handsLeft: 0,
+    targetScore: 999999
+  });
+
+  await w.resolveRound();
+
+  const dealBtnEl = $('btn-deal');
+  ck('Deal button text stays DEAL on loss (does NOT become NEW RUN)', /DEAL/.test(dealBtnEl.textContent));
+  ck('Deal button class is btn-deal (not btn-newrun)', !dealBtnEl.classList.contains('btn-newrun'));
+  ck('Deal button is disabled on loss', dealBtnEl.disabled === true);
+  ck('Playfield is locked on loss', w.isPlayfieldLocked() === true);
+  ck('App element has playfield-locked class', $('app').classList.contains('playfield-locked'));
+
+  // Attempt to click deal button during the loss lockout: must NOT reset the run
+  dealBtnEl.click();
+  ck('Clicking deal button during loss does NOT reset runStats handsPlayed', w.getRunStats().handsPlayed === 1);
+
+  // Wait for defeat modal to display
+  await sleep(1200);
+  ck('Defeat modal appears after defeat delay', !isHidden(defeatModal));
+
+  // Open statistics from defeat modal
+  $('btn-defeat-stats').click();
+  await sleep(50);
+  ck('Stats modal displays after clicking STATISTICS on defeat screen', !isHidden(statsModal));
+
+  // Verify Base Hand Outcomes breakdown contains rows with data from the lost run
+  const outcomesHTML = $('ui-stats-outcomes-tbody').innerHTML;
+  ck('Outcomes breakdown displays rows for played game', outcomesHTML.includes('Dealer Wins (Outscored)') && outcomesHTML.includes('1'));
+
+  // Close stats modal
+  statsModal.querySelector('button[onclick*="uiHideStatsModal"]').click();
+  await sleep(50);
+
+  // Restarting from Defeat screen unlocks playfield and resets for new game
+  $('ui-defeat-modal').querySelector('.btn-defeat-play').click();
+  ck('Restarting from defeat modal resets playfield lock', w.isPlayfieldLocked() === false);
+  ck('Restarting from defeat modal removes playfield-locked class from app', !$('app').classList.contains('playfield-locked'));
+
+  // Test Ante 8 victory lockout
+  w.startNewRun();
+  w.patchState({
+    ante: 8,
+    blindIndex: 2,
+    endlessMode: false,
+    roundScore: 999999,
+    targetScore: 100,
+    playerHand: [
+      { uid: 501, rank: '10', suit: '♠', enhancement: null },
+      { uid: 502, rank: 'A', suit: '♥', enhancement: null }
+    ],
+    dealerHand: [
+      { uid: 503, rank: '10', suit: '♦', enhancement: null },
+      { uid: 504, rank: '8', suit: '♣', enhancement: null }
+    ],
+    inHand: false,
+    handsLeft: 5
+  });
+
+  await w.resolveRound();
+  ck('Ante 8 victory immediately locks playfield', w.isPlayfieldLocked() === true);
+  ck('Ante 8 victory keeps deal button as DEAL (does NOT become CASH OUT)', /DEAL/.test($('btn-deal').textContent));
+  ck('Deal button is disabled on Ante 8 victory', $('btn-deal').disabled === true);
+
+  await sleep(1600);
+  ck('Victory modal visible after victory delay', !isHidden(victoryModal));
+
+  // Restart from victory unlocks playfield
+  w.uiRestartFromVictory();
+  ck('Restarting from victory unlocks playfield', w.isPlayfieldLocked() === false);
+
   console.log('\n--- ALL TESTS COMPLETED ---');
   console.log(results.join('\n'));
 
