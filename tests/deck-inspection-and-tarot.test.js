@@ -37,7 +37,7 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
 
 (async () => {
   const w = dom.window, d = w.document;
-  await sleep(400);
+  for (let i = 0; i < 60 && typeof w.uiStartGameFromMenu !== 'function'; i++) await sleep(50);
 
   const $ = id => d.getElementById(id);
   const isHidden = el => el.classList.contains('hidden');

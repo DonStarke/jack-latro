@@ -19,6 +19,7 @@ interface Card {
 }
 
 type JokerRarity = 'common' | 'uncommon' | 'rare';
+type JokerArchetype = 'mult' | 'chips' | 'econ' | 'utility' | 'suit';
 
 interface JokerDef {
   id: string;
@@ -29,6 +30,9 @@ interface JokerDef {
   desc: string;
   bonusMult?: number;
   bonusChips?: number;
+  icon?: string;
+  archetype?: JokerArchetype;
+  suitTheme?: Suit;
 }
 
 /** A Joker the player owns or that sits in the shop. */

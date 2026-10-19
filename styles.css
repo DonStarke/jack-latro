@@ -311,6 +311,7 @@
     cursor: pointer;
     flex-shrink: 0;
     position: relative;
+    overflow: hidden;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
   }
 
@@ -348,6 +349,28 @@
     color: #fca5a5;
   }
 
+  /* Mini-card Watermark Background */
+  .mini-card-watermark {
+    position: absolute;
+    right: -4px;
+    bottom: -8px;
+    font-size: 38px;
+    line-height: 1;
+    pointer-events: none;
+    user-select: none;
+    opacity: 0.16;
+    transform: rotate(-10deg);
+    z-index: 1;
+    filter: grayscale(25%);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+  .mini-card:hover .mini-card-watermark,
+  .mini-card.active-pop .mini-card-watermark {
+    opacity: 0.28;
+    transform: rotate(-4deg) scale(1.12);
+  }
+
+  /* Mini-card Text Layers */
   .mini-card-name {
     font-size: 12px;
     font-weight: 900;
@@ -355,6 +378,8 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    position: relative;
+    z-index: 2;
   }
 
   .mini-card.tarot .mini-card-name {
@@ -367,6 +392,90 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    position: relative;
+    z-index: 2;
+  }
+
+  .joker-icon-mini {
+    display: inline-block;
+    font-size: 11px;
+    margin-right: 3px;
+    vertical-align: -1px;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.6));
+  }
+
+  /* Joker Archetypes (Ambient Glows & Themes) */
+  .mini-card.archetype-mult {
+    background: radial-gradient(circle at 85% 85%, rgba(239, 68, 68, 0.24) 0%, rgba(37, 43, 59, 1) 75%);
+  }
+  .mini-card.archetype-chips {
+    background: radial-gradient(circle at 85% 85%, rgba(59, 130, 246, 0.24) 0%, rgba(37, 43, 59, 1) 75%);
+  }
+  .mini-card.archetype-econ {
+    background: radial-gradient(circle at 85% 85%, rgba(16, 185, 129, 0.24) 0%, rgba(37, 43, 59, 1) 75%);
+  }
+  .mini-card.archetype-utility {
+    background: radial-gradient(circle at 85% 85%, rgba(168, 85, 247, 0.22) 0%, rgba(37, 43, 59, 1) 75%);
+  }
+  .mini-card.archetype-suit.suit-hearts,
+  .mini-card.archetype-suit.suit-diamonds {
+    background: radial-gradient(circle at 85% 85%, rgba(244, 63, 94, 0.24) 0%, rgba(37, 43, 59, 1) 75%);
+    border-left: 3px solid #f43f5e;
+  }
+  .mini-card.archetype-suit.suit-spades,
+  .mini-card.archetype-suit.suit-clubs {
+    background: radial-gradient(circle at 85% 85%, rgba(56, 189, 248, 0.20) 0%, rgba(37, 43, 59, 1) 75%);
+    border-left: 3px solid #38bdf8;
+  }
+
+  /* Archetype Badges */
+  .archetype-badge {
+    font-size: 9px;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .archetype-badge.archetype-mult {
+    background: rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+    border: 1px solid rgba(239, 68, 68, 0.5);
+  }
+  .archetype-badge.archetype-chips {
+    background: rgba(59, 130, 246, 0.2);
+    color: #93c5fd;
+    border: 1px solid rgba(59, 130, 246, 0.5);
+  }
+  .archetype-badge.archetype-econ {
+    background: rgba(16, 185, 129, 0.2);
+    color: #6ee7b7;
+    border: 1px solid rgba(16, 185, 129, 0.5);
+  }
+  .archetype-badge.archetype-utility {
+    background: rgba(168, 85, 247, 0.2);
+    color: #d8b4fe;
+    border: 1px solid rgba(168, 85, 247, 0.5);
+  }
+  .archetype-badge.archetype-suit {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fde68a;
+    border: 1px solid rgba(245, 158, 11, 0.5);
+  }
+
+  /* Inspector Watermark */
+  .inspect-watermark {
+    position: absolute;
+    right: -10px;
+    top: -15px;
+    font-size: 75px;
+    line-height: 1;
+    pointer-events: none;
+    user-select: none;
+    opacity: 0.12;
+    transform: rotate(10deg);
+    z-index: 1;
+    filter: grayscale(30%);
   }
 
   /* 3. FELT TABLE AREA */
@@ -945,12 +1054,49 @@
     flex-direction: column;
     justify-content: space-between;
     gap: 5px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .shop-item > * {
+    position: relative;
+    z-index: 2;
+  }
+
+  .shop-item-watermark {
+    position: absolute;
+    right: -10px;
+    bottom: -15px;
+    font-size: 64px;
+    line-height: 1;
+    pointer-events: none;
+    user-select: none;
+    opacity: 0.12;
+    transform: rotate(-12deg);
+    z-index: 1;
+    filter: grayscale(35%);
   }
 
   .shop-item.type-joker { border-color: var(--gold); }
   .shop-item.type-voucher { border-color: var(--green); }
   .shop-item.type-tarot { border-color: var(--purple); }
   .shop-item.type-card { border-color: var(--chips); }
+
+  .shop-item.type-joker.archetype-mult {
+    background: radial-gradient(circle at 90% 90%, rgba(239, 68, 68, 0.18) 0%, #1a212d 75%);
+  }
+  .shop-item.type-joker.archetype-chips {
+    background: radial-gradient(circle at 90% 90%, rgba(59, 130, 246, 0.18) 0%, #1a212d 75%);
+  }
+  .shop-item.type-joker.archetype-econ {
+    background: radial-gradient(circle at 90% 90%, rgba(16, 185, 129, 0.18) 0%, #1a212d 75%);
+  }
+  .shop-item.type-joker.archetype-utility {
+    background: radial-gradient(circle at 90% 90%, rgba(168, 85, 247, 0.18) 0%, #1a212d 75%);
+  }
+  .shop-item.type-joker.archetype-suit {
+    background: radial-gradient(circle at 90% 90%, rgba(245, 158, 11, 0.18) 0%, #1a212d 75%);
+  }
 
   .shop-item-title { font-size: 13px; font-weight: 900; color: #fff; }
   .shop-item-sub { font-size: 10px; text-transform: uppercase; color: var(--gold); }
@@ -1114,6 +1260,8 @@
 
   .pack-opt-joker {
     border-color: #3b82f6;
+    position: relative;
+    overflow: hidden;
   }
   .pack-opt-joker.rarity-common {
     border-color: #64748b;
@@ -1125,6 +1273,41 @@
   .pack-opt-joker.rarity-rare {
     border-color: #ef4444;
     box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
+  }
+
+  .pack-opt-joker.archetype-mult {
+    background: radial-gradient(circle at 90% 90%, rgba(239, 68, 68, 0.22) 0%, #141b26 80%);
+  }
+  .pack-opt-joker.archetype-chips {
+    background: radial-gradient(circle at 90% 90%, rgba(59, 130, 246, 0.22) 0%, #141b26 80%);
+  }
+  .pack-opt-joker.archetype-econ {
+    background: radial-gradient(circle at 90% 90%, rgba(16, 185, 129, 0.22) 0%, #141b26 80%);
+  }
+  .pack-opt-joker.archetype-utility {
+    background: radial-gradient(circle at 90% 90%, rgba(168, 85, 247, 0.20) 0%, #141b26 80%);
+  }
+  .pack-opt-joker.archetype-suit {
+    background: radial-gradient(circle at 90% 90%, rgba(245, 158, 11, 0.20) 0%, #141b26 80%);
+  }
+
+  .pack-opt-watermark {
+    position: absolute;
+    right: -8px;
+    bottom: -12px;
+    font-size: 76px;
+    line-height: 1;
+    pointer-events: none;
+    user-select: none;
+    opacity: 0.14;
+    transform: rotate(-10deg);
+    z-index: 1;
+    filter: grayscale(30%);
+    transition: transform 0.2s ease, opacity 0.2s ease;
+  }
+  .pack-option-card.pack-opt-joker:hover .pack-opt-watermark {
+    opacity: 0.26;
+    transform: rotate(-4deg) scale(1.1);
   }
 
   .pack-opt-tarot {

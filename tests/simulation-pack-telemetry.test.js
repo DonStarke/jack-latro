@@ -35,7 +35,7 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
 (async () => {
   const w = dom.window;
   const d = w.document;
-  await sleep(400);
+  for (let i = 0; i < 60 && typeof w.startNewRun !== 'function'; i++) await sleep(50);
 
   const $ = id => d.getElementById(id);
 

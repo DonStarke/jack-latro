@@ -268,22 +268,29 @@ function inspectJoker(index: number): void {
   const j = state.jokers[index];
   if (!j) return;
   const sellVal = Math.max(1, Math.floor(j.cost / 2));
+  const arch = j.archetype || 'utility';
+  const icon = j.icon || '🃏';
   const box = $('ui-inspect-content');
   box.innerHTML = `
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-      <div style="display:flex; align-items:center; gap:8px;">
-        <h3 style="color:var(--gold); margin:0;">${j.name}</h3>
-        <span class="rarity-badge rarity-${j.rarity || 'common'}">${(j.rarity || 'common').toUpperCase()}</span>
+    <div class="inspect-header-wrap" style="position:relative; overflow:hidden; border-radius:6px; padding:2px;">
+      <div class="inspect-watermark">${icon}</div>
+      <div style="display:flex; justify-content:space-between; align-items:center; position:relative; z-index:2;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:22px; line-height:1;">${icon}</span>
+          <h3 style="color:var(--gold); margin:0;">${j.name}</h3>
+          <span class="rarity-badge rarity-${j.rarity || 'common'}">${(j.rarity || 'common').toUpperCase()}</span>
+          <span class="archetype-badge archetype-${arch}">${arch.toUpperCase()}</span>
+        </div>
+        <button class="btn btn-secondary" onclick="closeInspector()">Close</button>
       </div>
-      <button class="btn btn-secondary" onclick="closeInspector()">Close</button>
     </div>
-    <div style="font-size:13px; color:#e2e8f0; line-height:1.4;">${getJokerFullDesc(j)}</div>
-    <div style="font-size:12px; color:#94a3b8;">Tip: Jokers trigger Left ➔ Right. Put +Mult Jokers to the left of ×Mult Jokers!</div>
-    <div style="display:flex; gap:6px;">
+    <div style="font-size:13px; color:#e2e8f0; line-height:1.4; position:relative; z-index:2; margin-top:8px;">${getJokerFullDesc(j)}</div>
+    <div style="font-size:12px; color:#94a3b8; position:relative; z-index:2; margin-top:6px;">Tip: Jokers trigger Left ➔ Right. Put +Mult Jokers to the left of ×Mult Jokers!</div>
+    <div style="display:flex; gap:6px; position:relative; z-index:2; margin-top:10px;">
       <button class="btn btn-secondary" style="flex:1;" onclick="uiMoveJoker(${index}, -1)" ${index === 0 ? 'disabled' : ''}>◀ Move Left</button>
       <button class="btn btn-secondary" style="flex:1;" onclick="uiMoveJoker(${index}, 1)" ${index === state.jokers.length - 1 ? 'disabled' : ''}>Move Right ▶</button>
     </div>
-    <button class="btn btn-redeal" style="padding:10px;" onclick="uiSellJoker(${index})">Sell Joker for $${sellVal}</button>
+    <button class="btn btn-redeal" style="padding:10px; position:relative; z-index:2; margin-top:8px;" onclick="uiSellJoker(${index})">Sell Joker for $${sellVal}</button>
   `;
   $('ui-inspect-modal').classList.remove('hidden');
 }
@@ -609,18 +616,26 @@ function renderShop() {
   if (jGrid) {
     jGrid.innerHTML = state.shopJokers.map((item, idx) => {
       const isJoker = item.shopType === 'joker';
-      const rarityClass = isJoker && item.rarity ? `rarity-${item.rarity}` : '';
-      const badgeHtml = isJoker && item.rarity
-        ? `<span class="rarity-badge rarity-${item.rarity}">${item.rarity.toUpperCase()}</span>`
+      const jokerItem = isJoker ? (item as JokerInstance) : null;
+      const rarityClass = jokerItem && jokerItem.rarity ? `rarity-${jokerItem.rarity}` : '';
+      const archClass = jokerItem && jokerItem.archetype ? `archetype-${jokerItem.archetype}` : '';
+      const icon = jokerItem?.icon || '🃏';
+      const badgeHtml = jokerItem && jokerItem.rarity
+        ? `<span class="rarity-badge rarity-${jokerItem.rarity}">${jokerItem.rarity.toUpperCase()}</span>`
         : '';
+      const watermarkHtml = isJoker ? `<div class="shop-item-watermark">${icon}</div>` : '';
+      const titleHtml = isJoker
+        ? `<span class="joker-icon-mini">${icon}</span> ${item.name}`
+        : item.name;
       return `
-      <div class="shop-item type-${item.shopType} ${rarityClass}">
+      <div class="shop-item type-${item.shopType} ${rarityClass} ${archClass}">
+        ${watermarkHtml}
         <div>
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
             <div class="shop-item-sub">${item.shopType}</div>
             ${badgeHtml}
           </div>
-          <div class="shop-item-title">${item.name}</div>
+          <div class="shop-item-title">${titleHtml}</div>
           <div class="shop-item-desc">${item.shopType === 'joker' ? getJokerFullDesc(item) : item.desc}</div>
         </div>
         <button class="btn btn-deal" style="padding:6px; font-size:12px;"
@@ -691,12 +706,18 @@ function updateAllUI() {
   if (state.jokers.length === 0) {
     jRow.innerHTML = `<span style="font-size:12px; font-weight:700; color:#94a3b8;">No active Jokers</span>`;
   } else {
-    jRow.innerHTML = state.jokers.map((j, i) => `
-      <div class="mini-card rarity-${j.rarity || 'common'}" onclick="inspectJoker(${i})" title="${getJokerFullDesc(j)}">
-        <div class="mini-card-name">${j.name}</div>
-        <div class="mini-card-sub">${getJokerMiniSubHTML(j)}</div>
-      </div>
-    `).join('');
+    jRow.innerHTML = state.jokers.map((j, i) => {
+      const arch = j.archetype || 'utility';
+      const suitClass = j.suitTheme ? `suit-${j.suitTheme === '♥' ? 'hearts' : j.suitTheme === '♦' ? 'diamonds' : j.suitTheme === '♠' ? 'spades' : 'clubs'}` : '';
+      const icon = j.icon || '🃏';
+      return `
+        <div class="mini-card rarity-${j.rarity || 'common'} archetype-${arch} ${suitClass}" onclick="inspectJoker(${i})" title="${getJokerFullDesc(j)}">
+          <div class="mini-card-watermark">${icon}</div>
+          <div class="mini-card-name"><span class="joker-icon-mini">${icon}</span><span>${j.name}</span></div>
+          <div class="mini-card-sub">${getJokerMiniSubHTML(j)}</div>
+        </div>
+      `;
+    }).join('');
   }
 
   $('ui-consumable-slots').textContent = `TAROT ${state.consumables.length}/${state.maxConsumables}`;
@@ -1288,16 +1309,19 @@ function renderPackOpeningScreen(): void {
 
     if (opt.kind === 'joker') {
       const j = opt.data;
+      const icon = j.icon || '🃏';
+      const arch = j.archetype || 'utility';
       cardTypeLabel = `JOKER • ${(j.rarity || 'common').toUpperCase()}`;
       cardTitle = j.name;
       cardSub = getJokerFullDesc(j);
-      extraCardClass = `pack-opt-joker rarity-${j.rarity || 'common'}`;
+      extraCardClass = `pack-opt-joker rarity-${j.rarity || 'common'} archetype-${arch}`;
       cardContentHtml = `
-        <div class="pack-opt-inner">
+        <div class="pack-opt-watermark">${icon}</div>
+        <div class="pack-opt-inner" style="position:relative; z-index:2;">
           <div class="pack-opt-badge-row">
             <span class="pack-opt-type">${cardTypeLabel}</span>
           </div>
-          <div class="pack-opt-title">${cardTitle}</div>
+          <div class="pack-opt-title"><span class="joker-icon-mini">${icon}</span> ${cardTitle}</div>
           <div class="pack-opt-desc">${cardSub}</div>
         </div>
       `;
@@ -2030,7 +2054,7 @@ function showDefeatModal(): void {
     } else {
       jEl.innerHTML = s.jokers.map(j => `
         <span class="joker-tag" style="background:#1e293b; border:1px solid #475569; padding:2px 8px; border-radius:4px; font-size:11px;">
-          ${j.name}
+          ${j.icon || '🃏'} ${j.name}
         </span>
       `).join('');
     }
@@ -2068,7 +2092,7 @@ function showVictoryModal(): void {
     } else {
       jEl.innerHTML = s.jokers.map(j => `
         <span class="joker-tag" style="background:#1e293b; border:1px solid var(--gold); color:#fef08a; padding:3px 8px; border-radius:4px; font-size:12px; font-weight:700;">
-          🃏 ${j.name}
+          ${j.icon || '🃏'} ${j.name}
         </span>
       `).join('');
     }
@@ -2344,16 +2368,20 @@ function renderRunStats(): void {
         </div>
       `;
     } else {
+      const getJokerIcon = (id: string) => {
+        const found = JOKER_CATALOG.find(j => j.id === id);
+        return found?.icon || '🃏';
+      };
       const activeHtml = list.map(jt => `
         <div class="joker-trigger-card">
-          <div class="jt-name">🃏 ${jt.name}</div>
+          <div class="jt-name">${getJokerIcon(jt.id)} ${jt.name}</div>
           <div class="jt-badge">${jt.count} trigger${jt.count === 1 ? '' : 's'}</div>
         </div>
       `).join('');
 
       const unTriggeredHtml = unTriggeredJokers.map(j => `
         <div class="joker-trigger-card jt-untriggered">
-          <div class="jt-name">🃏 ${j.name}</div>
+          <div class="jt-name">${j.icon || getJokerIcon(j.id)} ${j.name}</div>
           <div class="jt-badge jt-badge-zero">0 triggers</div>
         </div>
       `).join('');
