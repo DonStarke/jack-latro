@@ -50,7 +50,8 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
 
   // Start with a hand
   w.handlePrimaryDealBtn();
-  await sleep(600);
+  while (w.getState().isDealing) await sleep(50);
+  await sleep(100);
 
   const state = w.getState();
   ck('Player hand has cards dealt', state.playerHand.length >= 2);

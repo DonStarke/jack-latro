@@ -222,12 +222,11 @@ const PACK_CATALOG: ReadonlyArray<PackDef> = [
   }
 ];
 
-function generatePackOptions(pack: PackDef): PackCardOption[] {
-  const s = getState();
+function generatePackOptions(pack: PackDef, ownedJokerIds?: string[]): PackCardOption[] {
+  const ownedIds = ownedJokerIds !== undefined ? ownedJokerIds : getState().jokers.map(j => j.id);
   const options: PackCardOption[] = [];
 
   if (pack.packType === 'joker') {
-    const ownedIds = s.jokers.map(j => j.id);
     const excluded = [...ownedIds];
     for (let i = 0; i < pack.cardsCount; i++) {
       let rolled = rollWeightedJoker(excluded);
@@ -262,7 +261,6 @@ function generatePackOptions(pack: PackDef): PackCardOption[] {
     }
   } else if (pack.packType === 'variety') {
     // 1 Joker
-    const ownedIds = s.jokers.map(j => j.id);
     const j = rollWeightedJoker(ownedIds) || shuffle(JOKER_CATALOG)[0];
     options.push({ kind: 'joker', data: j });
 
@@ -286,18 +284,16 @@ function generatePackOptions(pack: PackDef): PackCardOption[] {
   return options;
 }
 
-/* ---------- Shop stock ---------- */
-function generateShopStock(): void {
-  const s = getState();
-
-  const numPacks = s.vouchersBought.includes('overstock') ? 3 : 2;
-  const packsOffered: ShopPackSlot[] = [];
+/** Pure helper to generate packs for a shop visit (shared with simulator). */
+function generateShopPacks(ante: number, jokersCount: number, hasOverstock: boolean): PackDef[] {
+  const numPacks = hasOverstock ? 3 : 2;
+  const packsOffered: PackDef[] = [];
   const chosenIds: string[] = [];
 
   // In Ante 1 with 0 jokers, offer a Joker Pack in first slot to help player build early synergy
-  if (s.ante === 1 && s.jokers.length === 0) {
+  if (ante === 1 && jokersCount === 0) {
     const jokerPack = PACK_CATALOG.find(p => p.id === 'pack_joker') || PACK_CATALOG[0];
-    packsOffered.push({ ...jokerPack, shopType: 'pack', bought: false });
+    packsOffered.push(jokerPack);
     chosenIds.push(jokerPack.id);
   }
 
@@ -305,9 +301,19 @@ function generateShopStock(): void {
     const unpicked = PACK_CATALOG.filter(p => !chosenIds.includes(p.id));
     const pool = unpicked.length > 0 ? unpicked : PACK_CATALOG;
     const rolled = shuffle([...pool])[0];
-    packsOffered.push({ ...rolled, shopType: 'pack', bought: false });
+    packsOffered.push(rolled);
     chosenIds.push(rolled.id);
   }
+
+  return packsOffered;
+}
+
+/* ---------- Shop stock ---------- */
+function generateShopStock(): void {
+  const s = getState();
+  const hasOverstock = s.vouchersBought.includes('overstock');
+  const packs = generateShopPacks(s.ante, s.jokers.length, hasOverstock);
+  const packsOffered: ShopPackSlot[] = packs.map(p => ({ ...p, shopType: 'pack', bought: false }));
 
   // Voucher handling: 1 voucher per ante, persisting across blinds until bought or next ante
   let voucherOffer: ShopVoucher[] = [];

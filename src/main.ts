@@ -1054,6 +1054,22 @@ function renderSimResultsToModal(simData: SimData): void {
       </div>
     </div>
 
+    <div style="background:#0b0e14; padding:8px 12px; border-radius:8px; border:1px solid #283246; margin-bottom:10px; display:flex; flex-wrap:wrap; gap:12px; font-size:11px; align-items:center; justify-content:space-between;">
+      <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
+        <span style="font-weight:bold; color:var(--gold);">📦 PACKS OPENED:</span>
+        <span>🃏 Jokers: <strong style="color:#38bdf8;">${simData.packStats?.pack_joker?.bought ?? 0}</strong></span>
+        <span style="color:#475569;">|</span>
+        <span>🌀 Variety: <strong style="color:#10b981;">${simData.packStats?.pack_variety?.bought ?? 0}</strong></span>
+        <span style="color:#475569;">|</span>
+        <span>🔮 Tarots: <strong style="color:#a855f7;">${simData.packStats?.pack_tarot?.bought ?? 0}</strong></span>
+        <span style="color:#475569;">|</span>
+        <span>🎴 Cards: <strong style="color:#eab308;">${simData.packStats?.pack_card?.bought ?? 0}</strong></span>
+      </div>
+      <div>
+        <span style="color:#cbd5e1;">🔄 Rerolls: <strong style="color:var(--gold);">${(simData.totalRerolls ?? 0).toLocaleString()}</strong></span>
+      </div>
+    </div>
+
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
       <div style="background:#0b0e14; padding:10px; border-radius:8px; border:1px solid #283246;">
         <div style="font-size:11px; font-weight:bold; color:var(--gold); margin-bottom:6px;">ANTE SURVIVAL FUNNEL (% CLEARED)</div>
