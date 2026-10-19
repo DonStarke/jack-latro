@@ -576,49 +576,79 @@ function renderCardHTML(card: Card, faceDown: boolean = false, extraClasses: str
 
 function renderShop() {
   const state = getState();
-  const jGrid = $('ui-shop-jokers');
-  const eGrid = $('ui-shop-extras');
-  $<HTMLButtonElement>('btn-reroll').textContent = `Reroll ($${state.rerollCost})`;
+  const packGrid = document.getElementById('ui-shop-packs');
+  const jGrid = document.getElementById('ui-shop-jokers');
+  const eGrid = document.getElementById('ui-shop-extras');
+  const rerollBtn = document.getElementById('btn-reroll') as HTMLButtonElement | null;
+  if (rerollBtn) rerollBtn.textContent = `Reroll ($${state.rerollCost})`;
 
-  jGrid.innerHTML = state.shopJokers.map((item, idx) => {
-    const isJoker = item.shopType === 'joker';
-    const rarityClass = isJoker && item.rarity ? `rarity-${item.rarity}` : '';
-    const badgeHtml = isJoker && item.rarity
-      ? `<span class="rarity-badge rarity-${item.rarity}">${item.rarity.toUpperCase()}</span>`
-      : '';
-    return `
-    <div class="shop-item type-${item.shopType} ${rarityClass}">
-      <div>
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
-          <div class="shop-item-sub">${item.shopType}</div>
-          ${badgeHtml}
+  if (packGrid) {
+    packGrid.innerHTML = state.shopPacks.map((item, idx) => {
+      const badgeText = item.badge || item.packType.toUpperCase();
+      const badgeClass = `pack-badge-${item.packType}`;
+      return `
+        <div class="shop-item shop-pack type-pack pack-${item.packType}">
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+              <div class="shop-item-sub">BOOSTER PACK</div>
+              <span class="pack-badge ${badgeClass}">${badgeText}</span>
+            </div>
+            <div class="shop-item-title">${item.name}</div>
+            <div class="shop-item-desc">${item.desc}</div>
+          </div>
+          <button class="btn btn-deal btn-buy-pack" style="padding:6px; font-size:12px;"
+            onclick="uiBuyPack(${idx})"
+            ${item.bought || state.money < item.cost ? 'disabled' : ''}>
+            ${item.bought ? 'OPENED' : 'OPEN $' + item.cost}
+          </button>
         </div>
-        <div class="shop-item-title">${item.name}</div>
-        <div class="shop-item-desc">${item.shopType === 'joker' ? getJokerFullDesc(item) : item.desc}</div>
-      </div>
-      <button class="btn btn-deal" style="padding:6px; font-size:12px;"
-        onclick="uiBuyShopItem('shopJokers', ${idx})"
-        ${item.bought || state.money < item.cost ? 'disabled' : ''}>
-        ${item.bought ? 'SOLD' : 'BUY $' + item.cost}
-      </button>
-    </div>
-  `;
-  }).join('');
+      `;
+    }).join('');
+  }
 
-  eGrid.innerHTML = state.shopExtras.map((item, idx) => `
-    <div class="shop-item type-${item.shopType}">
-      <div>
-        <div class="shop-item-sub">${item.shopType === 'card' ? 'Shoe Card' : 'Voucher'}</div>
-        <div class="shop-item-title">${item.name}</div>
-        <div class="shop-item-desc">${item.desc}</div>
+  if (jGrid) {
+    jGrid.innerHTML = state.shopJokers.map((item, idx) => {
+      const isJoker = item.shopType === 'joker';
+      const rarityClass = isJoker && item.rarity ? `rarity-${item.rarity}` : '';
+      const badgeHtml = isJoker && item.rarity
+        ? `<span class="rarity-badge rarity-${item.rarity}">${item.rarity.toUpperCase()}</span>`
+        : '';
+      return `
+      <div class="shop-item type-${item.shopType} ${rarityClass}">
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+            <div class="shop-item-sub">${item.shopType}</div>
+            ${badgeHtml}
+          </div>
+          <div class="shop-item-title">${item.name}</div>
+          <div class="shop-item-desc">${item.shopType === 'joker' ? getJokerFullDesc(item) : item.desc}</div>
+        </div>
+        <button class="btn btn-deal" style="padding:6px; font-size:12px;"
+          onclick="uiBuyShopItem('shopJokers', ${idx})"
+          ${item.bought || state.money < item.cost ? 'disabled' : ''}>
+          ${item.bought ? 'SOLD' : 'BUY $' + item.cost}
+        </button>
       </div>
-      <button class="btn btn-hit" style="padding:6px; font-size:12px;"
-        onclick="uiBuyShopItem('shopExtras', ${idx})"
-        ${item.bought || state.money < item.cost ? 'disabled' : ''}>
-        ${item.bought ? 'SOLD' : 'BUY $' + item.cost}
-      </button>
-    </div>
-  `).join('');
+    `;
+    }).join('');
+  }
+
+  if (eGrid) {
+    eGrid.innerHTML = state.shopExtras.map((item, idx) => `
+      <div class="shop-item type-${item.shopType}">
+        <div>
+          <div class="shop-item-sub">${item.shopType === 'card' ? 'Shoe Card' : 'Voucher'}</div>
+          <div class="shop-item-title">${item.name}</div>
+          <div class="shop-item-desc">${item.desc}</div>
+        </div>
+        <button class="btn btn-hit" style="padding:6px; font-size:12px;"
+          onclick="uiBuyShopItem('shopExtras', ${idx})"
+          ${item.bought || state.money < item.cost ? 'disabled' : ''}>
+          ${item.bought ? 'SOLD' : 'BUY $' + item.cost}
+        </button>
+      </div>
+    `).join('');
+  }
 }
 
 function updateAllUI() {
@@ -1145,6 +1175,8 @@ function startNewRun(): void {
   startNewRunState();
   $('ui-rules-deals-count').textContent = String(getBalanceConfig().startingDeals);
   $('ui-shop-overlay').classList.add('hidden');
+  const packOverlay = document.getElementById('ui-pack-overlay');
+  if (packOverlay) packOverlay.classList.add('hidden');
   refreshBlindStartUI();
 }
 
@@ -1156,6 +1188,8 @@ function startBlindPlay(): void {
 
 function startNextBlindFromShop(): void {
   $('ui-shop-overlay').classList.add('hidden');
+  const packOverlay = document.getElementById('ui-pack-overlay');
+  if (packOverlay) packOverlay.classList.add('hidden');
   startBlindPlay();
 }
 
@@ -1206,6 +1240,148 @@ function uiBuyShopItem(listName: 'shopJokers' | 'shopExtras', idx: number): void
     return;
   }
   playCardDealSound();
+  renderShop();
+  updateAllUI();
+}
+
+function renderPackOpeningScreen(): void {
+  const state = getState();
+  const active = state.activePackOpening;
+  const overlay = $('ui-pack-overlay');
+  if (!active || !overlay) {
+    if (overlay) overlay.classList.add('hidden');
+    return;
+  }
+
+  const badgeEl = $('ui-pack-badge');
+  const titleEl = $('ui-pack-title');
+  const subEl = $('ui-pack-sub');
+  if (badgeEl) badgeEl.textContent = (active.pack.badge || active.pack.packType).toUpperCase() + ' PACK';
+  if (titleEl) titleEl.textContent = active.pack.name;
+  if (subEl) subEl.textContent = `Choose ${active.pack.chooseCount} of ${active.options.length} options to take`;
+
+  const stage = $('ui-pack-stage');
+  if (!stage) return;
+
+  stage.innerHTML = active.options.map((opt, optIdx) => {
+    let cardContentHtml = '';
+    let cardTypeLabel = '';
+    let cardTitle = '';
+    let cardSub = '';
+    let extraCardClass = '';
+
+    if (opt.kind === 'joker') {
+      const j = opt.data;
+      cardTypeLabel = `JOKER • ${(j.rarity || 'common').toUpperCase()}`;
+      cardTitle = j.name;
+      cardSub = getJokerFullDesc(j);
+      extraCardClass = `pack-opt-joker rarity-${j.rarity || 'common'}`;
+      cardContentHtml = `
+        <div class="pack-opt-inner">
+          <div class="pack-opt-badge-row">
+            <span class="pack-opt-type">${cardTypeLabel}</span>
+          </div>
+          <div class="pack-opt-title">${cardTitle}</div>
+          <div class="pack-opt-desc">${cardSub}</div>
+        </div>
+      `;
+    } else if (opt.kind === 'tarot') {
+      const t = opt.data;
+      cardTypeLabel = 'TAROT CONSUMABLE';
+      cardTitle = t.name;
+      cardSub = t.desc;
+      extraCardClass = 'pack-opt-tarot';
+      cardContentHtml = `
+        <div class="pack-opt-inner">
+          <div class="pack-opt-badge-row">
+            <span class="pack-opt-type">${cardTypeLabel}</span>
+          </div>
+          <div class="pack-opt-title">${cardTitle}</div>
+          <div class="pack-opt-desc">${cardSub}</div>
+        </div>
+      `;
+    } else if (opt.kind === 'card') {
+      const c = opt.data;
+      const isRed = ['♥', '♦'].includes(c.suit);
+      const enhName = c.enhancement ? c.enhancement.toUpperCase() : 'STANDARD';
+      cardTypeLabel = `PLAYING CARD • ${enhName}`;
+      cardTitle = `${c.rank}${c.suit}`;
+      let enhBlurb = 'Standard card (+chips in hand)';
+      if (c.enhancement === 'foil') enhBlurb = '+30 Chips';
+      else if (c.enhancement === 'holo') enhBlurb = '+4 Mult';
+      else if (c.enhancement === 'poly') enhBlurb = '×1.5 Mult';
+      else if (c.enhancement === 'gold') enhBlurb = '+$3 Bonus Cash';
+      cardSub = enhBlurb;
+      extraCardClass = `pack-opt-card enh-${c.enhancement || 'none'} ${isRed ? 'card-red' : 'card-black'}`;
+
+      const cardVisual = renderCardHTML({ uid: 0, rank: c.rank, suit: c.suit, enhancement: c.enhancement }, false, 'pack-mini-card');
+
+      cardContentHtml = `
+        <div class="pack-opt-inner">
+          <div class="pack-opt-badge-row">
+            <span class="pack-opt-type">${cardTypeLabel}</span>
+          </div>
+          <div class="pack-opt-card-visual">${cardVisual}</div>
+          <div class="pack-opt-title">${cardTitle}</div>
+          <div class="pack-opt-desc">${cardSub}</div>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="pack-option-card ${extraCardClass}" onclick="uiChoosePackOption(${optIdx})">
+        ${cardContentHtml}
+        <button class="btn btn-deal btn-pack-choose" onclick="event.stopPropagation(); uiChoosePackOption(${optIdx})">
+          CHOOSE
+        </button>
+      </div>
+    `;
+  }).join('');
+
+  overlay.classList.remove('hidden');
+}
+
+function uiBuyPack(idx: number): void {
+  if (isPlayfieldLocked) return;
+  const res = buyAndOpenPack(idx);
+  if (!res.ok) {
+    if (res.reason === 'too_poor') alert('Not enough cash to open this pack!');
+    return;
+  }
+  playCardDealSound();
+  renderShop();
+  updateAllUI();
+  renderPackOpeningScreen();
+}
+
+function uiChoosePackOption(optIdx: number): void {
+  if (isPlayfieldLocked) return;
+  const res = pickPackOption(optIdx);
+  if (!res.ok) {
+    if (res.reason === 'jokers_full') alert('Joker slots full! Tap an active Joker at the top to sell it, or tap Skip Pack.');
+    if (res.reason === 'tarots_full') alert('Tarot slots full! Tap an active Tarot at the top to use/sell it, or tap Skip Pack.');
+    return;
+  }
+  playCardDealSound();
+  const overlay = $('ui-pack-overlay');
+  if (overlay) overlay.classList.add('hidden');
+
+  let pickedName = '';
+  if (res.picked?.kind === 'joker') pickedName = res.picked.data.name;
+  else if (res.picked?.kind === 'tarot') pickedName = res.picked.data.name;
+  else if (res.picked?.kind === 'card') pickedName = `${res.picked.data.rank}${res.picked.data.suit}`;
+
+  setBanner(`Added ${pickedName} to your collection!`, 'Pit Boss Shop');
+  renderShop();
+  updateAllUI();
+}
+
+function uiSkipPack(): void {
+  if (isPlayfieldLocked) return;
+  skipPackOpening();
+  const overlay = $('ui-pack-overlay');
+  if (overlay) overlay.classList.add('hidden');
+  setBanner('Skipped pack.', 'Pit Boss Shop');
   renderShop();
   updateAllUI();
 }
@@ -2196,6 +2372,10 @@ function renderRunStats(): void {
 (window as any).inspectConsumable = inspectConsumable;
 (window as any).closeInspector = closeInspector;
 (window as any).uiBuyShopItem = uiBuyShopItem;
+(window as any).uiBuyPack = uiBuyPack;
+(window as any).uiChoosePackOption = uiChoosePackOption;
+(window as any).uiSkipPack = uiSkipPack;
+(window as any).renderPackOpeningScreen = renderPackOpeningScreen;
 (window as any).uiRerollShop = uiRerollShop;
 (window as any).uiMoveJoker = uiMoveJoker;
 (window as any).uiSellJoker = uiSellJoker;

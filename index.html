@@ -217,11 +217,31 @@
         </div>
       </div>
 
-      <div style="font-size:12px; color:#94a3b8; text-transform:uppercase; font-weight:bold;">Jokers & Tarots</div>
-      <div class="shop-grid" id="ui-shop-jokers"></div>
+      <div style="font-size:12px; color:#94a3b8; text-transform:uppercase; font-weight:bold;">Booster Packs</div>
+      <div class="shop-grid" id="ui-shop-packs"></div>
 
-      <div style="font-size:12px; color:#94a3b8; text-transform:uppercase; font-weight:bold;">Shoe Cards & Vouchers</div>
+      <div style="font-size:12px; color:#94a3b8; text-transform:uppercase; font-weight:bold;">Vouchers</div>
       <div class="shop-grid" id="ui-shop-extras"></div>
+      <div class="shop-grid hidden" id="ui-shop-jokers"></div>
+    </div>
+
+    <!-- PACK OPENING OVERLAY -->
+    <div class="overlay-panel hidden pack-opening-overlay" id="ui-pack-overlay">
+      <div class="pack-opening-header">
+        <div class="pack-opening-badge" id="ui-pack-badge">JOKER PACK</div>
+        <h2 class="pack-opening-title" id="ui-pack-title">Open Booster Pack</h2>
+        <div class="pack-opening-sub" id="ui-pack-sub">Choose 1 option to take</div>
+      </div>
+
+      <div class="pack-opening-stage" id="ui-pack-stage">
+        <!-- Rendered revealed cards -->
+      </div>
+
+      <div class="pack-opening-actions">
+        <button class="btn btn-secondary btn-skip-pack" id="btn-skip-pack" onclick="uiSkipPack()">
+          Skip Pack ➔
+        </button>
+      </div>
     </div>
   </main>
 </div>

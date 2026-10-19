@@ -70,12 +70,23 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   if (cleared) {
     click('btn-deal'); await sleep(200);
     ck('shop overlay visible after cash out', !$('ui-shop-overlay').classList.contains('hidden'));
-    ck('shop shows items', $('ui-shop-jokers').children.length === 3 && $('ui-shop-extras').children.length >= 2);
+    ck('shop shows packs and vouchers', $('ui-shop-packs').children.length >= 2 && $('ui-shop-extras').children.length >= 1);
     ck('shop payout note', /^Earned \+\$\d+/.test(text('ui-shop-payout-note')));
     ck('target now 435 (Big Blind)', text('ui-target-score') === '435');
-    // buy anything affordable
-    const buys = [...$('ui-shop-jokers').querySelectorAll('button'), ...$('ui-shop-extras').querySelectorAll('button')].filter(b => !b.disabled);
-    if (buys.length) { buys[0].click(); await sleep(50); ck('bought an item (a button now says SOLD)', /SOLD/.test($('ui-shop-jokers').textContent + $('ui-shop-extras').textContent)); }
+    // buy a pack, open screen appears, pick an option
+    const packBuys = [...$('ui-shop-packs').querySelectorAll('button')].filter(b => !b.disabled);
+    if (packBuys.length) {
+      packBuys[0].click(); await sleep(50);
+      ck('pack overlay opened after buying pack', !$('ui-pack-overlay').classList.contains('hidden'));
+      const options = $('ui-pack-stage').querySelectorAll('.pack-option-card');
+      ck('pack reveals options inside', options.length >= 3);
+      const chooseBtns = $('ui-pack-stage').querySelectorAll('button.btn-pack-choose');
+      if (chooseBtns.length) {
+        chooseBtns[0].click(); await sleep(50);
+        ck('pack overlay closed after choosing option', $('ui-pack-overlay').classList.contains('hidden'));
+        ck('bought pack button says OPENED', /OPENED/.test($('ui-shop-packs').textContent));
+      }
+    }
     const moneyBefore = text('ui-money');
     click('btn-reroll'); await sleep(50);
     ck('reroll ran without errors', errors.length === 0);

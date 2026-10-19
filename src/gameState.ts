@@ -67,6 +67,36 @@ interface ShopCardOffer {
   cardData: { rank: Rank; suit: Suit; enhancement: Enhancement };
   bought: boolean;
 }
+type PackType = 'joker' | 'tarot' | 'card' | 'variety';
+
+interface PackDef {
+  id: string;
+  name: string;
+  packType: PackType;
+  cost: number;
+  cardsCount: number;
+  chooseCount: number;
+  desc: string;
+  badge?: string;
+  color?: string;
+}
+
+interface ShopPackSlot extends PackDef {
+  shopType: 'pack';
+  bought: boolean;
+}
+
+type PackCardOption =
+  | { kind: 'joker'; data: JokerDef }
+  | { kind: 'tarot'; data: TarotDef }
+  | { kind: 'card'; data: { rank: Rank; suit: Suit; enhancement: Enhancement } };
+
+interface ActivePackOpening {
+  pack: ShopPackSlot;
+  options: PackCardOption[];
+  chosen: boolean;
+}
+
 type ShopJokerSlot = (JokerInstance & { shopType: 'joker'; bought: boolean }) | ShopTarot;
 type ShopExtraSlot = ShopCardOffer | ShopVoucher;
 
@@ -123,6 +153,8 @@ interface GameState {
   rerollCost: number;
   shopJokers: ShopJokerSlot[];
   shopExtras: ShopExtraSlot[];
+  shopPacks: ShopPackSlot[];
+  activePackOpening: ActivePackOpening | null;
 
   /** The Ante number for which the current shop voucher was offered. */
   voucherAnte: number;
@@ -279,6 +311,8 @@ let _state: GameState = {
   rerollCost: 2,
   shopJokers: [],
   shopExtras: [],
+  shopPacks: [],
+  activePackOpening: null,
 
   voucherAnte: 0,
   currentAnteVoucher: null,
@@ -436,9 +470,15 @@ function addVoucher(id: string): void {
   if (!_state.vouchersBought.includes(id)) _state.vouchersBought.push(id);
 }
 
-function setShopStock(jokers: ShopJokerSlot[], extras: ShopExtraSlot[]): void {
+function markShopPackBought(idx: number): void {
+  const item = _state.shopPacks[idx];
+  if (item) item.bought = true;
+}
+
+function setShopStock(jokers: ShopJokerSlot[], extras: ShopExtraSlot[], packs: ShopPackSlot[] = []): void {
   _state.shopJokers = jokers;
   _state.shopExtras = extras;
+  _state.shopPacks = packs;
 }
 
 /* ---------- Run Statistics & Telemetry Helpers ---------- */
@@ -519,5 +559,7 @@ function resetRunState(freshDeck: Card[]): void {
   _state.endlessMode = false;
   _state.voucherAnte = 0;
   _state.currentAnteVoucher = null;
+  _state.shopPacks = [];
+  _state.activePackOpening = null;
   _state.runStats = createInitialRunStats();
 }

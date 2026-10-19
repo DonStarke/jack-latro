@@ -174,48 +174,140 @@ function rollWeightedJoker(excludedIds: string[]): JokerDef | null {
   return shuffle(pool)[0] || null;
 }
 
-/* ---------- Shop stock ---------- */
-function generateShopStock(): void {
+/* ---------- Pack Catalog & Generation ---------- */
+const PACK_CATALOG: ReadonlyArray<PackDef> = [
+  {
+    id: 'pack_joker',
+    name: 'Joker Pack',
+    packType: 'joker',
+    cost: 4,
+    cardsCount: 3,
+    chooseCount: 1,
+    desc: 'Choose 1 of 3 Jokers to add to your collection.',
+    badge: 'JOKERS',
+    color: '#3b82f6'
+  },
+  {
+    id: 'pack_tarot',
+    name: 'Tarot Pack',
+    packType: 'tarot',
+    cost: 4,
+    cardsCount: 3,
+    chooseCount: 1,
+    desc: 'Choose 1 of 3 Tarots to add to your inventory.',
+    badge: 'TAROT',
+    color: '#a855f7'
+  },
+  {
+    id: 'pack_card',
+    name: 'Playing Card Pack',
+    packType: 'card',
+    cost: 4,
+    cardsCount: 3,
+    chooseCount: 1,
+    desc: 'Choose 1 of 3 Enhanced Playing Cards to add to your Deck.',
+    badge: 'CARDS',
+    color: '#eab308'
+  },
+  {
+    id: 'pack_variety',
+    name: 'Variety Pack',
+    packType: 'variety',
+    cost: 4,
+    cardsCount: 3,
+    chooseCount: 1,
+    desc: 'Choose 1 of 3 mixed options (1 Joker, 1 Tarot, 1 Enhanced Card).',
+    badge: 'VARIETY',
+    color: '#10b981'
+  }
+];
+
+function generatePackOptions(pack: PackDef): PackCardOption[] {
   const s = getState();
-  const ownedIds = s.jokers.map(j => j.id);
-  const excluded = [...ownedIds];
-  const j1 = rollWeightedJoker(excluded);
-  if (j1) excluded.push(j1.id);
-  const j2 = rollWeightedJoker(excluded);
-  const availableJokers: JokerDef[] = [];
-  if (j1) availableJokers.push(j1);
-  if (j2) availableJokers.push(j2);
+  const options: PackCardOption[] = [];
 
-  const tarot = shuffle(TAROT_CATALOG)[0];
+  if (pack.packType === 'joker') {
+    const ownedIds = s.jokers.map(j => j.id);
+    const excluded = [...ownedIds];
+    for (let i = 0; i < pack.cardsCount; i++) {
+      let rolled = rollWeightedJoker(excluded);
+      if (!rolled) {
+        const inPackIds = options.filter(o => o.kind === 'joker').map(o => (o as any).data.id);
+        const avail = JOKER_CATALOG.filter(j => !inPackIds.includes(j.id));
+        rolled = avail.length > 0 ? shuffle(avail)[0] : shuffle(JOKER_CATALOG)[0];
+      }
+      if (rolled) {
+        excluded.push(rolled.id);
+        options.push({ kind: 'joker', data: rolled });
+      }
+    }
+  } else if (pack.packType === 'tarot') {
+    const shuffled = shuffle([...TAROT_CATALOG]);
+    const picked = shuffled.slice(0, pack.cardsCount);
+    for (const t of picked) {
+      options.push({ kind: 'tarot', data: t });
+    }
+  } else if (pack.packType === 'card') {
+    const enhancements: ReadonlyArray<Exclude<Enhancement, null>> = ['foil', 'holo', 'poly', 'gold'];
+    const highRanks: ReadonlyArray<Rank> = ['A', 'K', 'Q', 'J', '10', '9', '8', '7'];
+    const suits: ReadonlyArray<Suit> = ['♠', '♥', '♣', '♦'];
+    for (let i = 0; i < pack.cardsCount; i++) {
+      const enh = enhancements[Math.floor(Math.random() * enhancements.length)];
+      const r = highRanks[Math.floor(Math.random() * highRanks.length)];
+      const su = suits[Math.floor(Math.random() * suits.length)];
+      options.push({
+        kind: 'card',
+        data: { rank: r, suit: su, enhancement: enh }
+      });
+    }
+  } else if (pack.packType === 'variety') {
+    // 1 Joker
+    const ownedIds = s.jokers.map(j => j.id);
+    const j = rollWeightedJoker(ownedIds) || shuffle(JOKER_CATALOG)[0];
+    options.push({ kind: 'joker', data: j });
 
-  const shopJokers: ShopJokerSlot[] = [
-    ...availableJokers.map(j => ({ ...j, bonusMult: 0, bonusChips: 0, shopType: 'joker' as const, bought: false })),
-    { ...tarot, shopType: 'tarot' as const, bought: false }
-  ];
+    // 1 Tarot
+    const t = shuffle([...TAROT_CATALOG])[0];
+    options.push({ kind: 'tarot', data: t });
 
-  const enhancements: ReadonlyArray<{ key: Exclude<Enhancement, null>; label: string; cost: number }> = [
-    { key: 'foil', label: 'Foil (+30c)', cost: 4 },
-    { key: 'holo', label: 'Holo (+4m)', cost: 4 },
-    { key: 'poly', label: 'Poly (×1.5m)', cost: 5 },
-    { key: 'gold', label: 'Gold (+$3)', cost: 4 }
-  ];
-  const highRanks: ReadonlyArray<Rank> = ['A', 'K', 'Q', 'J', '10', '7'];
-  const suits: ReadonlyArray<Suit> = ['♠', '♥', '♣', '♦'];
-
-  const extraCount = s.vouchersBought.includes('overstock') ? 3 : 2;
-  const cardOffers: ShopCardOffer[] = Array.from({ length: extraCount }, () => {
+    // 1 Playing card
+    const enhancements: ReadonlyArray<Exclude<Enhancement, null>> = ['foil', 'holo', 'poly', 'gold'];
+    const highRanks: ReadonlyArray<Rank> = ['A', 'K', 'Q', 'J', '10', '9', '8', '7'];
+    const suits: ReadonlyArray<Suit> = ['♠', '♥', '♣', '♦'];
     const enh = enhancements[Math.floor(Math.random() * enhancements.length)];
     const r = highRanks[Math.floor(Math.random() * highRanks.length)];
     const su = suits[Math.floor(Math.random() * suits.length)];
-    return {
-      shopType: 'card' as const,
-      name: `${r}${su} [${enh.key.toUpperCase()}]`,
-      cost: enh.cost,
-      desc: `Add ${r}${su} with ${enh.label} to Deck.`,
-      cardData: { rank: r, suit: su, enhancement: enh.key },
-      bought: false
-    };
-  });
+    options.push({
+      kind: 'card',
+      data: { rank: r, suit: su, enhancement: enh }
+    });
+  }
+
+  return options;
+}
+
+/* ---------- Shop stock ---------- */
+function generateShopStock(): void {
+  const s = getState();
+
+  const numPacks = s.vouchersBought.includes('overstock') ? 3 : 2;
+  const packsOffered: ShopPackSlot[] = [];
+  const chosenIds: string[] = [];
+
+  // In Ante 1 with 0 jokers, offer a Joker Pack in first slot to help player build early synergy
+  if (s.ante === 1 && s.jokers.length === 0) {
+    const jokerPack = PACK_CATALOG.find(p => p.id === 'pack_joker') || PACK_CATALOG[0];
+    packsOffered.push({ ...jokerPack, shopType: 'pack', bought: false });
+    chosenIds.push(jokerPack.id);
+  }
+
+  while (packsOffered.length < numPacks) {
+    const unpicked = PACK_CATALOG.filter(p => !chosenIds.includes(p.id));
+    const pool = unpicked.length > 0 ? unpicked : PACK_CATALOG;
+    const rolled = shuffle([...pool])[0];
+    packsOffered.push({ ...rolled, shopType: 'pack', bought: false });
+    chosenIds.push(rolled.id);
+  }
 
   // Voucher handling: 1 voucher per ante, persisting across blinds until bought or next ante
   let voucherOffer: ShopVoucher[] = [];
@@ -237,7 +329,7 @@ function generateShopStock(): void {
     }
   }
 
-  setShopStock(shopJokers, [...cardOffers, ...voucherOffer]);
+  setShopStock([], voucherOffer, packsOffered);
 }
 
 /** Hook for special effects (like a future joker or voucher) that allow additional vouchers per ante. */
@@ -295,9 +387,82 @@ function applyVoucher(id: string): void {
   patchState(patch);
 }
 
-function buyShopItem(listName: 'shopJokers' | 'shopExtras', idx: number): ShopActionResult {
+/* ---------- Pack Actions & Opening ---------- */
+function buyAndOpenPack(idx: number): { ok: boolean; reason?: ShopFailReason; pack?: ShopPackSlot; options?: PackCardOption[] } {
   const s = getState();
-  const item: ShopJokerSlot | ShopExtraSlot | undefined = s[listName][idx];
+  const pack = s.shopPacks[idx];
+  if (!pack || pack.bought) return { ok: false, reason: 'invalid' };
+  if (s.money < pack.cost) return { ok: false, reason: 'too_poor' };
+
+  spendMoney(pack.cost);
+
+  // Record money spent
+  if (pack.packType === 'joker') recordMoneySpent('jokers', pack.cost);
+  else if (pack.packType === 'tarot') recordMoneySpent('tarots', pack.cost);
+  else if (pack.packType === 'card') recordMoneySpent('cards', pack.cost);
+  else recordMoneySpent('cards', pack.cost);
+
+  markShopPackBought(idx);
+
+  const options = generatePackOptions(pack);
+  const active: ActivePackOpening = {
+    pack,
+    options,
+    chosen: false
+  };
+
+  patchState({ activePackOpening: active });
+  return { ok: true, pack, options };
+}
+
+function pickPackOption(optIdx: number): { ok: boolean; reason?: ShopFailReason; picked?: PackCardOption } {
+  const s = getState();
+  const active = s.activePackOpening;
+  if (!active || active.chosen) return { ok: false, reason: 'invalid' };
+
+  const opt = active.options[optIdx];
+  if (!opt) return { ok: false, reason: 'invalid' };
+
+  if (opt.kind === 'joker') {
+    if (s.jokers.length >= s.maxJokers) {
+      return { ok: false, reason: 'jokers_full' };
+    }
+    addJoker({ ...opt.data, bonusMult: 0, bonusChips: 0 });
+    if (opt.data.id === 'loan_shark') {
+      addMoney(15);
+      recordMoneyEarned('loanShark', 15);
+      recordJokerTrigger('loan_shark', opt.data.name);
+    }
+  } else if (opt.kind === 'tarot') {
+    if (s.consumables.length >= s.maxConsumables) {
+      return { ok: false, reason: 'tarots_full' };
+    }
+    addConsumable({ ...opt.data });
+  } else if (opt.kind === 'card') {
+    const newCard: Card = { uid: takeNextCardUid(), rank: opt.data.rank, suit: opt.data.suit, enhancement: opt.data.enhancement };
+    addCardToDeck(newCard);
+    addCardToShoe({ ...newCard });
+  }
+
+  active.chosen = true;
+  patchState({ activePackOpening: null });
+  return { ok: true, picked: opt };
+}
+
+function skipPackOpening(): boolean {
+  const s = getState();
+  if (!s.activePackOpening) return false;
+  patchState({ activePackOpening: null });
+  return true;
+}
+
+function buyShopItem(listName: 'shopJokers' | 'shopExtras' | 'shopPacks', idx: number): ShopActionResult {
+  if (listName === 'shopPacks') {
+    const res = buyAndOpenPack(idx);
+    return { ok: res.ok, reason: res.reason };
+  }
+  const s = getState();
+  const item: ShopJokerSlot | ShopExtraSlot | undefined = (s as any)[listName]?.[idx];
   if (!item || item.bought) return { ok: false, reason: 'invalid' };
   if (s.money < item.cost) return { ok: false, reason: 'too_poor' };
 
@@ -305,7 +470,7 @@ function buyShopItem(listName: 'shopJokers' | 'shopExtras', idx: number): ShopAc
     if (s.jokers.length >= s.maxJokers) return { ok: false, reason: 'jokers_full' };
     spendMoney(item.cost);
     recordMoneySpent('jokers', item.cost);
-    markShopItemBought(listName, idx);
+    markShopItemBought(listName as any, idx);
     addJoker({ ...item, bonusMult: item.bonusMult || 0, bonusChips: item.bonusChips || 0 });
     if (item.id === 'loan_shark') {
       addMoney(15);
@@ -316,19 +481,19 @@ function buyShopItem(listName: 'shopJokers' | 'shopExtras', idx: number): ShopAc
     if (s.consumables.length >= s.maxConsumables) return { ok: false, reason: 'tarots_full' };
     spendMoney(item.cost);
     recordMoneySpent('tarots', item.cost);
-    markShopItemBought(listName, idx);
+    markShopItemBought(listName as any, idx);
     addConsumable({ ...item });
   } else if (item.shopType === 'card') {
     spendMoney(item.cost);
     recordMoneySpent('cards', item.cost);
-    markShopItemBought(listName, idx);
+    markShopItemBought(listName as any, idx);
     const newCard: Card = { uid: takeNextCardUid(), ...item.cardData };
     addCardToDeck(newCard);
     addCardToShoe({ ...newCard });
   } else if (item.shopType === 'voucher') {
     spendMoney(item.cost);
     recordMoneySpent('vouchers', item.cost);
-    markShopItemBought(listName, idx);
+    markShopItemBought(listName as any, idx);
     applyVoucher(item.id);
     if (s.currentAnteVoucher && s.currentAnteVoucher.id === item.id) {
       patchState({ currentAnteVoucher: { ...s.currentAnteVoucher, bought: true } });
