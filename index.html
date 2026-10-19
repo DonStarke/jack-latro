@@ -443,6 +443,7 @@
 
     <div class="defeat-actions">
       <button class="btn btn-deal btn-defeat-play" onclick="uiRestartFromDefeat()">↻ NEW GAME</button>
+      <button class="btn btn-secondary btn-defeat-stats" id="btn-defeat-stats" onclick="uiShowStatsModal('DEFEAT')">📊 STATISTICS</button>
       <button class="btn btn-secondary btn-defeat-menu" onclick="showMainMenu()">🏠 MAIN MENU</button>
       <button class="btn btn-secondary btn-defeat-view" id="btn-defeat-view-table" onclick="uiHideModalToViewTable('DEFEAT')">👁️ VIEW TABLE</button>
     </div>
@@ -488,6 +489,9 @@
         <span>🚀 CONTINUE INTO ENDLESS</span>
       </button>
       <div class="victory-sub-actions">
+        <button class="btn btn-secondary btn-victory-stats" id="btn-victory-stats" onclick="uiShowStatsModal('VICTORY')">
+          <span>📊 STATISTICS</span>
+        </button>
         <button class="btn btn-secondary" onclick="uiRestartFromVictory()">
           <span>↻ NEW GAME</span>
         </button>
@@ -498,6 +502,128 @@
           <span>👁️ VIEW TABLE</span>
         </button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- RUN STATISTICS MODAL -->
+<div class="modal-backdrop hidden" id="ui-stats-modal">
+  <div class="modal-box stats-box" onclick="event.stopPropagation()">
+    <div class="stats-header">
+      <div class="stats-badge">RUN DOSSIER</div>
+      <h2 class="stats-title">RUN STATISTICS</h2>
+      <div class="stats-sub" id="ui-stats-status">Run Telemetry & Performance</div>
+    </div>
+
+    <!-- OVERVIEW STATS GRID -->
+    <div class="stats-section-title">📊 RUN OVERVIEW</div>
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="stat-box-lbl">Final Ante</div>
+        <div class="stat-box-val gold-txt" id="ui-stats-ante">Ante 1</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-lbl">Total Score</div>
+        <div class="stat-box-val" id="ui-stats-total-score">0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-lbl">Best Hand Score</div>
+        <div class="stat-box-val gold-txt" id="ui-stats-high-score">0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-lbl">Hands Record</div>
+        <div class="stat-box-val" id="ui-stats-hands-played">0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-lbl">Hand Win Rate</div>
+        <div class="stat-box-val" id="ui-stats-winrate">0.0%</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-lbl">Double Downs</div>
+        <div class="stat-box-val" id="ui-stats-doubles">0/0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-lbl">Cards Dealt</div>
+        <div class="stat-box-val" id="ui-stats-cards-drawn">0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-lbl">Tarots Used</div>
+        <div class="stat-box-val" id="ui-stats-tarots-used">0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-lbl">Vouchers Bought</div>
+        <div class="stat-box-val" id="ui-stats-vouchers-bought">0</div>
+      </div>
+    </div>
+
+    <!-- BASE HAND OUTCOMES BREAKDOWN -->
+    <div class="stats-section-title">🃏 BASE HAND OUTCOMES BREAKDOWN</div>
+    <div class="stats-table-wrapper">
+      <table class="rules-table stats-table">
+        <thead>
+          <tr>
+            <th>Outcome Tier</th>
+            <th style="text-align:center;">Won</th>
+            <th style="text-align:center;">Push</th>
+            <th style="text-align:center;">Lost</th>
+            <th style="text-align:center;">Total</th>
+            <th style="text-align:right;">Win %</th>
+          </tr>
+        </thead>
+        <tbody id="ui-stats-outcomes-tbody">
+        </tbody>
+      </table>
+    </div>
+
+    <!-- MONEY BREAKDOWN -->
+    <div class="stats-section-title">💰 MONEY BREAKDOWN</div>
+    <div class="stats-economy-grid">
+      <div class="stats-eco-col eco-earned">
+        <div class="eco-header">
+          <span>MONEY EARNED</span>
+          <span class="eco-total gold-txt" id="ui-stats-earned-total">+$0</span>
+        </div>
+        <div class="eco-row"><span>Blinds Rewards</span><span id="ui-stats-earned-blinds">+$0</span></div>
+        <div class="eco-row"><span>Unused Deals</span><span id="ui-stats-earned-deals">+$0</span></div>
+        <div class="eco-row"><span>Interest</span><span id="ui-stats-earned-interest">+$0</span></div>
+        <div class="eco-row"><span>In-Hand Cards / Jokers</span><span id="ui-stats-earned-scoring">+$0</span></div>
+        <div class="eco-row"><span>Sales (Jokers/Tarots)</span><span id="ui-stats-earned-sales">+$0</span></div>
+        <div class="eco-row"><span>Loan Shark Buyout</span><span id="ui-stats-earned-loan">+$0</span></div>
+      </div>
+
+      <div class="stats-eco-col eco-spent">
+        <div class="eco-header">
+          <span>MONEY SPENT</span>
+          <span class="eco-total red-txt" id="ui-stats-spent-total">-$0</span>
+        </div>
+        <div class="eco-row"><span>Jokers Purchased</span><span id="ui-stats-spent-jokers">-$0</span></div>
+        <div class="eco-row"><span>Tarots Purchased</span><span id="ui-stats-spent-tarots">-$0</span></div>
+        <div class="eco-row"><span>Shoe Cards Added</span><span id="ui-stats-spent-cards">-$0</span></div>
+        <div class="eco-row"><span>Vouchers Redeemed</span><span id="ui-stats-spent-vouchers">-$0</span></div>
+        <div class="eco-row"><span>Shop Rerolls</span><span id="ui-stats-spent-rerolls">-$0</span></div>
+        <div class="eco-row"><span>Loan Shark Fees</span><span id="ui-stats-spent-loan">-$0</span></div>
+      </div>
+    </div>
+    <div class="stats-eco-summary">
+      <div class="eco-summary-box">
+        <span>Net Cash Flow:</span>
+        <strong id="ui-stats-net-cash" class="gold-txt">$0</strong>
+      </div>
+      <div class="eco-summary-box">
+        <span>Final Cash Balance:</span>
+        <strong id="ui-stats-final-money" class="gold-txt">$0</strong>
+      </div>
+    </div>
+
+    <!-- JOKER TRIGGERS BREAKDOWN -->
+    <div class="stats-section-title">🃏 JOKER ACTIVATIONS & TRIGGERS</div>
+    <div class="stats-jokers-list" id="ui-stats-joker-triggers">
+      <!-- populated dynamically -->
+    </div>
+
+    <!-- MODAL ACTIONS -->
+    <div class="stats-actions">
+      <button class="btn btn-deal btn-stats-back" onclick="uiHideStatsModal()">← RETURN</button>
     </div>
   </div>
 </div>

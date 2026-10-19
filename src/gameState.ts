@@ -123,6 +123,58 @@ interface GameState {
   rerollCost: number;
   shopJokers: ShopJokerSlot[];
   shopExtras: ShopExtraSlot[];
+
+  /** The Ante number for which the current shop voucher was offered. */
+  voucherAnte: number;
+  /** The single voucher offered for this ante (persists across blinds until bought or next ante). */
+  currentAnteVoucher: ShopVoucher | null;
+
+  /** Comprehensive run telemetry and statistics. */
+  runStats: RunStats;
+}
+
+interface OutcomeCounter {
+  label: string;
+  won: number;
+  lost: number;
+  push: number;
+}
+
+interface RunStats {
+  handsPlayed: number;
+  handsWon: number;
+  handsLost: number;
+  handsPushed: number;
+  highestHandScore: number;
+  totalScore: number;
+  doubleDownAttempts: number;
+  doubleDownWins: number;
+  cardsDrawn: number;
+  tarotsUsed: number;
+  vouchersBoughtCount: number;
+
+  outcomes: Record<string, OutcomeCounter>;
+
+  moneyEarned: {
+    blinds: number;
+    unusedDeals: number;
+    interest: number;
+    inHandScoring: number;
+    sales: number;
+    loanShark: number;
+    total: number;
+  };
+  moneySpent: {
+    jokers: number;
+    tarots: number;
+    cards: number;
+    vouchers: number;
+    rerolls: number;
+    loanSharkFees: number;
+    total: number;
+  };
+
+  jokerTriggers: Record<string, { id: string; name: string; count: number }>;
 }
 
 /** Run-start constants (shared with the simulator so it can't drift from the live game). */
@@ -140,6 +192,54 @@ const DEFAULT_BALANCE_CONFIG: BalanceConfig = {
 
 let _balanceConfig: BalanceConfig = { ...DEFAULT_BALANCE_CONFIG };
 let _nextCardUid = 1;
+
+function createInitialRunStats(): RunStats {
+  return {
+    handsPlayed: 0,
+    handsWon: 0,
+    handsLost: 0,
+    handsPushed: 0,
+    highestHandScore: 0,
+    totalScore: 0,
+    doubleDownAttempts: 0,
+    doubleDownWins: 0,
+    cardsDrawn: 0,
+    tarotsUsed: 0,
+    vouchersBoughtCount: 0,
+    outcomes: {
+      CHARLIE: { label: '5-Card Charlie', won: 0, lost: 0, push: 0 },
+      NATURAL: { label: 'Natural Blackjack', won: 0, lost: 0, push: 0 },
+      EXACT21: { label: 'Exact 21', won: 0, lost: 0, push: 0 },
+      CUSHIONED: { label: 'Cushioned 21 (Rubber Table)', won: 0, lost: 0, push: 0 },
+      WIN: { label: 'Standard Win (Beat Dealer)', won: 0, lost: 0, push: 0 },
+      DEALER_BUST: { label: 'Dealer Bust', won: 0, lost: 0, push: 0 },
+      PUSH: { label: 'Push (Tie)', won: 0, lost: 0, push: 0 },
+      PUSH_IT_GOOD: { label: 'Push It Good Win', won: 0, lost: 0, push: 0 },
+      SAFETY_NET: { label: 'Safety Net Salvage', won: 0, lost: 0, push: 0 },
+      BUST: { label: 'Player Bust', won: 0, lost: 0, push: 0 },
+      LOSS: { label: 'Dealer Wins (Outscored)', won: 0, lost: 0, push: 0 }
+    },
+    moneyEarned: {
+      blinds: 0,
+      unusedDeals: 0,
+      interest: 0,
+      inHandScoring: 0,
+      sales: 0,
+      loanShark: 0,
+      total: 0
+    },
+    moneySpent: {
+      jokers: 0,
+      tarots: 0,
+      cards: 0,
+      vouchers: 0,
+      rerolls: 0,
+      loanSharkFees: 0,
+      total: 0
+    },
+    jokerTriggers: {}
+  };
+}
 
 let _state: GameState = {
   ante: 1,
@@ -178,7 +278,11 @@ let _state: GameState = {
 
   rerollCost: 2,
   shopJokers: [],
-  shopExtras: []
+  shopExtras: [],
+
+  voucherAnte: 0,
+  currentAnteVoucher: null,
+  runStats: createInitialRunStats()
 };
 
 /* ---------- Read API ---------- */
@@ -309,6 +413,65 @@ function setShopStock(jokers: ShopJokerSlot[], extras: ShopExtraSlot[]): void {
   _state.shopExtras = extras;
 }
 
+/* ---------- Run Statistics & Telemetry Helpers ---------- */
+function getRunStats(): RunStats {
+  return _state.runStats;
+}
+
+function recordHandOutcomeStats(
+  categoryKey: string,
+  resultType: 'won' | 'lost' | 'push',
+  handScore: number,
+  cardsCount: number,
+  isDouble: boolean
+): void {
+  const stats = _state.runStats;
+  stats.handsPlayed++;
+  stats.totalScore += handScore;
+  if (handScore > stats.highestHandScore) {
+    stats.highestHandScore = handScore;
+  }
+  stats.cardsDrawn += cardsCount;
+  if (isDouble) {
+    stats.doubleDownAttempts++;
+    if (resultType === 'won') {
+      stats.doubleDownWins++;
+    }
+  }
+  if (resultType === 'won') stats.handsWon++;
+  else if (resultType === 'push') stats.handsPushed++;
+  else stats.handsLost++;
+
+  if (stats.outcomes[categoryKey]) {
+    stats.outcomes[categoryKey][resultType]++;
+  }
+}
+
+function recordJokerTrigger(id: string, name?: string): void {
+  const stats = _state.runStats;
+  if (!stats.jokerTriggers[id]) {
+    let resolvedName = name;
+    if (!resolvedName && typeof JOKER_CATALOG !== 'undefined') {
+      const found = JOKER_CATALOG.find(j => j.id === id);
+      if (found) resolvedName = found.name;
+    }
+    stats.jokerTriggers[id] = { id, name: resolvedName || id, count: 0 };
+  }
+  stats.jokerTriggers[id].count++;
+}
+
+function recordMoneyEarned(category: keyof RunStats['moneyEarned'], amount: number): void {
+  if (amount <= 0 || category === 'total') return;
+  _state.runStats.moneyEarned[category] += amount;
+  _state.runStats.moneyEarned.total += amount;
+}
+
+function recordMoneySpent(category: keyof RunStats['moneySpent'], amount: number): void {
+  if (amount <= 0 || category === 'total') return;
+  _state.runStats.moneySpent[category] += amount;
+  _state.runStats.moneySpent.total += amount;
+}
+
 /* ---------- Lifecycle ---------- */
 /** Resets everything that belongs to a single run. The deck is supplied by deckEngine. */
 function resetRunState(freshDeck: Card[]): void {
@@ -326,4 +489,7 @@ function resetRunState(freshDeck: Card[]): void {
   _state.inShop = false;
   _state.isDealing = false;
   _state.endlessMode = false;
+  _state.voucherAnte = 0;
+  _state.currentAnteVoucher = null;
+  _state.runStats = createInitialRunStats();
 }

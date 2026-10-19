@@ -399,15 +399,20 @@ function buildScoreEquationHTML(res: ScoreResult, playerHand: ReadonlyArray<Card
     } else if (step.deltaMult) {
       bracket = `+${formatScoringVal(step.deltaMult)}<span class="eq-m">m</span>`;
     }
+    if (step.deltaMoney && step.deltaMoney > 0) {
+      bracket += `+$${step.deltaMoney}`;
+    }
     if (bracket) {
       parts.push(`${name}[${bracket}]`);
     }
   }
 
-  // 4. Double Down:
+  // 4. Double Down / Double or Nothing:
   const doubleStep = res.steps.find(s => s.kind === 'double');
   if (doubleStep) {
-    parts.push(`Double Down[×2<span class="eq-m">m</span>]`);
+    const dMult = formatScoringVal(doubleStep.deltaMult || 2);
+    const dName = (doubleStep.deltaMult === 3 || (doubleStep.sourceName && doubleStep.sourceName.includes('Double or Nothing'))) ? 'Double or Nothing' : 'Double Down';
+    parts.push(`${dName}[×${dMult}<span class="eq-m">m</span>]`);
   }
 
   const leftHandSide = parts.join(' + ');
@@ -506,10 +511,14 @@ function renderScoringBanner(
       else if (step.deltaChips && step.deltaMult) bVal = `+${formatScoringVal(step.deltaChips)}c+${formatScoringVal(step.deltaMult)}m`;
       else if (step.deltaChips) bVal = `+${formatScoringVal(step.deltaChips)}c`;
       else if (step.deltaMult) bVal = `+${formatScoringVal(step.deltaMult)}m`;
+      if (step.deltaMoney && step.deltaMoney > 0) bVal += `+$${step.deltaMoney}`;
       if (bVal) parts.push(`${name}[${bVal}]`);
     }
-    if (res.steps.some(s => s.kind === 'double')) {
-      parts.push(`Double Down[×2m]`);
+    const doubleStep = res.steps.find(s => s.kind === 'double');
+    if (doubleStep) {
+      const dMult = formatScoringVal(doubleStep.deltaMult || 2);
+      const dName = (doubleStep.deltaMult === 3 || (doubleStep.sourceName && doubleStep.sourceName.includes('Double or Nothing'))) ? 'Double or Nothing' : 'Double Down';
+      parts.push(`${dName}[×${dMult}m]`);
     }
   }
 
@@ -1178,6 +1187,7 @@ async function playerHit(): Promise<void> {
     state.jokers.forEach((j, idx) => {
       if (j.id === 'daredevil') {
         patchJoker('daredevil', { bonusMult: (j.bonusMult || 0) + gain });
+        recordJokerTrigger('daredevil', 'Daredevil');
         scaledAny = true;
         popJokerCard(idx);
       }
@@ -1489,12 +1499,31 @@ async function resolveRound(): Promise<void> {
         }
 
       } else if (step.kind === 'double') {
-        setBanner('Double Down: ×2 Mult!', 'Tap table felt to skip');
+        const isDoN = step.deltaMult === 3 || step.jokerId === 'double_or_nothing';
+        const bannerTitle = isDoN ? 'Double or Nothing: ×3 Mult!' : 'Double Down: ×2 Mult!';
+        setBanner(bannerTitle, 'Tap table felt to skip');
+
+        let tokenSource: HTMLElement = $('ui-table-felt');
+        let jEl: HTMLElement | null = null;
+        if (isDoN) {
+          const jIdx = step.jokerIndex !== undefined ? step.jokerIndex : getState().jokers.findIndex(j => j.id === 'double_or_nothing');
+          if (jIdx !== -1 && jRow.children[jIdx]) {
+            jEl = jRow.children[jIdx] as HTMLElement;
+            tokenSource = jEl;
+            jRow.classList.add('joker-row-scoring');
+            jEl.classList.add('scoring-focus');
+            if (typeof jEl.scrollIntoView === 'function') {
+              jEl.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            }
+            playCardSlideSound();
+          }
+        }
+
         spawnFloatingToken(
-          $('ui-table-felt'),
+          tokenSource,
           multEl,
           'mult-x',
-          '×2m',
+          `×${formatScoringVal(step.deltaMult || 2)}m`,
           () => {
             void animateNumberRoll(multEl, curDisplayMult, targetMult, Math.round(300 / scoringSpeedMultiplier), false);
             curDisplayMult = targetMult;
@@ -1505,6 +1534,10 @@ async function resolveRound(): Promise<void> {
           }
         );
         await sleepScore(240);
+        if (jEl) {
+          jEl.classList.remove('scoring-focus');
+          jRow.classList.remove('joker-row-scoring');
+        }
       }
     }
 
@@ -1520,6 +1553,53 @@ async function resolveRound(): Promise<void> {
   addMoney(res.moneyGained);
   addRoundScore(res.handScore);
   patchState({ isDealing: false });
+
+  // Telemetry: record hand outcome, scores & cards drawn
+  let outcomeCategory = 'LOSS';
+  if (res.rawOutcomeType === 'CHARLIE') outcomeCategory = 'CHARLIE';
+  else if (res.rawOutcomeType === 'NATURAL') outcomeCategory = 'NATURAL';
+  else if (res.cushioned) outcomeCategory = 'CUSHIONED';
+  else if (res.safetyNetSaved) outcomeCategory = 'SAFETY_NET';
+  else if (res.outcomeLabel.includes('PUSH IT GOOD')) outcomeCategory = 'PUSH_IT_GOOD';
+  else if (res.rawOutcomeType === 'EXACT21') outcomeCategory = 'EXACT21';
+  else if (res.rawOutcomeType === 'WIN') outcomeCategory = res.dBust ? 'DEALER_BUST' : 'WIN';
+  else if (res.rawOutcomeType === 'PUSH') outcomeCategory = 'PUSH';
+  else if (res.rawOutcomeType === 'BUST') outcomeCategory = 'BUST';
+  else outcomeCategory = 'LOSS';
+
+  const resType: 'won' | 'lost' | 'push' = res.isWin ? 'won' : (res.outcomeType === 'PUSH' ? 'push' : 'lost');
+  recordHandOutcomeStats(
+    outcomeCategory,
+    resType,
+    res.handScore,
+    state.playerHand.length + state.dealerHand.length,
+    state.doubledDown
+  );
+
+  if (res.moneyGained > 0) {
+    recordMoneyEarned('inHandScoring', res.moneyGained);
+  }
+
+  // Record joker triggers from this hand
+  for (const step of res.steps) {
+    if (step.kind === 'joker' && step.jokerId) {
+      recordJokerTrigger(step.jokerId, step.sourceName);
+    } else if (step.kind === 'double' && step.jokerId === 'double_or_nothing') {
+      recordJokerTrigger('double_or_nothing', 'Double or Nothing');
+    }
+  }
+  if (res.cushioned) {
+    recordJokerTrigger('bust_cushion', 'Bust Cushion');
+  }
+  if (res.safetyNetSaved) {
+    recordJokerTrigger('safety_net', 'Safety Net');
+  }
+  if (res.rawOutcomeType === 'PUSH' && state.jokers.some(j => j.id === 'push_it_good')) {
+    recordJokerTrigger('push_it_good', 'Push It Good');
+  }
+  if (res.chipStackerNewBonus !== null) {
+    recordJokerTrigger('chip_stacker', 'Chip Stacker');
+  }
 
   if (state.roundScore >= state.targetScore) {
     const payout = computeBlindPayout();
@@ -1750,6 +1830,127 @@ function closeTableInspection(): void {
   tableInspectionActiveModal = null;
 }
 
+/* ---------- Run Statistics Screen ---------- */
+let statsReturnModal: 'VICTORY' | 'DEFEAT' | null = null;
+
+function uiShowStatsModal(source: 'VICTORY' | 'DEFEAT'): void {
+  statsReturnModal = source;
+  if (source === 'VICTORY') {
+    hideVictoryModal();
+  } else {
+    hideDefeatModal();
+  }
+  renderRunStats();
+  const m = $('ui-stats-modal');
+  if (m) m.classList.remove('hidden');
+}
+
+function uiHideStatsModal(): void {
+  const m = $('ui-stats-modal');
+  if (m) m.classList.add('hidden');
+  const returnTo = statsReturnModal;
+  statsReturnModal = null;
+  if (returnTo === 'VICTORY') {
+    showVictoryModal();
+  } else if (returnTo === 'DEFEAT') {
+    showDefeatModal();
+  }
+}
+
+function renderRunStats(): void {
+  const state = getState();
+  const stats = state.runStats;
+
+  // Header / Status
+  const statusEl = $('ui-stats-status');
+  if (statusEl) {
+    if (state.ante >= 8 && state.blindIndex === 2 && !state.endlessMode && state.roundScore >= state.targetScore) {
+      statusEl.innerHTML = `<span class="gold-txt" style="font-weight:900;">👑 ANTE 8 VICTORY</span>`;
+    } else if (state.endlessMode) {
+      statusEl.innerHTML = `<span class="gold-txt" style="font-weight:900;">🚀 ENDLESS MODE (Ante ${state.ante})</span>`;
+    } else {
+      statusEl.innerHTML = `<span style="color:#f87171; font-weight:900;">💀 RUN OVER (Ante ${state.ante})</span>`;
+    }
+  }
+
+  // Overview stats
+  const setTxt = (id: string, val: string) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+  };
+
+  const winRate = stats.handsPlayed > 0 ? ((stats.handsWon / stats.handsPlayed) * 100).toFixed(1) + '%' : '0.0%';
+  const dblWinRate = stats.doubleDownAttempts > 0 ? ((stats.doubleDownWins / stats.doubleDownAttempts) * 100).toFixed(1) + '%' : 'N/A';
+
+  setTxt('ui-stats-ante', `Ante ${state.ante} (${getBlindName()})`);
+  setTxt('ui-stats-total-score', stats.totalScore.toLocaleString());
+  setTxt('ui-stats-high-score', stats.highestHandScore.toLocaleString());
+  setTxt('ui-stats-hands-played', `${stats.handsPlayed} (W: ${stats.handsWon} / L: ${stats.handsLost} / P: ${stats.handsPushed})`);
+  setTxt('ui-stats-winrate', winRate);
+  setTxt('ui-stats-doubles', `${stats.doubleDownWins}/${stats.doubleDownAttempts} (${dblWinRate})`);
+  setTxt('ui-stats-cards-drawn', String(stats.cardsDrawn));
+  setTxt('ui-stats-tarots-used', String(stats.tarotsUsed));
+  setTxt('ui-stats-vouchers-bought', String(stats.vouchersBoughtCount));
+
+  // Hand Outcomes Table
+  const outcomesTbody = $('ui-stats-outcomes-tbody');
+  if (outcomesTbody) {
+    const rows = Object.entries(stats.outcomes).map(([k, o]) => {
+      const total = o.won + o.lost + o.push;
+      const pct = total > 0 ? ((o.won / total) * 100).toFixed(0) + '%' : '-';
+      const rowClass = total === 0 ? 'class="stats-row-empty"' : '';
+      return `
+        <tr ${rowClass}>
+          <td style="font-weight:600;">${o.label}</td>
+          <td class="gold-txt" style="text-align:center;">${o.won}</td>
+          <td style="text-align:center; color:#94a3b8;">${o.push}</td>
+          <td style="text-align:center; color:#f87171;">${o.lost}</td>
+          <td style="text-align:center; font-weight:700;">${total}</td>
+          <td style="text-align:right; font-weight:700;">${pct}</td>
+        </tr>
+      `;
+    }).join('');
+    outcomesTbody.innerHTML = rows;
+  }
+
+  // Money Breakdown
+  setTxt('ui-stats-earned-total', `+$${stats.moneyEarned.total}`);
+  setTxt('ui-stats-earned-blinds', `+$${stats.moneyEarned.blinds}`);
+  setTxt('ui-stats-earned-deals', `+$${stats.moneyEarned.unusedDeals}`);
+  setTxt('ui-stats-earned-interest', `+$${stats.moneyEarned.interest}`);
+  setTxt('ui-stats-earned-scoring', `+$${stats.moneyEarned.inHandScoring}`);
+  setTxt('ui-stats-earned-sales', `+$${stats.moneyEarned.sales}`);
+  setTxt('ui-stats-earned-loan', `+$${stats.moneyEarned.loanShark}`);
+
+  setTxt('ui-stats-spent-total', `-$${stats.moneySpent.total}`);
+  setTxt('ui-stats-spent-jokers', `-$${stats.moneySpent.jokers}`);
+  setTxt('ui-stats-spent-tarots', `-$${stats.moneySpent.tarots}`);
+  setTxt('ui-stats-spent-cards', `-$${stats.moneySpent.cards}`);
+  setTxt('ui-stats-spent-vouchers', `-$${stats.moneySpent.vouchers}`);
+  setTxt('ui-stats-spent-rerolls', `-$${stats.moneySpent.rerolls}`);
+  setTxt('ui-stats-spent-loan', `-$${stats.moneySpent.loanSharkFees}`);
+
+  const netCash = stats.moneyEarned.total - stats.moneySpent.total;
+  setTxt('ui-stats-net-cash', (netCash >= 0 ? `+$${netCash}` : `-$${Math.abs(netCash)}`));
+  setTxt('ui-stats-final-money', `$${state.money}`);
+
+  // Joker Triggers Breakdown
+  const jokerTriggersEl = $('ui-stats-joker-triggers');
+  if (jokerTriggersEl) {
+    const list = Object.values(stats.jokerTriggers).sort((a, b) => b.count - a.count);
+    if (list.length === 0) {
+      jokerTriggersEl.innerHTML = '<div style="color:#94a3b8; font-style:italic; padding:6px 0;">No Jokers triggered during this run.</div>';
+    } else {
+      jokerTriggersEl.innerHTML = list.map(jt => `
+        <div class="joker-trigger-card">
+          <div class="jt-name">🃏 ${jt.name}</div>
+          <div class="jt-badge">${jt.count} trigger${jt.count === 1 ? '' : 's'}</div>
+        </div>
+      `).join('');
+    }
+  }
+}
+
 (window as any).showMainMenu = showMainMenu;
 (window as any).uiStartGameFromMenu = uiStartGameFromMenu;
 (window as any).showDefeatModal = showDefeatModal;
@@ -1762,6 +1963,9 @@ function closeTableInspection(): void {
 (window as any).uiHideModalToViewTable = uiHideModalToViewTable;
 (window as any).uiRestoreModal = uiRestoreModal;
 (window as any).closeTableInspection = closeTableInspection;
+(window as any).uiShowStatsModal = uiShowStatsModal;
+(window as any).uiHideStatsModal = uiHideStatsModal;
+(window as any).renderRunStats = renderRunStats;
 (window as any).toggleCogModal = toggleCogModal;
 (window as any).toggleBlindModal = toggleBlindModal;
 (window as any).toggleDeckModal = toggleDeckModal;

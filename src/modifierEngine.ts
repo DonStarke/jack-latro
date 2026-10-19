@@ -107,6 +107,7 @@ interface ScoreStep {
   mult: number;
   cardIndex?: number;
   jokerIndex?: number;
+  jokerId?: string;
   popLabel?: string;
   deltaChips?: number;
   deltaMult?: number;
@@ -299,7 +300,7 @@ function scoreHand(ctx: ScoreContext): ScoreResult {
         // Tie bonus is applied in base scoring on PUSH hands
         break;
       case 'blackjack_tycoon':
-        if (pTotal === 21) { mult *= 2; money += 2; logs.push('Tycoon ×2m/+$2'); triggered = true; }
+        if (pTotal === 21) { mult = round1(mult * 2); money += 2; logs.push('Tycoon ×2m/+$2'); triggered = true; }
         break;
       case 'the_shark':
         if (!pBust && (dBust || (pTotal - dTotal >= 3))) { mult = round1(mult * 1.5); logs.push('Shark ×1.5m'); triggered = true; }
@@ -325,7 +326,7 @@ function scoreHand(ctx: ScoreContext): ScoreResult {
         break;
       }
       case 'minimalist':
-        if (hand.length === 2 && outcomeType !== 'PUSH') { mult = round1(mult * 1.8); logs.push('Minimalist ×1.8m'); triggered = true; }
+        if (isWin && hand.length === 2) { mult = round1(mult * 1.8); logs.push('Minimalist ×1.8m'); triggered = true; }
         break;
       case 'hot_hand': {
         const hm = j.bonusMult || 0;
@@ -417,6 +418,7 @@ function scoreHand(ctx: ScoreContext): ScoreResult {
       const dMult = isX ? (prevMult > 0 ? round1(mult / prevMult) : mult) : round1(mult - prevMult);
       steps.push({
         kind: 'joker',
+        jokerId: j.id,
         jokerIndex: jIdx,
         chips: Math.round(chips),
         mult: round1(mult),
@@ -430,11 +432,22 @@ function scoreHand(ctx: ScoreContext): ScoreResult {
   });
 
   if (ctx.doubledDown && !safetyNetSaved) {
-    const dblMult = owns('double_or_nothing') ? 3 : 2;
+    const hasDoN = owns('double_or_nothing');
+    const dblMult = hasDoN ? 3 : 2;
     mult = round1(mult * dblMult);
-    const label = owns('double_or_nothing') ? 'Double or Nothing ×3m' : 'Double Down ×2m';
+    const label = hasDoN ? 'Double or Nothing ×3m' : 'Double Down ×2m';
     logs.push(label);
-    steps.push({ kind: 'double', chips: Math.round(chips), mult: round1(mult), deltaMult: dblMult, isXMult: true, sourceName: label });
+    const donIdx = hasDoN ? ctx.jokers.findIndex(j => j.id === 'double_or_nothing') : undefined;
+    steps.push({
+      kind: 'double',
+      chips: Math.round(chips),
+      mult: round1(mult),
+      deltaMult: dblMult,
+      isXMult: true,
+      sourceName: label,
+      jokerId: hasDoN ? 'double_or_nothing' : undefined,
+      jokerIndex: donIdx !== undefined && donIdx >= 0 ? donIdx : undefined
+    });
   }
 
   result.chips = Math.round(chips);

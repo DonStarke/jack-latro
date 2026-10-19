@@ -125,6 +125,14 @@ function cashOutAndEnterShop(): PendingPayout | null {
 
   const payout = s.pendingPayout;
   addMoney(payout.totalEarned);
+  recordMoneyEarned('blinds', payout.blindReward);
+  recordMoneyEarned('unusedDeals', payout.handBonus);
+  recordMoneyEarned('interest', payout.interest);
+
+  if (s.jokers.some(j => j.id === 'loan_shark')) {
+    recordMoneySpent('loanSharkFees', 1);
+    recordJokerTrigger('loan_shark', 'Loan Shark');
+  }
 
   let blindIndex = s.blindIndex + 1;
   let ante = s.ante;
@@ -209,12 +217,32 @@ function generateShopStock(): void {
     };
   });
 
-  const availVouchers = VOUCHER_CATALOG.filter(v => !s.vouchersBought.includes(v.id));
-  const voucherOffer: ShopVoucher[] = availVouchers.length > 0
-    ? [{ ...shuffle(availVouchers)[0], shopType: 'voucher' as const, bought: false }]
-    : [];
+  // Voucher handling: 1 voucher per ante, persisting across blinds until bought or next ante
+  let voucherOffer: ShopVoucher[] = [];
+  if (s.voucherAnte !== s.ante) {
+    // New ante! Refresh voucher offer
+    const availVouchers = VOUCHER_CATALOG.filter(v => !s.vouchersBought.includes(v.id));
+    if (availVouchers.length > 0) {
+      const rolled = shuffle(availVouchers)[0];
+      const newVoucher: ShopVoucher = { ...rolled, shopType: 'voucher' as const, bought: false };
+      patchState({ voucherAnte: s.ante, currentAnteVoucher: newVoucher });
+      voucherOffer = [newVoucher];
+    } else {
+      patchState({ voucherAnte: s.ante, currentAnteVoucher: null });
+    }
+  } else if (s.currentAnteVoucher) {
+    // Same ante: offer the existing voucher unless already bought (unless a special effect allows another)
+    if (!s.currentAnteVoucher.bought || canOfferExtraVoucher(s)) {
+      voucherOffer = [{ ...s.currentAnteVoucher }];
+    }
+  }
 
   setShopStock(shopJokers, [...cardOffers, ...voucherOffer]);
+}
+
+/** Hook for special effects (like a future joker or voucher) that allow additional vouchers per ante. */
+function canOfferExtraVoucher(s: GameState): boolean {
+  return false;
 }
 
 /* ---------- Shop actions ---------- */
@@ -228,6 +256,7 @@ function rerollShop(): ShopActionResult {
   const s = getState();
   if (s.money < s.rerollCost) return { ok: false, reason: 'too_poor' };
   spendMoney(s.rerollCost);
+  recordMoneySpent('rerolls', s.rerollCost);
   patchState({ rerollCost: s.rerollCost + 1 });
   generateShopStock();
   return { ok: true };
@@ -275,26 +304,36 @@ function buyShopItem(listName: 'shopJokers' | 'shopExtras', idx: number): ShopAc
   if (item.shopType === 'joker') {
     if (s.jokers.length >= s.maxJokers) return { ok: false, reason: 'jokers_full' };
     spendMoney(item.cost);
+    recordMoneySpent('jokers', item.cost);
     markShopItemBought(listName, idx);
     addJoker({ ...item, bonusMult: item.bonusMult || 0, bonusChips: item.bonusChips || 0 });
     if (item.id === 'loan_shark') {
       addMoney(15);
+      recordMoneyEarned('loanShark', 15);
+      recordJokerTrigger('loan_shark', item.name);
     }
   } else if (item.shopType === 'tarot') {
     if (s.consumables.length >= s.maxConsumables) return { ok: false, reason: 'tarots_full' };
     spendMoney(item.cost);
+    recordMoneySpent('tarots', item.cost);
     markShopItemBought(listName, idx);
     addConsumable({ ...item });
   } else if (item.shopType === 'card') {
     spendMoney(item.cost);
+    recordMoneySpent('cards', item.cost);
     markShopItemBought(listName, idx);
     const newCard: Card = { uid: takeNextCardUid(), ...item.cardData };
     addCardToDeck(newCard);
     addCardToShoe({ ...newCard });
   } else if (item.shopType === 'voucher') {
     spendMoney(item.cost);
+    recordMoneySpent('vouchers', item.cost);
     markShopItemBought(listName, idx);
     applyVoucher(item.id);
+    if (s.currentAnteVoucher && s.currentAnteVoucher.id === item.id) {
+      patchState({ currentAnteVoucher: { ...s.currentAnteVoucher, bought: true } });
+    }
+    _state.runStats.vouchersBoughtCount++;
   }
   return { ok: true };
 }
@@ -306,12 +345,14 @@ function sellJoker(index: number): number | null {
   if (!j) return null;
   const value = getJokerSellValue(j);
   addMoney(value);
+  recordMoneyEarned('sales', value);
   return value;
 }
 
 function sellConsumable(index: number): boolean {
   if (!removeConsumableAt(index)) return false;
   addMoney(1);
+  recordMoneyEarned('sales', 1);
   return true;
 }
 
@@ -351,7 +392,8 @@ function useConsumable(index: number): ConsumableResult {
     }
   } else if (c.id === 'double_vision') {
     patchState({ doubledDown: true });
-    message = 'Double Vision: Hand Doubled Down (×2 Mult)!';
+    const dblMult = s.jokers.some(j => j.id === 'double_or_nothing') ? 3 : 2;
+    message = `Double Vision: Hand Doubled Down (×${dblMult} Mult)!`;
   } else if (c.id === 'polychrome_dice') {
     const firstCard = s.playerHand[0];
     if (firstCard) {
@@ -387,6 +429,7 @@ function useConsumable(index: number): ConsumableResult {
     }
   }
 
+  _state.runStats.tarotsUsed++;
   removeConsumableAt(index);
   return { ok: true, message };
 }

@@ -25,6 +25,9 @@ interface SimRun {
   jokers: JokerInstance[];
   vouchers: string[];
   consumables: string[];
+  voucherAnte?: number;
+  anteVoucher?: VoucherDef | null;
+  anteVoucherBought?: boolean;
   handsWonInBlind?: number;
   previousHandTotal?: number | null;
 }
@@ -286,17 +289,25 @@ function simulateExpertShopVisit(
     'extra_hand',
     'overstock'
   ];
-  const availVouchers = VOUCHER_CATALOG
-    .filter(v => !simRun.vouchers.includes(v.id))
-    .sort((a, b) => voucherPriority.indexOf(a.id) - voucherPriority.indexOf(b.id));
+  if (simRun.voucherAnte !== simRun.ante) {
+    simRun.voucherAnte = simRun.ante;
+    simRun.anteVoucherBought = false;
+    const availVouchers = VOUCHER_CATALOG
+      .filter(v => !simRun.vouchers.includes(v.id))
+      .sort((a, b) => voucherPriority.indexOf(a.id) - voucherPriority.indexOf(b.id));
+    simRun.anteVoucher = availVouchers.length > 0 ? availVouchers[0] : null;
+    if (simRun.anteVoucher) {
+      voucherStats[simRun.anteVoucher.id].offered++;
+    }
+  }
 
-  if (availVouchers.length > 0) {
-    const v = availVouchers[0];
-    voucherStats[v.id].offered++;
+  if (simRun.anteVoucher && !simRun.anteVoucherBought) {
+    const v = simRun.anteVoucher;
     const reserve = (v.id === 'joker_slot' || v.id === 'clearance_sale') ? 0 : Math.floor(targetBank * 0.5);
     if (simRun.money >= v.cost + reserve) {
       simRun.money -= v.cost;
       simRun.vouchers.push(v.id);
+      simRun.anteVoucherBought = true;
       voucherStats[v.id].bought++;
       const d = getVoucherDeltas(v.id);
       simRun.maxHands += d.maxHands || 0;
@@ -446,13 +457,22 @@ function simulateShopVisit(
     return;
   }
 
-  const availVouchers = VOUCHER_CATALOG.filter(v => !simRun.vouchers.includes(v.id));
-  if (availVouchers.length > 0) {
-    const v = availVouchers[Math.floor(Math.random() * availVouchers.length)];
-    voucherStats[v.id].offered++;
+  if (simRun.voucherAnte !== simRun.ante) {
+    simRun.voucherAnte = simRun.ante;
+    simRun.anteVoucherBought = false;
+    const availVouchers = VOUCHER_CATALOG.filter(v => !simRun.vouchers.includes(v.id));
+    simRun.anteVoucher = availVouchers.length > 0 ? availVouchers[Math.floor(Math.random() * availVouchers.length)] : null;
+    if (simRun.anteVoucher) {
+      voucherStats[simRun.anteVoucher.id].offered++;
+    }
+  }
+
+  if (simRun.anteVoucher && !simRun.anteVoucherBought) {
+    const v = simRun.anteVoucher;
     if (simRun.money >= v.cost + 2) {
       simRun.money -= v.cost;
       simRun.vouchers.push(v.id);
+      simRun.anteVoucherBought = true;
       voucherStats[v.id].bought++;
       const d = getVoucherDeltas(v.id);
       simRun.maxHands += d.maxHands || 0;
