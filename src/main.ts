@@ -1922,47 +1922,94 @@ function renderRunStats(): void {
   setTxt('ui-stats-tarots-used', String(stats.tarotsUsed));
   setTxt('ui-stats-vouchers-bought', String(stats.vouchersBoughtCount));
 
-  // Hand Outcomes Table
-  const outcomesTbody = $('ui-stats-outcomes-tbody');
-  if (outcomesTbody) {
+  // Hand Outcomes Breakdown Grid
+  const winsListEl = $('ui-stats-outcomes-wins-list');
+  const lossesListEl = $('ui-stats-outcomes-losses-list');
+  const winsTotalEl = $('ui-stats-outcomes-wins-total');
+  const lossesTotalEl = $('ui-stats-outcomes-losses-total');
+
+  if (winsTotalEl) {
+    winsTotalEl.textContent = `${stats.handsWon} Won`;
+  }
+  if (lossesTotalEl) {
+    lossesTotalEl.textContent = `${stats.handsLost} Lost • ${stats.handsPushed} Push`;
+  }
+
+  if (winsListEl && lossesListEl) {
     if (stats.handsPlayed === 0) {
-      outcomesTbody.innerHTML = `
-        <tr>
-          <td colspan="6" style="text-align:center; color:#94a3b8; font-style:italic; padding:16px;">
-            No hands recorded for this run yet.
-          </td>
-        </tr>
+      winsListEl.innerHTML = `
+        <div style="color:#94a3b8; font-style:italic; font-size:11px; padding:6px 0; text-align:center;">
+          No winning hands recorded yet.
+        </div>
+      `;
+      lossesListEl.innerHTML = `
+        <div style="color:#94a3b8; font-style:italic; font-size:11px; padding:6px 0; text-align:center;">
+          No losses or ties recorded yet.
+        </div>
       `;
     } else {
-      // Sort outcomes so active outcomes (hands played > 0) appear prominently at the top
-      const entries = Object.entries(stats.outcomes).sort((a, b) => {
-        const totalA = a[1].won + a[1].lost + a[1].push;
-        const totalB = b[1].won + b[1].lost + b[1].push;
-        return totalB - totalA;
+      const winningDefinitions: { key: string; label: string }[] = [
+        { key: 'NATURAL', label: 'Natural Blackjack' },
+        { key: 'EXACT21', label: 'Exact 21' },
+        { key: 'WIN', label: 'Standard Win (Beat Dealer)' },
+        { key: 'DEALER_BUST', label: 'Dealer Bust' },
+        { key: 'CHARLIE', label: '5-Card Charlie' },
+        { key: 'CUSHIONED', label: 'Cushioned 21 (Rubber Table)' },
+        { key: 'PUSH_IT_GOOD', label: 'Push It Good Win' },
+        { key: 'SAFETY_NET', label: 'Safety Net Salvage' },
+      ];
+
+      // Any extra non-standard outcome recorded in stats.outcomes
+      const knownKeys = new Set([...winningDefinitions.map(d => d.key), 'BUST', 'LOSS', 'PUSH']);
+      for (const [k, o] of Object.entries(stats.outcomes)) {
+        if (!knownKeys.has(k)) {
+          winningDefinitions.push({ key: k, label: o.label || k });
+        }
+      }
+
+      winningDefinitions.sort((a, b) => {
+        const countA = stats.outcomes[a.key]?.won || 0;
+        const countB = stats.outcomes[b.key]?.won || 0;
+        return countB - countA;
       });
 
-      const rows = entries.map(([k, o]) => {
-        const total = o.won + o.lost + o.push;
-        const pct = total > 0 ? ((o.won / total) * 100).toFixed(0) + '%' : '-';
-        const rowClass = total === 0 ? 'class="stats-row-empty"' : 'class="stats-row-active"';
-        const wonVal = o.won > 0 ? `<span class="gold-txt" style="font-weight:800;">${o.won}</span>` : `<span style="color:#64748b;">0</span>`;
-        const pushVal = o.push > 0 ? `<span style="color:#e2e8f0; font-weight:700;">${o.push}</span>` : `<span style="color:#64748b;">0</span>`;
-        const lostVal = o.lost > 0 ? `<span style="color:#f87171; font-weight:700;">${o.lost}</span>` : `<span style="color:#64748b;">0</span>`;
-        const totalVal = total > 0 ? `<strong>${total}</strong>` : `<span style="color:#64748b;">0</span>`;
-        const pctVal = total > 0 ? `<strong style="color:var(--gold);">${pct}</strong>` : `<span style="color:#64748b;">-</span>`;
-
+      winsListEl.innerHTML = winningDefinitions.map(item => {
+        const count = stats.outcomes[item.key]?.won || 0;
+        const isActive = count > 0;
+        const rowClass = isActive ? 'eco-row stats-row-active' : 'eco-row stats-row-empty';
+        const valHtml = isActive
+          ? `<span class="gold-txt" style="font-weight:800;">${count}</span>`
+          : `<span style="color:#64748b;">0</span>`;
         return `
-          <tr ${rowClass}>
-            <td style="font-weight:600;">${o.label}</td>
-            <td style="text-align:center;">${wonVal}</td>
-            <td style="text-align:center;">${pushVal}</td>
-            <td style="text-align:center;">${lostVal}</td>
-            <td style="text-align:center;">${totalVal}</td>
-            <td style="text-align:right;">${pctVal}</td>
-          </tr>
+          <div class="${rowClass}">
+            <span style="${isActive ? 'color:#f8fafc; font-weight:600;' : ''}">${item.label}</span>
+            ${valHtml}
+          </div>
         `;
       }).join('');
-      outcomesTbody.innerHTML = rows;
+
+      const lossDefinitions: { key: string; label: string; count: number; isLoss: boolean }[] = [
+        { key: 'BUST', label: 'Player Bust', count: stats.outcomes['BUST']?.lost || 0, isLoss: true },
+        { key: 'LOSS', label: 'Dealer Wins (Outscored)', count: stats.outcomes['LOSS']?.lost || 0, isLoss: true },
+        { key: 'PUSH', label: 'Push (Tie)', count: stats.outcomes['PUSH']?.push || 0, isLoss: false },
+      ];
+
+      lossDefinitions.sort((a, b) => b.count - a.count);
+
+      lossesListEl.innerHTML = lossDefinitions.map(item => {
+        const isActive = item.count > 0;
+        const rowClass = isActive ? 'eco-row stats-row-active' : 'eco-row stats-row-empty';
+        const valColor = item.isLoss ? '#f87171' : '#cbd5e1';
+        const valHtml = isActive
+          ? `<span style="color:${valColor}; font-weight:800;">${item.count}</span>`
+          : `<span style="color:#64748b;">0</span>`;
+        return `
+          <div class="${rowClass}">
+            <span style="${isActive ? 'color:#f8fafc; font-weight:600;' : ''}">${item.label}</span>
+            ${valHtml}
+          </div>
+        `;
+      }).join('');
     }
   }
 

@@ -12,7 +12,7 @@
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="styles.css?v=2.1">
+<link rel="stylesheet" href="styles.css?v=2.2">
 <style>
   /* Critical fallback layout: ensures splash screen and modals are immediately fixed and centered */
   .splash-screen {
@@ -558,21 +558,26 @@
 
     <!-- BASE HAND OUTCOMES BREAKDOWN -->
     <div class="stats-section-title">🃏 BASE HAND OUTCOMES BREAKDOWN</div>
-    <div class="stats-table-wrapper">
-      <table class="rules-table stats-table">
-        <thead>
-          <tr>
-            <th>Outcome Tier</th>
-            <th style="text-align:center;">Won</th>
-            <th style="text-align:center;">Push</th>
-            <th style="text-align:center;">Lost</th>
-            <th style="text-align:center;">Total</th>
-            <th style="text-align:right;">Win %</th>
-          </tr>
-        </thead>
-        <tbody id="ui-stats-outcomes-tbody">
-        </tbody>
-      </table>
+    <div class="stats-outcomes-grid">
+      <div class="stats-eco-col eco-earned">
+        <div class="eco-header">
+          <span>WINNING &amp; SCORING HANDS</span>
+          <span class="eco-total gold-txt" id="ui-stats-outcomes-wins-total">0 Won</span>
+        </div>
+        <div id="ui-stats-outcomes-wins-list" class="stats-outcome-list">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <div class="stats-eco-col eco-spent">
+        <div class="eco-header">
+          <span>LOSSES &amp; TIES</span>
+          <span class="eco-total red-txt" id="ui-stats-outcomes-losses-total">0 Lost / 0 Push</span>
+        </div>
+        <div id="ui-stats-outcomes-losses-list" class="stats-outcome-list">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
     </div>
 
     <!-- MONEY BREAKDOWN -->
@@ -641,12 +646,12 @@
 </div>
 
 <!-- Compiled TypeScript (npx.cmd tsc: src/*.ts -> dist/*.js). Plain global scripts; order matters. -->
-<script src="dist/gameState.js?v=2.1"></script>
-<script src="dist/deckEngine.js?v=2.1"></script>
-<script src="dist/modifierEngine.js?v=2.1"></script>
-<script src="dist/shopEngine.js?v=2.1"></script>
-<script src="dist/simulator.js?v=2.1"></script>
-<script src="dist/uiFx.js?v=2.1"></script>
-<script src="dist/main.js?v=2.1"></script>
+<script src="dist/gameState.js?v=2.2"></script>
+<script src="dist/deckEngine.js?v=2.2"></script>
+<script src="dist/modifierEngine.js?v=2.2"></script>
+<script src="dist/shopEngine.js?v=2.2"></script>
+<script src="dist/simulator.js?v=2.2"></script>
+<script src="dist/uiFx.js?v=2.2"></script>
+<script src="dist/main.js?v=2.2"></script>
 </body>
 </html>

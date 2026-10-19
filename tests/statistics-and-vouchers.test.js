@@ -210,7 +210,7 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   // Verify Stats Modal contents
   ck('Stats modal renders Ante info', $('ui-stats-ante').textContent.length > 0);
   ck('Stats modal renders Total Score', $('ui-stats-total-score').textContent.length > 0);
-  ck('Stats modal renders Outcomes table tbody', !!$('ui-stats-outcomes-tbody'));
+  ck('Stats modal renders Outcomes breakdown grid', !!$('ui-stats-outcomes-wins-list') && !!$('ui-stats-outcomes-losses-list'));
   ck('Stats modal renders Money Earned section', $('ui-stats-earned-total').textContent.startsWith('+$'));
   ck('Stats modal renders Money Spent section', $('ui-stats-spent-total').textContent.startsWith('-$'));
   ck('Stats modal renders Joker triggers container', !!$('ui-stats-joker-triggers'));
@@ -322,8 +322,8 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   ck('Stats modal displays after clicking STATISTICS on defeat screen', !isHidden(statsModal));
 
   // Verify Base Hand Outcomes breakdown contains rows with data from the lost run
-  const outcomesHTML = $('ui-stats-outcomes-tbody').innerHTML;
-  ck('Outcomes breakdown displays rows for played game', outcomesHTML.includes('Dealer Wins (Outscored)') && outcomesHTML.includes('1'));
+  const lossesHTML = $('ui-stats-outcomes-losses-list').innerHTML;
+  ck('Outcomes breakdown displays rows for played game', lossesHTML.includes('Dealer Wins (Outscored)') && lossesHTML.includes('1'));
 
   // Close stats modal
   statsModal.querySelector('button[onclick*="uiHideStatsModal"]').click();
