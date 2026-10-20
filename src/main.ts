@@ -1328,14 +1328,14 @@ function updatePackCardsLayout(): void {
       cardEl.style.pointerEvents = 'auto';
     } else if (delta === 1) {
       cardEl.classList.add('pack-card-next');
-      cardEl.style.transform = 'translateX(min(125px, 32vw)) scale(0.85) translateZ(-60px) rotate(3deg)';
+      cardEl.style.transform = 'translateX(min(130px, 34vw)) scale(0.86) translateZ(-60px) rotate(3deg)';
       cardEl.style.zIndex = '6';
       cardEl.style.opacity = '0.78';
       cardEl.style.filter = 'brightness(0.72)';
       cardEl.style.pointerEvents = 'auto';
     } else if (delta === 2) {
       cardEl.classList.add('pack-card-far-next');
-      cardEl.style.transform = 'translateX(min(220px, 58vw)) scale(0.70) translateZ(-120px) rotate(6deg)';
+      cardEl.style.transform = 'translateX(min(230px, 60vw)) scale(0.72) translateZ(-120px) rotate(6deg)';
       cardEl.style.zIndex = '3';
       cardEl.style.opacity = '0.52';
       cardEl.style.filter = 'brightness(0.50)';
@@ -1349,14 +1349,14 @@ function updatePackCardsLayout(): void {
       cardEl.style.pointerEvents = 'none';
     } else if (delta === -1) {
       cardEl.classList.add('pack-card-prev');
-      cardEl.style.transform = 'translateX(max(-125px, -32vw)) scale(0.85) translateZ(-60px) rotate(-3deg)';
+      cardEl.style.transform = 'translateX(max(-130px, -34vw)) scale(0.86) translateZ(-60px) rotate(-3deg)';
       cardEl.style.zIndex = '6';
       cardEl.style.opacity = '0.78';
       cardEl.style.filter = 'brightness(0.72)';
       cardEl.style.pointerEvents = 'auto';
     } else if (delta === -2) {
       cardEl.classList.add('pack-card-far-prev');
-      cardEl.style.transform = 'translateX(max(-220px, -58vw)) scale(0.70) translateZ(-120px) rotate(-6deg)';
+      cardEl.style.transform = 'translateX(max(-230px, -60vw)) scale(0.72) translateZ(-120px) rotate(-6deg)';
       cardEl.style.zIndex = '3';
       cardEl.style.opacity = '0.52';
       cardEl.style.filter = 'brightness(0.50)';
@@ -1694,7 +1694,7 @@ function renderPackOpeningScreen(triggerAnim: boolean = false): void {
       playPackRipPopSound();
     }
 
-    // Step 2: Pop burst at 420ms
+    // Step 2: Pop burst at 650ms (50% slower shaking)
     packAnimTimer1 = setTimeout(() => {
       boosterWrapper.classList.remove('anim-shake');
       boosterWrapper.classList.add('anim-burst');
@@ -1703,11 +1703,11 @@ function renderPackOpeningScreen(triggerAnim: boolean = false): void {
       stage.classList.remove('pack-cards-hidden');
       stage.classList.add('pack-cards-reveal');
 
-      // Step 3: Complete animation at 780ms
+      // Step 3: Complete animation at 360ms after pop
       packAnimTimer2 = setTimeout(() => {
         uiSkipPackAnimation();
       }, 360);
-    }, 420);
+    }, 650);
   } else {
     if (boosterContainer) boosterContainer.classList.add('hidden');
     stage.classList.remove('pack-cards-hidden');

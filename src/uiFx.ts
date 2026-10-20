@@ -230,8 +230,8 @@ function playPackRipPopSound(): void {
     if (!ctx) return;
     const now = ctx.currentTime;
 
-    // 1. Foil tear/rip crinkle: filtered noise with resonant sweeping bandpass
-    const ripDuration = 0.22;
+    // 1. Foil tear/rip crinkle: filtered noise with resonant sweeping bandpass during 0.65s shake
+    const ripDuration = 0.48;
     const bufferSize = Math.floor(ctx.sampleRate * ripDuration);
     const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     const data = buffer.getChannelData(0);
@@ -243,9 +243,9 @@ function playPackRipPopSound(): void {
     noise.buffer = buffer;
     const filter = ctx.createBiquadFilter();
     filter.type = 'bandpass';
-    filter.frequency.setValueAtTime(2400, now);
-    filter.frequency.exponentialRampToValueAtTime(800, now + ripDuration);
-    filter.Q.setValueAtTime(3.0, now);
+    filter.frequency.setValueAtTime(2600, now);
+    filter.frequency.exponentialRampToValueAtTime(700, now + ripDuration);
+    filter.Q.setValueAtTime(3.2, now);
 
     const ripGain = ctx.createGain();
     ripGain.gain.setValueAtTime(0.32, now);
@@ -257,25 +257,25 @@ function playPackRipPopSound(): void {
     noise.start(now);
     noise.stop(now + ripDuration);
 
-    // 2. Resonant energetic pop body: descending triangle pitch sweep
+    // 2. Resonant energetic pop body: descending triangle pitch sweep right as pack pops at ~0.65s
     const popOsc = ctx.createOscillator();
     const popGain = ctx.createGain();
     popOsc.type = 'triangle';
-    popOsc.frequency.setValueAtTime(420, now + 0.16);
-    popOsc.frequency.exponentialRampToValueAtTime(140, now + 0.36);
+    popOsc.frequency.setValueAtTime(440, now + 0.60);
+    popOsc.frequency.exponentialRampToValueAtTime(130, now + 0.84);
 
-    popGain.gain.setValueAtTime(0.001, now + 0.16);
-    popGain.gain.linearRampToValueAtTime(0.35, now + 0.19);
-    popGain.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
+    popGain.gain.setValueAtTime(0.001, now + 0.60);
+    popGain.gain.linearRampToValueAtTime(0.38, now + 0.63);
+    popGain.gain.exponentialRampToValueAtTime(0.001, now + 0.86);
 
     popOsc.connect(popGain);
     popGain.connect(getMasterOutput(ctx));
-    popOsc.start(now + 0.16);
-    popOsc.stop(now + 0.40);
+    popOsc.start(now + 0.60);
+    popOsc.stop(now + 0.88);
 
-    // 3. Bright magical sparkle bells
-    playTone(1174.66, 'sine', now + 0.20, 0.26, 0.16); // D6
-    playTone(1760.0, 'sine', now + 0.25, 0.32, 0.14);  // A6
+    // 3. Bright magical sparkle bells right as cards burst out
+    playTone(1174.66, 'sine', now + 0.64, 0.28, 0.18); // D6
+    playTone(1760.0, 'sine', now + 0.70, 0.35, 0.15);  // A6
   } catch (e) {}
 }
 
