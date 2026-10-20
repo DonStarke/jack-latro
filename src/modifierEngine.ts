@@ -78,6 +78,53 @@ const BOSS_BLINDS: ReadonlyArray<BossBlindDef> = [
   { id: 'the_anchor', name: 'The Anchor', desc: 'Double Down is disabled during this Blind.' }
 ];
 
+const CARD_EFFECTS_CATALOG: ReadonlyArray<CardEffectDef> = [
+  {
+    id: 'foil',
+    name: 'Foil',
+    enhancement: 'foil',
+    badge: 'FOIL',
+    icon: '✨',
+    bonusText: '+30 Chips',
+    desc: 'Adds +30 Chips permanently to this card when scored in your final hand.',
+    color: '#38bdf8',
+    tarotSource: 'Prism Dye Tarot & Booster Packs'
+  },
+  {
+    id: 'holo',
+    name: 'Holographic',
+    enhancement: 'holo',
+    badge: 'HOLO',
+    icon: '🌈',
+    bonusText: '+4 Mult',
+    desc: 'Adds +4 Mult permanently to this card when scored in your final hand.',
+    color: '#f87171',
+    tarotSource: 'Lucky Charm Tarot & Booster Packs'
+  },
+  {
+    id: 'poly',
+    name: 'Polychrome',
+    enhancement: 'poly',
+    badge: 'POLY',
+    icon: '🔮',
+    bonusText: '×1.5 Mult',
+    desc: 'Multiplies your total hand Mult by ×1.5 permanently when scored in your final hand.',
+    color: '#c084fc',
+    tarotSource: 'Polychrome Dice Tarot & Booster Packs'
+  },
+  {
+    id: 'gold',
+    name: 'Gold',
+    enhancement: 'gold',
+    badge: 'GOLD',
+    icon: '🪙',
+    bonusText: '+$3 Cash',
+    desc: 'Earns +$3 bonus cash permanently whenever a scoring hand is won with this card.',
+    color: '#eab308',
+    tarotSource: 'Midas Touch Tarot & Booster Packs'
+  }
+];
+
 /* ---------- Scoring ---------- */
 interface ScoreContext {
   playerHand: ReadonlyArray<Card>;
@@ -184,9 +231,16 @@ function scoreHand(ctx: ScoreContext): ScoreResult {
 
   let chipStackerNewBonus: number | null = null;
   const stacker = ctx.jokers.find(j => j.id === 'chip_stacker');
-  if ((ctx.doubledDown || outcomeType === 'EXACT21') && isWin && stacker) {
-    chipStackerNewBonus = (stacker.bonusChips || 0) + 10;
-    logs.push(`Chip Stacker Scaled (+10c ➔ +${chipStackerNewBonus}c)`);
+  if (isWin && stacker) {
+    let stackerGain = 0;
+    const isExact21 = outcomeType === 'EXACT21' || pTotal === 21;
+    if (ctx.doubledDown) stackerGain += 10;
+    if (isExact21) stackerGain += 10;
+
+    if (stackerGain > 0) {
+      chipStackerNewBonus = (stacker.bonusChips || 0) + stackerGain;
+      logs.push(`Chip Stacker Scaled (+${stackerGain}c ➔ +${chipStackerNewBonus}c)`);
+    }
   }
 
   const result: ScoreResult = {

@@ -40,7 +40,8 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
 
 (async () => {
   const w = dom.window, d = w.document;
-  await sleep(400);
+  for (let i = 0; i < 50 && !w.toggleCogModal; i++) await sleep(20);
+  await sleep(100);
 
   const $ = id => d.getElementById(id);
   const click = id => $(id).click();

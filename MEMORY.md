@@ -56,6 +56,12 @@
   * **Rescaled ANTE_TARGETS:** `[300, 600, 1200, 2400, 4500, 8500, 15000, 25000]`. Eliminates mid-to-late Ante 1-deal blind sweeps; average deals used scales cleanly from 3.1 in Ante 4 up to 8.5 in Ante 8.
   * **Expert Strategy Bot Added:** Full AI model in `simulator.ts`, `Jack-latro6Sim.html`, and UI with Clearance Rack-aware rerolls, compound interest thresholds ($5/$15/$25), target-aware standing, and proactive tarot deck modification (Guillotine thinning, Card Forge rank ups, Foil/Holo/Poly enhancements).
   * **Verified Benchmarking:** 5,000-run simulation and 6-bot comparative suite (`jack-latro-stage4-telemetry-suite.txt`) executed. 53/53 new features and 21/21 UI smoke tests pass cleanly. All 4 Roadmap stages 100% complete!
+* **Compendium & Archives Library System**:
+  * **Main Screen Integration:** Added `VIEW LIBRARY` button on the main/intro splash screen (`#btn-splash-library`) and in-game cog settings menu (`#btn-modal-library`).
+  * **Interactive Categories Landing Page:** Allows player to choose from 5 categories: Jokers (35), Tarots (10), Vouchers (10), Card Effects (4: Foil, Holo, Poly, Gold), and Booster Packs (4: Joker, Tarot, Card, Variety).
+  * **Category Items Grid:** Dedicated browsable views for each category with rarity filtering for Jokers (All/Common/Uncommon/Rare), full item descriptions, cost, badges, and artwork.
+  * **Enlarged Center Stage & Stat Telemetry Inspection:** Clicking any item opens an enlarged detail modal centered on the screen with full visuals, archetype/rarity badges, game strategy tips, and a structured lifetime telemetry stats panel prepared for future stat tracking.
+  * **Automated Verification:** Added `tests/library.test.js` validating all 97 checks across navigation, categories, zoom modals, and placeholder stats. All suites passing cleanly.
 
 
 

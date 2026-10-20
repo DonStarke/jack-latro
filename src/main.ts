@@ -1634,6 +1634,10 @@ async function resolveRound(): Promise<void> {
 
   if (res.chipStackerNewBonus !== null) {
     patchJoker('chip_stacker', { bonusChips: res.chipStackerNewBonus });
+    const stackerIdx = state.jokers.findIndex(j => j.id === 'chip_stacker');
+    if (stackerIdx >= 0) {
+      popJokerCard(stackerIdx);
+    }
     updateAllUI();
   }
 
@@ -1936,7 +1940,7 @@ async function resolveRound(): Promise<void> {
   if (res.rawOutcomeType === 'PUSH' && state.jokers.some(j => j.id === 'push_it_good')) {
     recordJokerTrigger('push_it_good', 'Push It Good');
   }
-  if (res.chipStackerNewBonus !== null) {
+  if (res.chipStackerNewBonus !== null && !res.steps.some(s => s.kind === 'joker' && s.jokerId === 'chip_stacker')) {
     recordJokerTrigger('chip_stacker', 'Chip Stacker');
   }
 
@@ -1992,9 +1996,535 @@ async function resolveRound(): Promise<void> {
 }
 
 /* ==========================================================
+   LIBRARY / COMPENDIUM VIEWS & STATS PLACEHOLDERS
+========================================================== */
+
+type LibraryCategory = 'jokers' | 'tarots' | 'vouchers' | 'effects' | 'packs';
+
+let currentLibraryCategory: LibraryCategory | null = null;
+let currentLibraryJokerFilter: 'all' | 'common' | 'uncommon' | 'rare' = 'all';
+
+interface ItemTelemetryStats {
+  statusText?: string;
+  metrics: Array<{ label: string; value: string; hint?: string }>;
+}
+
+function getItemTelemetryStats(category: LibraryCategory, itemId: string): ItemTelemetryStats {
+  // Primed for future telemetry persistence; displays clean structured placeholders for now
+  if (category === 'jokers') {
+    return {
+      statusText: 'Joker Lifetime Telemetry',
+      metrics: [
+        { label: 'Times Discovered', value: '--', hint: 'Seen in shop & booster packs' },
+        { label: 'Rounds Held', value: '--', hint: 'Active blinds with this joker' },
+        { label: 'Hands Triggered', value: '--', hint: 'Scoring activations recorded' },
+        { label: 'Chips Contributed', value: '--', hint: 'Total chips generated' },
+        { label: 'Mult Contributed', value: '--', hint: 'Total mult generated' },
+        { label: 'Win Rate When Held', value: '--%', hint: 'Ante clears when owned' }
+      ]
+    };
+  } else if (category === 'tarots') {
+    return {
+      statusText: 'Consumable Spell Telemetry',
+      metrics: [
+        { label: 'Times Acquired', value: '--', hint: 'Purchased in shop or packs' },
+        { label: 'Times Cast', value: '--', hint: 'Used during active hands' },
+        { label: 'Times Sold', value: '--', hint: 'Liquidated for cash' },
+        { label: 'Win Rate When Cast', value: '--%', hint: 'Victories on cast hands' }
+      ]
+    };
+  } else if (category === 'vouchers') {
+    return {
+      statusText: 'Table Voucher Telemetry',
+      metrics: [
+        { label: 'Times Redeemed', value: '--', hint: 'Purchased across all runs' },
+        { label: 'Earliest Ante Acquired', value: '--', hint: 'Earliest ante redeemed' },
+        { label: 'Runs Won With Voucher', value: '--', hint: 'Ante 8 victories with perk' },
+        { label: 'Est. Value Contributed', value: '--', hint: 'Bonus chips, deals, money' }
+      ]
+    };
+  } else if (category === 'effects') {
+    return {
+      statusText: 'Card Edition Telemetry',
+      metrics: [
+        { label: 'Cards Enhanced', value: '--', hint: 'Permanent upgrades created' },
+        { label: 'Times Scored In Hand', value: '--', hint: 'Played in scoring hands' },
+        { label: 'Bonus Impact', value: '--', hint: 'Total chips/mult/cash scored' },
+        { label: 'Deck Saturation Peak', value: '--%', hint: 'Highest % of deck enhanced' }
+      ]
+    };
+  } else {
+    return {
+      statusText: 'Booster Pack Telemetry',
+      metrics: [
+        { label: 'Packs Opened', value: '--', hint: 'Purchased in Pit Boss Shop' },
+        { label: 'Cards Drafted', value: '--', hint: 'Options chosen from pack' },
+        { label: 'Packs Skipped', value: '--', hint: 'Pack contents bypassed' },
+        { label: 'Total Money Invested', value: '$0', hint: 'Cash spent on this pack' }
+      ]
+    };
+  }
+}
+
+function openLibraryModal(initialCategory?: LibraryCategory): void {
+  playCardSlideSound();
+  const modal = $('ui-library-modal');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+
+  if (initialCategory) {
+    openLibraryCategory(initialCategory);
+  } else {
+    showLibraryCategories();
+  }
+}
+
+function closeLibraryModal(): void {
+  closeLibraryDetail();
+  const modal = $('ui-library-modal');
+  if (modal) modal.classList.add('hidden');
+  currentLibraryCategory = null;
+}
+
+function showLibraryCategories(): void {
+  currentLibraryCategory = null;
+  const categoriesPage = $('ui-lib-categories-page');
+  const itemsPage = $('ui-lib-items-page');
+  const tabs = $('ui-lib-category-tabs');
+  const title = $('ui-lib-title');
+  const subtitle = $('ui-lib-subtitle');
+  const backLabel = $('ui-lib-back-label');
+
+  if (categoriesPage) categoriesPage.classList.remove('hidden');
+  if (itemsPage) itemsPage.classList.add('hidden');
+  if (tabs) tabs.classList.add('hidden');
+
+  if (title) title.textContent = 'ARCHIVES & COMPENDIUM';
+  if (subtitle) subtitle.textContent = 'Select a collection to view all cards, upgrades & effects';
+  if (backLabel) backLabel.textContent = 'Main Menu';
+}
+
+function openLibraryCategory(category: LibraryCategory): void {
+  playCardSlideSound();
+  currentLibraryCategory = category;
+  const categoriesPage = $('ui-lib-categories-page');
+  const itemsPage = $('ui-lib-items-page');
+  const tabs = $('ui-lib-category-tabs');
+  const title = $('ui-lib-title');
+  const subtitle = $('ui-lib-subtitle');
+  const backLabel = $('ui-lib-back-label');
+
+  if (categoriesPage) categoriesPage.classList.add('hidden');
+  if (itemsPage) itemsPage.classList.remove('hidden');
+  if (tabs) tabs.classList.remove('hidden');
+
+  if (backLabel) backLabel.textContent = 'Categories';
+
+  const tabBtns = document.querySelectorAll('.lib-tab-btn');
+  tabBtns.forEach(btn => {
+    btn.classList.toggle('active', btn.id === `lib-tab-${category}`);
+  });
+
+  const catMeta: Record<LibraryCategory, { title: string; subtitle: string }> = {
+    jokers: {
+      title: `JOKERS COMPENDIUM (${JOKER_CATALOG.length})`,
+      subtitle: 'Passive scoring jokers, suit synergies and rule-bending abilities'
+    },
+    tarots: {
+      title: `TAROT SPELLS (${TAROT_CATALOG.length})`,
+      subtitle: 'Consumable spells that enhance cards, forge ranks, or alter game rules'
+    },
+    vouchers: {
+      title: `VOUCHERS (${VOUCHER_CATALOG.length})`,
+      subtitle: 'Permanent table upgrades active for the duration of the run'
+    },
+    effects: {
+      title: `CARD SPECIAL EFFECTS (${CARD_EFFECTS_CATALOG.length})`,
+      subtitle: 'Permanent card edition enhancements with custom visual shaders'
+    },
+    packs: {
+      title: `BOOSTER PACKS (${PACK_CATALOG.length})`,
+      subtitle: 'Card booster packs available for purchase in the Pit Boss Shop'
+    }
+  };
+
+  const meta = catMeta[category];
+  if (title) title.textContent = meta.title;
+  if (subtitle) subtitle.textContent = meta.subtitle;
+
+  renderLibraryItems();
+}
+
+function switchLibraryCategory(category: LibraryCategory): void {
+  closeLibraryDetail();
+  openLibraryCategory(category);
+}
+
+function handleLibraryBack(): void {
+  const detailModal = $('ui-lib-detail-modal');
+  if (detailModal && !detailModal.classList.contains('hidden')) {
+    closeLibraryDetail();
+    return;
+  }
+  if (currentLibraryCategory !== null) {
+    showLibraryCategories();
+  } else {
+    closeLibraryModal();
+  }
+}
+
+function setLibraryJokerFilter(filter: 'all' | 'common' | 'uncommon' | 'rare'): void {
+  currentLibraryJokerFilter = filter;
+  renderLibraryItems();
+}
+
+function renderLibraryItems(): void {
+  const grid = $('ui-lib-items-grid');
+  const subfilter = $('ui-lib-subfilter-bar');
+  if (!grid) return;
+
+  if (currentLibraryCategory === 'jokers') {
+    if (subfilter) {
+      subfilter.classList.remove('hidden');
+      const counts = {
+        all: JOKER_CATALOG.length,
+        common: JOKER_CATALOG.filter(j => j.rarity === 'common').length,
+        uncommon: JOKER_CATALOG.filter(j => j.rarity === 'uncommon').length,
+        rare: JOKER_CATALOG.filter(j => j.rarity === 'rare').length
+      };
+      subfilter.innerHTML = `
+        <div class="lib-subfilter-pills">
+          <button class="lib-filter-pill ${currentLibraryJokerFilter === 'all' ? 'active' : ''}" onclick="setLibraryJokerFilter('all')">ALL (${counts.all})</button>
+          <button class="lib-filter-pill filter-common ${currentLibraryJokerFilter === 'common' ? 'active' : ''}" onclick="setLibraryJokerFilter('common')">COMMON (${counts.common})</button>
+          <button class="lib-filter-pill filter-uncommon ${currentLibraryJokerFilter === 'uncommon' ? 'active' : ''}" onclick="setLibraryJokerFilter('uncommon')">UNCOMMON (${counts.uncommon})</button>
+          <button class="lib-filter-pill filter-rare ${currentLibraryJokerFilter === 'rare' ? 'active' : ''}" onclick="setLibraryJokerFilter('rare')">RARE (${counts.rare})</button>
+        </div>
+      `;
+    }
+
+    const filtered = JOKER_CATALOG.filter(j => currentLibraryJokerFilter === 'all' || j.rarity === currentLibraryJokerFilter);
+    grid.innerHTML = filtered.map(j => {
+      const arch = j.archetype || 'utility';
+      const icon = j.icon || '🃏';
+      return `
+        <div class="lib-item-card lib-joker-card rarity-${j.rarity} archetype-${arch}" onclick="openLibraryDetail('jokers', '${j.id}')">
+          <div class="lib-item-watermark">${icon}</div>
+          <div class="lib-item-header">
+            <span class="rarity-badge rarity-${j.rarity}">${j.rarity.toUpperCase()}</span>
+            <span class="archetype-badge archetype-${arch}">${arch.toUpperCase()}</span>
+          </div>
+          <div class="lib-item-main">
+            <span class="lib-item-icon">${icon}</span>
+            <div class="lib-item-name">${j.name}</div>
+          </div>
+          <div class="lib-item-desc">${j.desc}</div>
+          <div class="lib-item-footer">
+            <span class="lib-item-cost">$${j.cost}</span>
+            <span class="lib-item-action-hint">🔍 Inspect</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+  } else {
+    if (subfilter) {
+      subfilter.classList.add('hidden');
+      subfilter.innerHTML = '';
+    }
+
+    if (currentLibraryCategory === 'tarots') {
+      grid.innerHTML = TAROT_CATALOG.map(t => `
+        <div class="lib-item-card lib-tarot-card" onclick="openLibraryDetail('tarots', '${t.id}')">
+          <div class="lib-item-watermark">🔮</div>
+          <div class="lib-item-header">
+            <span class="tarot-badge">TAROT</span>
+            <span class="lib-tag-pill">CONSUMABLE</span>
+          </div>
+          <div class="lib-item-main">
+            <span class="lib-item-icon">🔮</span>
+            <div class="lib-item-name" style="color:#d8b4fe;">${t.name}</div>
+          </div>
+          <div class="lib-item-desc">${t.desc}</div>
+          <div class="lib-item-footer">
+            <span class="lib-item-cost">$${t.cost}</span>
+            <span class="lib-item-action-hint">🔍 Inspect</span>
+          </div>
+        </div>
+      `).join('');
+
+    } else if (currentLibraryCategory === 'vouchers') {
+      grid.innerHTML = VOUCHER_CATALOG.map(v => `
+        <div class="lib-item-card lib-voucher-card" onclick="openLibraryDetail('vouchers', '${v.id}')">
+          <div class="lib-item-watermark">🎟️</div>
+          <div class="lib-item-header">
+            <span class="voucher-badge">VOUCHER</span>
+            <span class="lib-tag-pill">PERMANENT</span>
+          </div>
+          <div class="lib-item-main">
+            <span class="lib-item-icon">🎟️</span>
+            <div class="lib-item-name" style="color:var(--gold);">${v.name}</div>
+          </div>
+          <div class="lib-item-desc">${v.desc}</div>
+          <div class="lib-item-footer">
+            <span class="lib-item-cost">$${v.cost}</span>
+            <span class="lib-item-action-hint">🔍 Inspect</span>
+          </div>
+        </div>
+      `).join('');
+
+    } else if (currentLibraryCategory === 'effects') {
+      grid.innerHTML = CARD_EFFECTS_CATALOG.map(e => `
+        <div class="lib-item-card lib-effect-card enh-${e.enhancement}" onclick="openLibraryDetail('effects', '${e.id}')">
+          <div class="lib-item-header">
+            <span class="card-enh-tag" style="position:static; transform:none;">${e.badge}</span>
+            <span class="lib-tag-pill" style="color:${e.color}; font-weight:800;">${e.bonusText}</span>
+          </div>
+          <div class="lib-effect-preview-row">
+            ${renderCardHTML({ uid: 0, rank: 'A', suit: '♠', enhancement: e.enhancement }, false, 'deck-mini')}
+            <div class="lib-item-main" style="margin:0;">
+              <div class="lib-item-name" style="color:${e.color}; font-size:16px;">${e.name} Edition</div>
+              <div style="font-size:11px; color:#94a3b8;">${e.tarotSource}</div>
+            </div>
+          </div>
+          <div class="lib-item-desc">${e.desc}</div>
+          <div class="lib-item-footer">
+            <span class="lib-item-cost" style="color:${e.color};">${e.bonusText}</span>
+            <span class="lib-item-action-hint">🔍 Inspect</span>
+          </div>
+        </div>
+      `).join('');
+
+    } else if (currentLibraryCategory === 'packs') {
+      grid.innerHTML = PACK_CATALOG.map(p => `
+        <div class="lib-item-card lib-pack-card pack-${p.packType}" onclick="openLibraryDetail('packs', '${p.id}')">
+          <div class="lib-item-header">
+            <span class="pack-badge pack-badge-${p.packType}">${p.badge || p.packType.toUpperCase()}</span>
+            <span class="lib-tag-pill">SHOP PACK</span>
+          </div>
+          <div class="lib-item-main">
+            <span class="lib-item-icon">📦</span>
+            <div class="lib-item-name" style="color:#ffffff;">${p.name}</div>
+          </div>
+          <div class="lib-item-desc">${p.desc}</div>
+          <div class="lib-item-footer">
+            <span class="lib-item-cost">$${p.cost}</span>
+            <span class="lib-item-action-hint">🔍 Inspect</span>
+          </div>
+        </div>
+      `).join('');
+    }
+  }
+}
+
+function openLibraryDetail(category: LibraryCategory, itemId: string): void {
+  playChipSound();
+  const detailModal = $('ui-lib-detail-modal');
+  const stage = $('ui-lib-detail-stage');
+  const title = $('ui-lib-detail-title');
+  const badge = $('ui-lib-detail-badge');
+  const typeEl = $('ui-lib-detail-type');
+  const costEl = $('ui-lib-detail-cost');
+  const descEl = $('ui-lib-detail-desc');
+  const tipEl = $('ui-lib-detail-tip');
+  const statsGrid = $('ui-lib-detail-stats-grid');
+  const statsStatus = $('ui-lib-detail-stats-status');
+
+  if (!detailModal) return;
+
+  if (category === 'jokers') {
+    const j = JOKER_CATALOG.find(x => x.id === itemId);
+    if (!j) return;
+    const arch = j.archetype || 'utility';
+    const icon = j.icon || '🃏';
+
+    if (badge) {
+      badge.className = `lib-detail-badge rarity-${j.rarity}`;
+      badge.textContent = j.rarity.toUpperCase();
+    }
+    if (typeEl) typeEl.textContent = `${arch.toUpperCase()} JOKER`;
+    if (title) title.innerHTML = `<span style="font-size:24px; vertical-align:middle; margin-right:6px;">${icon}</span> ${j.name}`;
+    if (costEl) costEl.textContent = `$${j.cost}`;
+    if (descEl) descEl.textContent = j.desc;
+    if (tipEl) {
+      tipEl.innerHTML = `<strong>Gameplay Strategy:</strong> Jokers trigger left-to-right. Position +Chips and +Mult Jokers to the left of ×Mult Jokers to maximize exponential scoring returns.`;
+    }
+
+    if (stage) {
+      stage.innerHTML = `
+        <div class="lib-stage-joker-card rarity-${j.rarity} archetype-${arch}">
+          <div class="lib-stage-watermark">${icon}</div>
+          <div class="lib-stage-header">
+            <span class="rarity-badge rarity-${j.rarity}">${j.rarity.toUpperCase()}</span>
+            <span class="archetype-badge archetype-${arch}">${arch.toUpperCase()}</span>
+          </div>
+          <div class="lib-stage-art">${icon}</div>
+          <div class="lib-stage-name">${j.name}</div>
+          <div class="lib-stage-cost-row">
+            <span>Shop Cost</span>
+            <span class="lib-stage-cost-val">$${j.cost}</span>
+          </div>
+        </div>
+      `;
+    }
+
+  } else if (category === 'tarots') {
+    const t = TAROT_CATALOG.find(x => x.id === itemId);
+    if (!t) return;
+
+    if (badge) {
+      badge.className = 'lib-detail-badge tarot-badge';
+      badge.textContent = 'TAROT SPELL';
+    }
+    if (typeEl) typeEl.textContent = 'SINGLE-USE CONSUMABLE';
+    if (title) title.innerHTML = `<span style="font-size:24px; vertical-align:middle; margin-right:6px;">🔮</span> ${t.name}`;
+    if (costEl) costEl.textContent = `$${t.cost}`;
+    if (descEl) descEl.textContent = t.desc;
+    if (tipEl) {
+      tipEl.innerHTML = `<strong>Pit Boss Shop Consumable:</strong> Store up to 2 Tarots in your inventory. Cast during an active hand to modify card values or trigger immediate bonuses.`;
+    }
+
+    if (stage) {
+      stage.innerHTML = `
+        <div class="lib-stage-tarot-card">
+          <div class="lib-stage-watermark">🔮</div>
+          <div class="lib-stage-header">
+            <span class="tarot-badge">TAROT</span>
+            <span class="lib-tag-pill">MYSTIC</span>
+          </div>
+          <div class="lib-stage-art">🎴</div>
+          <div class="lib-stage-name" style="color:#d8b4fe;">${t.name}</div>
+          <div class="lib-stage-cost-row">
+            <span>Shop Cost</span>
+            <span class="lib-stage-cost-val" style="color:#d8b4fe;">$${t.cost}</span>
+          </div>
+        </div>
+      `;
+    }
+
+  } else if (category === 'vouchers') {
+    const v = VOUCHER_CATALOG.find(x => x.id === itemId);
+    if (!v) return;
+
+    if (badge) {
+      badge.className = 'lib-detail-badge voucher-badge';
+      badge.textContent = 'TABLE VOUCHER';
+    }
+    if (typeEl) typeEl.textContent = 'PERMANENT RUN UPGRADE';
+    if (title) title.innerHTML = `<span style="font-size:24px; vertical-align:middle; margin-right:6px;">🎟️</span> ${v.name}`;
+    if (costEl) costEl.textContent = `$${v.cost}`;
+    if (descEl) descEl.textContent = v.desc;
+    if (tipEl) {
+      tipEl.innerHTML = `<strong>Table Perk:</strong> Exactly 1 Voucher is offered per Ante in the shop. Once purchased, its passive benefits remain active permanently for the rest of your run.`;
+    }
+
+    if (stage) {
+      stage.innerHTML = `
+        <div class="lib-stage-voucher-card">
+          <div class="lib-stage-watermark">🎟️</div>
+          <div class="lib-stage-header">
+            <span class="voucher-badge">VOUCHER</span>
+            <span class="lib-tag-pill">PERMANENT</span>
+          </div>
+          <div class="lib-stage-art">🎟️</div>
+          <div class="lib-stage-name" style="color:var(--gold);">${v.name}</div>
+          <div class="lib-stage-cost-row">
+            <span>Shop Cost</span>
+            <span class="lib-stage-cost-val" style="color:var(--gold);">$${v.cost}</span>
+          </div>
+        </div>
+      `;
+    }
+
+  } else if (category === 'effects') {
+    const e = CARD_EFFECTS_CATALOG.find(x => x.id === itemId);
+    if (!e) return;
+
+    if (badge) {
+      badge.className = 'lib-detail-badge';
+      badge.style.background = e.color;
+      badge.style.color = '#000000';
+      badge.textContent = e.badge;
+    }
+    if (typeEl) typeEl.textContent = 'SPECIAL CARD EDITION';
+    if (title) title.innerHTML = `<span style="font-size:24px; vertical-align:middle; margin-right:6px;">${e.icon}</span> ${e.name} Edition`;
+    if (costEl) costEl.innerHTML = `<span style="color:${e.color}; font-weight:800;">${e.bonusText}</span>`;
+    if (descEl) descEl.textContent = e.desc;
+    if (tipEl) {
+      tipEl.innerHTML = `<strong>Source & Stacking:</strong> Applied via ${e.tarotSource}. Enhanced cards retain their special properties across all subsequent deals, reshuffles, and antes.`;
+    }
+
+    if (stage) {
+      stage.innerHTML = `
+        <div class="lib-stage-effect-wrap">
+          ${renderCardHTML({ uid: 0, rank: 'A', suit: '♠', enhancement: e.enhancement }, false, 'card-zoomed')}
+          <div class="lib-stage-effect-caption" style="color:${e.color};">
+            <strong>${e.badge} EDITION</strong> • ${e.bonusText}
+          </div>
+        </div>
+      `;
+    }
+
+  } else if (category === 'packs') {
+    const p = PACK_CATALOG.find(x => x.id === itemId);
+    if (!p) return;
+
+    if (badge) {
+      badge.className = `lib-detail-badge pack-badge-${p.packType}`;
+      badge.textContent = p.badge || p.packType.toUpperCase();
+    }
+    if (typeEl) typeEl.textContent = 'PIT BOSS BOOSTER PACK';
+    if (title) title.innerHTML = `<span style="font-size:24px; vertical-align:middle; margin-right:6px;">📦</span> ${p.name}`;
+    if (costEl) costEl.textContent = `$${p.cost}`;
+    if (descEl) descEl.textContent = p.desc;
+    if (tipEl) {
+      tipEl.innerHTML = `<strong>Drafting Mechanics:</strong> Opening this pack reveals ${p.cardsCount} options. Select ${p.chooseCount} to permanently add to your run, or skip to save inventory space.`;
+    }
+
+    if (stage) {
+      stage.innerHTML = `
+        <div class="lib-stage-pack-card pack-${p.packType}">
+          <div class="lib-stage-pack-crimped top"></div>
+          <div class="lib-stage-header">
+            <span class="pack-badge pack-badge-${p.packType}">${p.badge || p.packType.toUpperCase()}</span>
+            <span class="lib-tag-pill">$${p.cost}</span>
+          </div>
+          <div class="lib-stage-art">📦</div>
+          <div class="lib-stage-name">${p.name}</div>
+          <div class="lib-stage-pack-sub">Choose ${p.chooseCount} of ${p.cardsCount}</div>
+          <div class="lib-stage-pack-crimped bottom"></div>
+        </div>
+      `;
+    }
+  }
+
+  // Populate structured telemetry stats placeholders
+  const stats = getItemTelemetryStats(category, itemId);
+  if (statsStatus && stats.statusText) {
+    statsStatus.textContent = stats.statusText;
+  }
+  if (statsGrid) {
+    statsGrid.innerHTML = stats.metrics.map(m => `
+      <div class="lib-stat-box">
+        <div class="lib-stat-label">${m.label}</div>
+        <div class="lib-stat-val">${m.value}</div>
+        ${m.hint ? `<div class="lib-stat-hint">${m.hint}</div>` : ''}
+      </div>
+    `).join('');
+  }
+
+  detailModal.classList.remove('hidden');
+}
+
+function closeLibraryDetail(): void {
+  const detailModal = $('ui-lib-detail-modal');
+  if (detailModal) detailModal.classList.add('hidden');
+}
+
+/* ==========================================================
    MAIN MENU, DEFEAT & VICTORY FLOW
 ========================================================== */
 function showMainMenu(): void {
+  closeLibraryModal();
   closeTableInspection();
   hideDefeatModal();
   hideVictoryModal();
@@ -2018,6 +2548,7 @@ function showMainMenu(): void {
 }
 
 function uiStartGameFromMenu(): void {
+  closeLibraryModal();
   closeTableInspection();
   toggleCogModal(false);
   setPlayfieldLocked(false);
@@ -2438,6 +2969,18 @@ function renderRunStats(): void {
 (window as any).applySimConfigToLiveGame = applySimConfigToLiveGame;
 (window as any).isPlayfieldLocked = () => isPlayfieldLocked;
 (window as any).setPlayfieldLocked = setPlayfieldLocked;
+(window as any).openLibraryModal = openLibraryModal;
+(window as any).closeLibraryModal = closeLibraryModal;
+(window as any).openLibraryCategory = openLibraryCategory;
+(window as any).switchLibraryCategory = switchLibraryCategory;
+(window as any).showLibraryCategories = showLibraryCategories;
+(window as any).handleLibraryBack = handleLibraryBack;
+(window as any).setLibraryJokerFilter = setLibraryJokerFilter;
+(window as any).renderLibraryItems = renderLibraryItems;
+(window as any).openLibraryDetail = openLibraryDetail;
+(window as any).closeLibraryDetail = closeLibraryDetail;
+(window as any).getItemTelemetryStats = getItemTelemetryStats;
+(window as any).CARD_EFFECTS_CATALOG = CARD_EFFECTS_CATALOG;
 
 /* ==========================================================
    BOOT

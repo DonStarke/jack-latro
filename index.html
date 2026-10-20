@@ -85,6 +85,10 @@
         <span class="play-icon">▶</span>
         <span class="play-text">NEW GAME</span>
       </button>
+      <button class="btn btn-splash-library" id="btn-splash-library" onclick="openLibraryModal()">
+        <span class="lib-icon">📖</span>
+        <span class="lib-text">VIEW LIBRARY</span>
+      </button>
       <div class="splash-secondary-row">
         <button class="btn btn-splash-secondary" onclick="toggleCogModal(true)">
           <span>⚙️ SETTINGS</span>
@@ -275,6 +279,10 @@
       <button class="btn btn-secondary" id="btn-modal-main-menu" style="padding:10px 4px; font-size:12px;" onclick="toggleCogModal(false); showMainMenu();">🏠 Main Menu</button>
       <button class="btn btn-double" id="btn-modal-sim" style="padding:10px 4px; font-size:12px;" onclick="toggleCogModal(false); toggleSimModal(true);">📊 Sim Lab</button>
     </div>
+
+    <button class="btn btn-secondary" id="btn-modal-library" style="width:100%; padding:9px 12px; font-size:12px; font-weight:700; margin:2px 0 4px;" onclick="toggleCogModal(false); openLibraryModal();">
+      📖 VIEW COMPENDIUM / LIBRARY
+    </button>
 
     <div style="display:flex; justify-content:space-between; align-items:center; background:#111622; padding:7px 10px; border-radius:6px; border:1px solid #222938; margin: 6px 0;">
       <div style="display:flex; align-items:center; gap:8px;">
@@ -669,6 +677,160 @@
     <!-- MODAL ACTIONS -->
     <div class="stats-actions">
       <button class="btn btn-deal btn-stats-back" onclick="uiHideStatsModal()">← RETURN</button>
+    </div>
+  </div>
+</div>
+
+<!-- ARCHIVES & COMPENDIUM LIBRARY MODAL -->
+<div class="modal-backdrop hidden" id="ui-library-modal" onclick="closeLibraryModal()">
+  <div class="modal-box library-modal-box" onclick="event.stopPropagation()">
+    <!-- TOP BAR -->
+    <div class="library-top-bar">
+      <div class="library-top-left">
+        <button class="btn btn-secondary btn-library-nav-back" id="btn-library-back" onclick="handleLibraryBack()">
+          <span id="ui-lib-back-icon">←</span> <span id="ui-lib-back-label">Main Menu</span>
+        </button>
+        <div class="library-title-group">
+          <h2 class="library-title" id="ui-lib-title">ARCHIVES & COMPENDIUM</h2>
+          <div class="library-subtitle" id="ui-lib-subtitle">Select a collection to view all cards, upgrades & effects</div>
+        </div>
+      </div>
+      <div class="library-top-right">
+        <button class="btn btn-secondary btn-library-close" onclick="closeLibraryModal()" title="Close Library">✖</button>
+      </div>
+    </div>
+
+    <!-- CATEGORY TABS (visible in category view) -->
+    <div class="library-category-tabs hidden" id="ui-lib-category-tabs">
+      <button class="lib-tab-btn" id="lib-tab-jokers" onclick="switchLibraryCategory('jokers')">🃏 Jokers (35)</button>
+      <button class="lib-tab-btn" id="lib-tab-tarots" onclick="switchLibraryCategory('tarots')">🔮 Tarots (10)</button>
+      <button class="lib-tab-btn" id="lib-tab-vouchers" onclick="switchLibraryCategory('vouchers')">🎟️ Vouchers (10)</button>
+      <button class="lib-tab-btn" id="lib-tab-effects" onclick="switchLibraryCategory('effects')">✨ Card Effects (4)</button>
+      <button class="lib-tab-btn" id="lib-tab-packs" onclick="switchLibraryCategory('packs')">📦 Packs (4)</button>
+    </div>
+
+    <!-- VIEW 1: CATEGORY SELECTION MENU -->
+    <div class="library-page" id="ui-lib-categories-page">
+      <div class="lib-categories-grid">
+        <div class="lib-cat-card cat-jokers" id="lib-cat-card-jokers" onclick="openLibraryCategory('jokers')">
+          <div class="lib-cat-header">
+            <span class="lib-cat-icon">🃏</span>
+            <span class="lib-cat-count-badge">35 CARDS</span>
+          </div>
+          <div class="lib-cat-name">JOKERS</div>
+          <div class="lib-cat-desc">Rule-bending passive jokers providing Chips, Multipliers, economic perks, and hand synergies.</div>
+          <div class="lib-cat-tags">
+            <span class="lib-pill pill-common">Common (18)</span>
+            <span class="lib-pill pill-uncommon">Uncommon (11)</span>
+            <span class="lib-pill pill-rare">Rare (6)</span>
+          </div>
+          <div class="lib-cat-cta">BROWSE JOKERS →</div>
+        </div>
+
+        <div class="lib-cat-card cat-tarots" id="lib-cat-card-tarots" onclick="openLibraryCategory('tarots')">
+          <div class="lib-cat-header">
+            <span class="lib-cat-icon">🔮</span>
+            <span class="lib-cat-count-badge">10 CONSUMABLES</span>
+          </div>
+          <div class="lib-cat-name">TAROTS</div>
+          <div class="lib-cat-desc">Mystical single-use consumables that alter card ranks, apply special enhancements, or destroy weak cards.</div>
+          <div class="lib-cat-tags">
+            <span class="lib-pill pill-purple">Permanent Alteration</span>
+            <span class="lib-pill pill-purple">Special Editions</span>
+          </div>
+          <div class="lib-cat-cta">BROWSE TAROTS →</div>
+        </div>
+
+        <div class="lib-cat-card cat-vouchers" id="lib-cat-card-vouchers" onclick="openLibraryCategory('vouchers')">
+          <div class="lib-cat-header">
+            <span class="lib-cat-icon">🎟️</span>
+            <span class="lib-cat-count-badge">10 UPGRADES</span>
+          </div>
+          <div class="lib-cat-name">VOUCHERS</div>
+          <div class="lib-cat-desc">Permanent table perks lasting the entire run. Boost deals, expand joker slots, discount rerolls, and amplify base stats.</div>
+          <div class="lib-cat-tags">
+            <span class="lib-pill pill-gold">1 Per Ante</span>
+            <span class="lib-pill pill-gold">Permanent Passives</span>
+          </div>
+          <div class="lib-cat-cta">BROWSE VOUCHERS →</div>
+        </div>
+
+        <div class="lib-cat-card cat-effects" id="lib-cat-card-effects" onclick="openLibraryCategory('effects')">
+          <div class="lib-cat-header">
+            <span class="lib-cat-icon">✨</span>
+            <span class="lib-cat-count-badge">4 SPECIAL EFFECTS</span>
+          </div>
+          <div class="lib-cat-name">CARD EFFECTS</div>
+          <div class="lib-cat-desc">Special card editions with animated visual shaders: Foil (+30c), Holographic (+4m), Polychrome (×1.5m), and Gold (+$3).</div>
+          <div class="lib-cat-tags">
+            <span class="lib-pill pill-chips">Foil</span>
+            <span class="lib-pill pill-mult">Holo</span>
+            <span class="lib-pill pill-purple">Poly</span>
+            <span class="lib-pill pill-gold">Gold</span>
+          </div>
+          <div class="lib-cat-cta">BROWSE EFFECTS →</div>
+        </div>
+
+        <div class="lib-cat-card cat-packs" id="lib-cat-card-packs" onclick="openLibraryCategory('packs')">
+          <div class="lib-cat-header">
+            <span class="lib-cat-icon">📦</span>
+            <span class="lib-cat-count-badge">4 BOOSTER PACKS</span>
+          </div>
+          <div class="lib-cat-name">PACKS</div>
+          <div class="lib-cat-desc">Booster packs offered in the Pit Boss Shop. Open to draft powerful Jokers, Tarots, Enhanced Playing Cards, or mixed Variety.</div>
+          <div class="lib-cat-tags">
+            <span class="lib-pill pill-blue">Joker Pack</span>
+            <span class="lib-pill pill-purple">Tarot Pack</span>
+            <span class="lib-pill pill-green">Variety Pack</span>
+          </div>
+          <div class="lib-cat-cta">BROWSE PACKS →</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW 2: CATEGORY ITEMS GRID PAGE -->
+    <div class="library-page hidden" id="ui-lib-items-page">
+      <div class="lib-subfilter-bar hidden" id="ui-lib-subfilter-bar"></div>
+      <div class="lib-items-grid" id="ui-lib-items-grid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ITEM ENLARGED DETAIL & TELEMETRY MODAL -->
+<div class="modal-backdrop hidden" id="ui-lib-detail-modal" onclick="closeLibraryDetail()">
+  <div class="modal-box lib-detail-box" onclick="event.stopPropagation()">
+    <div class="lib-detail-header">
+      <div class="lib-detail-tag-row">
+        <span class="lib-detail-badge" id="ui-lib-detail-badge">CATEGORY</span>
+        <span class="lib-detail-type" id="ui-lib-detail-type">ITEM TYPE</span>
+      </div>
+      <button class="btn btn-secondary btn-detail-close" onclick="closeLibraryDetail()">Close ✖</button>
+    </div>
+
+    <!-- Centered Enlarged Item Stage -->
+    <div class="lib-detail-stage" id="ui-lib-detail-stage"></div>
+
+    <!-- Item Information & Description -->
+    <div class="lib-detail-info">
+      <div class="lib-detail-name-row">
+        <h3 class="lib-detail-title" id="ui-lib-detail-title">Item Name</h3>
+        <span class="lib-detail-cost" id="ui-lib-detail-cost">$0</span>
+      </div>
+      <div class="lib-detail-desc" id="ui-lib-detail-desc">Item Description</div>
+      <div class="lib-detail-tip" id="ui-lib-detail-tip"></div>
+    </div>
+
+    <!-- Stats & Telemetry Section (Future Stat Tracking Architecture) -->
+    <div class="lib-detail-stats-section">
+      <div class="lib-stats-header">
+        <span class="lib-stats-title">📊 ITEM TELEMETRY & LIFETIME STATS</span>
+        <span class="lib-stats-pill" id="ui-lib-detail-stats-status">UPCOMING TRACKING</span>
+      </div>
+      <div class="lib-stats-grid" id="ui-lib-detail-stats-grid"></div>
+    </div>
+
+    <div class="lib-detail-actions">
+      <button class="btn btn-secondary" style="width:100%; padding:10px; font-weight:700;" onclick="closeLibraryDetail()">← Return to Collection</button>
     </div>
   </div>
 </div>

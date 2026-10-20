@@ -61,6 +61,18 @@ interface BossBlindDef {
   desc: string;
 }
 
+interface CardEffectDef {
+  id: string;
+  name: string;
+  enhancement: 'foil' | 'holo' | 'poly' | 'gold';
+  badge: string;
+  icon: string;
+  bonusText: string;
+  desc: string;
+  color: string;
+  tarotSource: string;
+}
+
 interface ShopTarot extends TarotDef { shopType: 'tarot'; bought: boolean; }
 interface ShopVoucher extends VoucherDef { shopType: 'voucher'; bought: boolean; }
 interface ShopCardOffer {
