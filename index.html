@@ -12,7 +12,7 @@
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="styles.css?v=2.5">
+<link rel="stylesheet" href="styles.css?v=2.6">
 <style>
   /* Critical fallback layout: ensures splash screen and modals are immediately fixed and centered */
   .splash-screen {
@@ -473,13 +473,13 @@
       <button class="pack-stage-arrow pack-arrow-right" id="btn-joker-next" onclick="uiJokerCarouselNavNext()" aria-label="Next joker">&#9654;</button>
     </div>
 
-    <!-- Carousel Footer (Navigation Dots & Counter) -->
+    <!-- Carousel Footer (Reorder Controls & Pagination Dots) -->
     <div class="pack-carousel-footer joker-carousel-footer">
-      <button class="btn btn-secondary pack-footer-nav" id="btn-joker-prev-foot" onclick="uiJokerCarouselNavPrev()">&#9664; Prev</button>
+      <button class="btn btn-secondary btn-joker-reorder" id="btn-joker-reorder-left" onclick="uiMoveJokerInCarousel(-1)">&#9664; Reorder joker left</button>
       <div class="pack-dots-row" id="ui-joker-dots"></div>
-      <button class="btn btn-secondary pack-footer-nav" id="btn-joker-next-foot" onclick="uiJokerCarouselNavNext()">Next &#9654;</button>
+      <button class="btn btn-secondary btn-joker-reorder" id="btn-joker-reorder-right" onclick="uiMoveJokerInCarousel(1)">Reorder joker right &#9654;</button>
     </div>
-    <div class="pack-nav-hint" id="ui-joker-nav-hint">Joker 1 of 3 &bull; Move Left/Right to rearrange scoring order</div>
+    <div class="pack-nav-hint" id="ui-joker-nav-hint">Joker 1 of 3 &bull; Tap side arrows to browse &bull; Reorder buttons arrange scoring</div>
 
     <!-- Action Bar -->
     <div class="joker-carousel-actions">
@@ -921,12 +921,12 @@
 </div>
 
 <!-- Compiled TypeScript (npx.cmd tsc: src/*.ts -> dist/*.js). Plain global scripts; order matters. -->
-<script src="dist/gameState.js?v=2.5"></script>
-<script src="dist/deckEngine.js?v=2.5"></script>
-<script src="dist/modifierEngine.js?v=2.5"></script>
-<script src="dist/shopEngine.js?v=2.5"></script>
-<script src="dist/simulator.js?v=2.5"></script>
-<script src="dist/uiFx.js?v=2.5"></script>
-<script src="dist/main.js?v=2.5"></script>
+<script src="dist/gameState.js?v=2.6"></script>
+<script src="dist/deckEngine.js?v=2.6"></script>
+<script src="dist/modifierEngine.js?v=2.6"></script>
+<script src="dist/shopEngine.js?v=2.6"></script>
+<script src="dist/simulator.js?v=2.6"></script>
+<script src="dist/uiFx.js?v=2.6"></script>
+<script src="dist/main.js?v=2.6"></script>
 </body>
 </html>

@@ -426,11 +426,21 @@ function updateJokerCarouselLayout(): void {
     }
   }
 
-  // Update footer nav buttons
-  const prevFootBtn = $('btn-joker-prev-foot') as HTMLButtonElement | null;
-  const nextFootBtn = $('btn-joker-next-foot') as HTMLButtonElement | null;
-  if (prevFootBtn) prevFootBtn.disabled = currentJokerCarouselIndex <= 0;
-  if (nextFootBtn) nextFootBtn.disabled = currentJokerCarouselIndex >= total - 1;
+  // Update footer reorder buttons
+  const reorderLeftBtn = $('btn-joker-reorder-left') as HTMLButtonElement | null;
+  const reorderRightBtn = $('btn-joker-reorder-right') as HTMLButtonElement | null;
+  if (reorderLeftBtn) {
+    const disabled = currentJokerCarouselIndex <= 0 || total <= 1;
+    reorderLeftBtn.disabled = disabled;
+    reorderLeftBtn.style.opacity = disabled ? '0.25' : '1';
+    reorderLeftBtn.style.pointerEvents = disabled ? 'none' : 'auto';
+  }
+  if (reorderRightBtn) {
+    const disabled = currentJokerCarouselIndex >= total - 1 || total <= 1;
+    reorderRightBtn.disabled = disabled;
+    reorderRightBtn.style.opacity = disabled ? '0.25' : '1';
+    reorderRightBtn.style.pointerEvents = disabled ? 'none' : 'auto';
+  }
 
   // Update pagination dots
   const dotsEl = $('ui-joker-dots');
@@ -443,7 +453,7 @@ function updateJokerCarouselLayout(): void {
   // Update hint text
   const hintEl = $('ui-joker-nav-hint');
   if (hintEl) {
-    hintEl.textContent = `Joker ${currentJokerCarouselIndex + 1} of ${total} • Move Left/Right to rearrange scoring order`;
+    hintEl.textContent = `Joker ${currentJokerCarouselIndex + 1} of ${total} • Tap side arrows to browse • Reorder buttons arrange scoring`;
   }
 }
 
@@ -499,21 +509,6 @@ function renderJokerCarousel(): void {
         </div>
 
         <div class="joker-card-controls">
-          <div class="joker-move-row">
-            <button class="btn btn-secondary btn-joker-move"
-                    onclick="event.stopPropagation(); uiMoveJokerInCarousel(-1)"
-                    ${idx === 0 ? 'disabled' : ''}
-                    title="Move earlier in scoring order">
-              ◀ Move Left
-            </button>
-            <button class="btn btn-secondary btn-joker-move"
-                    onclick="event.stopPropagation(); uiMoveJokerInCarousel(1)"
-                    ${idx === total - 1 ? 'disabled' : ''}
-                    title="Move later in scoring order">
-              Move Right ▶
-            </button>
-          </div>
-
           <button class="btn btn-redeal btn-joker-sell"
                   onclick="event.stopPropagation(); uiSellJokerInCarousel(${idx})"
                   title="Sell this joker for cash">
