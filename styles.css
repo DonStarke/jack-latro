@@ -1196,6 +1196,7 @@
     flex-direction: column;
     justify-content: space-between;
     animation: packFadeIn 0.25s ease-out;
+    overflow-x: hidden !important;
   }
 
   @keyframes packFadeIn {
@@ -1423,7 +1424,7 @@
     justify-content: center;
     flex: 1;
     min-height: 380px;
-    overflow: visible;
+    overflow: hidden;
   }
 
   .pack-stage-arrow {
@@ -1497,6 +1498,11 @@
   /* THE EXPANDED 3D STACKED CARD */
   .pack-option-card {
     position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    margin: auto;
     width: 270px;
     min-width: 260px;
     max-width: 82vw;
@@ -1531,8 +1537,6 @@
 
   .pack-opt-joker {
     border-color: #3b82f6;
-    position: relative;
-    overflow: hidden;
   }
   .pack-opt-joker.rarity-common {
     border-color: #64748b;
