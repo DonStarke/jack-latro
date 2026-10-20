@@ -12,7 +12,7 @@
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="styles.css?v=2.4">
+<link rel="stylesheet" href="styles.css?v=2.5">
 <style>
   /* Critical fallback layout: ensures splash screen and modals are immediately fixed and centered */
   .splash-screen {
@@ -443,6 +443,49 @@
       <div style="text-align:center; color:#64748b; font-size:12px; padding:16px;">
         Click <strong>▶ Run Simulation</strong> (or <strong>🚀 Run All 6 Bots & Export (.TXT)</strong>) to generate telemetry.
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- JOKER INSPECTION & REORDERING 3D CAROUSEL MODAL -->
+<div class="modal-backdrop hidden joker-carousel-backdrop" id="ui-joker-carousel-modal" onclick="closeJokerCarousel()">
+  <div class="joker-carousel-modal-panel" onclick="event.stopPropagation()">
+    <!-- Header -->
+    <div class="joker-carousel-header">
+      <div class="joker-header-left">
+        <span class="pack-badge pack-badge-joker" id="ui-joker-carousel-badge">ACTIVE JOKERS</span>
+        <span class="joker-carousel-order-tip">⚡ Triggers Left ➔ Right</span>
+      </div>
+      <button class="btn btn-secondary joker-close-btn" onclick="closeJokerCarousel()" aria-label="Close">✕</button>
+    </div>
+
+    <!-- Subtitle Tip -->
+    <div class="joker-carousel-sub">Arrange jokers for optimal scoring (e.g. +Chips & +Mult before ×Mult)</div>
+
+    <!-- 3D Carousel Stage with Chevrons -->
+    <div class="pack-stage-container joker-stage-container">
+      <button class="pack-stage-arrow pack-arrow-left" id="btn-joker-prev" onclick="uiJokerCarouselNavPrev()" aria-label="Previous joker">&#9664;</button>
+
+      <div class="pack-opening-stage joker-opening-stage" id="ui-joker-carousel-stage" onclick="handleJokerStageClick(event)">
+        <!-- Stacked 3D active joker cards rendered dynamically -->
+      </div>
+
+      <button class="pack-stage-arrow pack-arrow-right" id="btn-joker-next" onclick="uiJokerCarouselNavNext()" aria-label="Next joker">&#9654;</button>
+    </div>
+
+    <!-- Carousel Footer (Navigation Dots & Counter) -->
+    <div class="pack-carousel-footer joker-carousel-footer">
+      <button class="btn btn-secondary pack-footer-nav" id="btn-joker-prev-foot" onclick="uiJokerCarouselNavPrev()">&#9664; Prev</button>
+      <div class="pack-dots-row" id="ui-joker-dots"></div>
+      <button class="btn btn-secondary pack-footer-nav" id="btn-joker-next-foot" onclick="uiJokerCarouselNavNext()">Next &#9654;</button>
+    </div>
+    <div class="pack-nav-hint" id="ui-joker-nav-hint">Joker 1 of 3 &bull; Move Left/Right to rearrange scoring order</div>
+
+    <!-- Action Bar -->
+    <div class="joker-carousel-actions">
+      <button class="btn btn-deal btn-joker-done" onclick="closeJokerCarousel()">
+        Return to Table ➔
+      </button>
     </div>
   </div>
 </div>
@@ -878,12 +921,12 @@
 </div>
 
 <!-- Compiled TypeScript (npx.cmd tsc: src/*.ts -> dist/*.js). Plain global scripts; order matters. -->
-<script src="dist/gameState.js?v=2.4"></script>
-<script src="dist/deckEngine.js?v=2.4"></script>
-<script src="dist/modifierEngine.js?v=2.4"></script>
-<script src="dist/shopEngine.js?v=2.4"></script>
-<script src="dist/simulator.js?v=2.4"></script>
-<script src="dist/uiFx.js?v=2.4"></script>
-<script src="dist/main.js?v=2.4"></script>
+<script src="dist/gameState.js?v=2.5"></script>
+<script src="dist/deckEngine.js?v=2.5"></script>
+<script src="dist/modifierEngine.js?v=2.5"></script>
+<script src="dist/shopEngine.js?v=2.5"></script>
+<script src="dist/simulator.js?v=2.5"></script>
+<script src="dist/uiFx.js?v=2.5"></script>
+<script src="dist/main.js?v=2.5"></script>
 </body>
 </html>

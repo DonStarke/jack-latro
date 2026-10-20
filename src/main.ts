@@ -260,39 +260,387 @@ function spawnFloatingToken(
   }
 }
 
-/* ---------- Inspectors ---------- */
+/* ---------- Joker 3D Carousel Viewer & Inspector ---------- */
+
+let currentJokerCarouselIndex = 0;
+let jokerStageTouchAttached = false;
+
+function initJokerTouchGestures(): void {
+  if (jokerStageTouchAttached) return;
+  const stage = $('ui-joker-carousel-stage');
+  if (!stage) return;
+  jokerStageTouchAttached = true;
+
+  let startX = 0;
+  let startY = 0;
+  let startTime = 0;
+
+  stage.addEventListener('touchstart', (e: TouchEvent) => {
+    if (e.touches.length !== 1) return;
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    startTime = Date.now();
+  }, { passive: true });
+
+  stage.addEventListener('touchend', (e: TouchEvent) => {
+    if (e.changedTouches.length !== 1) return;
+    const endX = e.changedTouches[0].clientX;
+    const endY = e.changedTouches[0].clientY;
+    const deltaX = endX - startX;
+    const deltaY = endY - startY;
+    const elapsed = Date.now() - startTime;
+
+    if (Math.abs(deltaX) > 30 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2 && elapsed < 800) {
+      if (deltaX < 0) {
+        uiJokerCarouselNavNext();
+      } else {
+        uiJokerCarouselNavPrev();
+      }
+    }
+  }, { passive: true });
+
+  // Mouse drag support for desktop
+  let isMouseDown = false;
+  let mouseStartX = 0;
+  stage.addEventListener('mousedown', (e: MouseEvent) => {
+    if (e.button !== 0) return;
+    isMouseDown = true;
+    mouseStartX = e.clientX;
+  });
+  window.addEventListener('mouseup', (e: MouseEvent) => {
+    if (!isMouseDown) return;
+    isMouseDown = false;
+    const deltaX = e.clientX - mouseStartX;
+    if (Math.abs(deltaX) > 45) {
+      if (deltaX < 0) uiJokerCarouselNavNext();
+      else uiJokerCarouselNavPrev();
+    }
+  });
+
+  // Keyboard navigation
+  window.addEventListener('keydown', (e: KeyboardEvent) => {
+    const modal = $('ui-joker-carousel-modal');
+    if (!modal || modal.classList.contains('hidden')) return;
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      uiJokerCarouselNavNext();
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      uiJokerCarouselNavPrev();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      closeJokerCarousel();
+    }
+  });
+}
+
+function updateJokerCarouselLayout(): void {
+  const stage = $('ui-joker-carousel-stage');
+  if (!stage) return;
+  const cards = stage.querySelectorAll<HTMLElement>('.joker-carousel-card');
+  const total = cards.length;
+  if (total === 0) return;
+
+  if (currentJokerCarouselIndex < 0) currentJokerCarouselIndex = 0;
+  if (currentJokerCarouselIndex >= total) currentJokerCarouselIndex = total - 1;
+
+  cards.forEach((cardEl, idx) => {
+    const delta = idx - currentJokerCarouselIndex;
+    cardEl.classList.remove('pack-card-active', 'pack-card-prev', 'pack-card-next', 'pack-card-far-prev', 'pack-card-far-next');
+
+    if (delta === 0) {
+      cardEl.classList.add('pack-card-active');
+      cardEl.style.transform = 'translateX(0px) scale(1) translateZ(0px) rotate(0deg)';
+      cardEl.style.zIndex = '10';
+      cardEl.style.opacity = '1';
+      cardEl.style.filter = 'none';
+      cardEl.style.pointerEvents = 'auto';
+    } else if (delta === 1) {
+      cardEl.classList.add('pack-card-next');
+      cardEl.style.transform = 'translateX(min(130px, 34vw)) scale(0.86) translateZ(-60px) rotate(3deg)';
+      cardEl.style.zIndex = '6';
+      cardEl.style.opacity = '0.78';
+      cardEl.style.filter = 'brightness(0.72)';
+      cardEl.style.pointerEvents = 'auto';
+    } else if (delta === 2) {
+      cardEl.classList.add('pack-card-far-next');
+      cardEl.style.transform = 'translateX(min(230px, 60vw)) scale(0.72) translateZ(-120px) rotate(6deg)';
+      cardEl.style.zIndex = '3';
+      cardEl.style.opacity = '0.52';
+      cardEl.style.filter = 'brightness(0.50)';
+      cardEl.style.pointerEvents = 'auto';
+    } else if (delta > 2) {
+      cardEl.classList.add('pack-card-far-next');
+      cardEl.style.transform = 'translateX(min(290px, 78vw)) scale(0.58) translateZ(-180px) rotate(9deg)';
+      cardEl.style.zIndex = '1';
+      cardEl.style.opacity = '0';
+      cardEl.style.filter = 'brightness(0.3)';
+      cardEl.style.pointerEvents = 'none';
+    } else if (delta === -1) {
+      cardEl.classList.add('pack-card-prev');
+      cardEl.style.transform = 'translateX(max(-130px, -34vw)) scale(0.86) translateZ(-60px) rotate(-3deg)';
+      cardEl.style.zIndex = '6';
+      cardEl.style.opacity = '0.78';
+      cardEl.style.filter = 'brightness(0.72)';
+      cardEl.style.pointerEvents = 'auto';
+    } else if (delta === -2) {
+      cardEl.classList.add('pack-card-far-prev');
+      cardEl.style.transform = 'translateX(max(-230px, -60vw)) scale(0.72) translateZ(-120px) rotate(-6deg)';
+      cardEl.style.zIndex = '3';
+      cardEl.style.opacity = '0.52';
+      cardEl.style.filter = 'brightness(0.50)';
+      cardEl.style.pointerEvents = 'auto';
+    } else {
+      cardEl.classList.add('pack-card-far-prev');
+      cardEl.style.transform = 'translateX(max(-290px, -78vw)) scale(0.58) translateZ(-180px) rotate(-9deg)';
+      cardEl.style.zIndex = '1';
+      cardEl.style.opacity = '0';
+      cardEl.style.filter = 'brightness(0.3)';
+      cardEl.style.pointerEvents = 'none';
+    }
+  });
+
+  // Update navigation chevrons
+  const prevBtn = $('btn-joker-prev');
+  const nextBtn = $('btn-joker-next');
+  if (prevBtn) {
+    if (currentJokerCarouselIndex > 0) {
+      prevBtn.classList.remove('disabled');
+      prevBtn.style.opacity = '1';
+      prevBtn.style.pointerEvents = 'auto';
+    } else {
+      prevBtn.classList.add('disabled');
+      prevBtn.style.opacity = '0.15';
+      prevBtn.style.pointerEvents = 'none';
+    }
+  }
+  if (nextBtn) {
+    if (currentJokerCarouselIndex < total - 1) {
+      nextBtn.classList.remove('disabled');
+      nextBtn.style.opacity = '1';
+      nextBtn.style.pointerEvents = 'auto';
+    } else {
+      nextBtn.classList.add('disabled');
+      nextBtn.style.opacity = '0.15';
+      nextBtn.style.pointerEvents = 'none';
+    }
+  }
+
+  // Update footer nav buttons
+  const prevFootBtn = $('btn-joker-prev-foot') as HTMLButtonElement | null;
+  const nextFootBtn = $('btn-joker-next-foot') as HTMLButtonElement | null;
+  if (prevFootBtn) prevFootBtn.disabled = currentJokerCarouselIndex <= 0;
+  if (nextFootBtn) nextFootBtn.disabled = currentJokerCarouselIndex >= total - 1;
+
+  // Update pagination dots
+  const dotsEl = $('ui-joker-dots');
+  if (dotsEl) {
+    dotsEl.innerHTML = Array.from({ length: total }, (_, i) => `
+      <span class="pack-dot ${i === currentJokerCarouselIndex ? 'active' : ''}" onclick="uiSetJokerCarouselActiveCard(${i})"></span>
+    `).join('');
+  }
+
+  // Update hint text
+  const hintEl = $('ui-joker-nav-hint');
+  if (hintEl) {
+    hintEl.textContent = `Joker ${currentJokerCarouselIndex + 1} of ${total} • Move Left/Right to rearrange scoring order`;
+  }
+}
+
+function renderJokerCarousel(): void {
+  const state = getState();
+  const jokers = state.jokers;
+  const total = jokers.length;
+  const modal = $('ui-joker-carousel-modal');
+  if (!modal || total === 0) {
+    if (modal) modal.classList.add('hidden');
+    return;
+  }
+
+  initJokerTouchGestures();
+
+  if (currentJokerCarouselIndex < 0) currentJokerCarouselIndex = 0;
+  if (currentJokerCarouselIndex >= total) currentJokerCarouselIndex = total - 1;
+
+  const badgeEl = $('ui-joker-carousel-badge');
+  if (badgeEl) badgeEl.textContent = `ACTIVE JOKERS (${total}/${state.maxJokers})`;
+
+  const stage = $('ui-joker-carousel-stage');
+  if (!stage) return;
+
+  stage.innerHTML = jokers.map((j, idx) => {
+    const sellVal = Math.max(1, Math.floor(j.cost / 2));
+    const arch = j.archetype || 'utility';
+    const icon = j.icon || '🃏';
+    const rarity = j.rarity || 'common';
+    const fullDesc = getJokerFullDesc(j);
+
+    const ord = idx === 0 ? '1st' : idx === 1 ? '2nd' : idx === 2 ? '3rd' : `${idx + 1}th`;
+
+    return `
+      <div class="joker-carousel-card pack-opt-joker rarity-${rarity} archetype-${arch}"
+           data-joker-idx="${idx}"
+           onclick="uiClickJokerCarouselCard(${idx})">
+        <div class="pack-opt-watermark">${icon}</div>
+        <div class="pack-opt-inner">
+          <div class="pack-opt-badge-row">
+            <span class="pack-opt-type">JOKER • ${rarity.toUpperCase()}</span>
+            <span class="pack-opt-archetype">${arch.toUpperCase()}</span>
+          </div>
+
+          <div class="joker-order-pill">
+            <span>⚡ Trigger Slot #${idx + 1} of ${total}</span>
+            <span style="opacity:0.75; font-size:9.5px;">(${ord})</span>
+          </div>
+
+          <div class="pack-card-art-box"><span class="pack-card-big-icon">${icon}</span></div>
+          <div class="pack-opt-title">${j.name}</div>
+          <div class="pack-opt-desc">${fullDesc}</div>
+        </div>
+
+        <div class="joker-card-controls">
+          <div class="joker-move-row">
+            <button class="btn btn-secondary btn-joker-move"
+                    onclick="event.stopPropagation(); uiMoveJokerInCarousel(-1)"
+                    ${idx === 0 ? 'disabled' : ''}
+                    title="Move earlier in scoring order">
+              ◀ Move Left
+            </button>
+            <button class="btn btn-secondary btn-joker-move"
+                    onclick="event.stopPropagation(); uiMoveJokerInCarousel(1)"
+                    ${idx === total - 1 ? 'disabled' : ''}
+                    title="Move later in scoring order">
+              Move Right ▶
+            </button>
+          </div>
+
+          <button class="btn btn-redeal btn-joker-sell"
+                  onclick="event.stopPropagation(); uiSellJokerInCarousel(${idx})"
+                  title="Sell this joker for cash">
+            Sell Joker for $${sellVal}
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  modal.classList.remove('hidden');
+  updateJokerCarouselLayout();
+}
+
+function uiJokerCarouselNavNext(): void {
+  const total = getState().jokers.length;
+  if (currentJokerCarouselIndex < total - 1) {
+    currentJokerCarouselIndex++;
+    if (typeof (window as any).playCardSlideSound === 'function') {
+      (window as any).playCardSlideSound();
+    }
+    updateJokerCarouselLayout();
+  }
+}
+
+function uiJokerCarouselNavPrev(): void {
+  if (currentJokerCarouselIndex > 0) {
+    currentJokerCarouselIndex--;
+    if (typeof (window as any).playCardSlideSound === 'function') {
+      (window as any).playCardSlideSound();
+    }
+    updateJokerCarouselLayout();
+  }
+}
+
+function uiSetJokerCarouselActiveCard(idx: number): void {
+  const total = getState().jokers.length;
+  if (idx >= 0 && idx < total && idx !== currentJokerCarouselIndex) {
+    currentJokerCarouselIndex = idx;
+    if (typeof (window as any).playCardSlideSound === 'function') {
+      (window as any).playCardSlideSound();
+    }
+    updateJokerCarouselLayout();
+  }
+}
+
+function uiClickJokerCarouselCard(idx: number): void {
+  if (isPlayfieldLocked) return;
+  if (idx !== currentJokerCarouselIndex) {
+    uiSetJokerCarouselActiveCard(idx);
+  }
+}
+
+function handleJokerStageClick(e: MouseEvent): void {
+  const target = e.target as HTMLElement;
+  if (!target) return;
+  if (target.closest('button') || target.closest('.pack-dot')) return;
+  if (target.closest('.joker-carousel-card')) return;
+
+  const stage = $('ui-joker-carousel-stage');
+  if (!stage) return;
+  const rect = stage.getBoundingClientRect();
+  const clickX = e.clientX;
+  if (clickX > rect.left + rect.width * 0.6) {
+    uiJokerCarouselNavNext();
+  } else if (clickX < rect.left + rect.width * 0.4) {
+    uiJokerCarouselNavPrev();
+  }
+}
+
+function uiMoveJokerInCarousel(dir: -1 | 1): void {
+  if (isPlayfieldLocked) return;
+  const state = getState();
+  const currentIdx = currentJokerCarouselIndex;
+  const targetIdx = currentIdx + dir;
+  if (targetIdx < 0 || targetIdx >= state.jokers.length) return;
+
+  moveJokerAt(currentIdx, dir);
+  currentJokerCarouselIndex = targetIdx;
+
+  if (typeof (window as any).playCardSlideSound === 'function') {
+    (window as any).playCardSlideSound();
+  }
+
+  updateAllUI();
+  renderJokerCarousel();
+}
+
+function uiSellJokerInCarousel(idx: number): void {
+  if (isPlayfieldLocked) return;
+  const res = sellJoker(idx);
+  if (res === null) return;
+
+  if (typeof (window as any).playCardDealSound === 'function') {
+    (window as any).playCardDealSound();
+  }
+
+  const remaining = getState().jokers.length;
+  if (remaining === 0) {
+    closeJokerCarousel();
+  } else {
+    if (currentJokerCarouselIndex >= remaining) {
+      currentJokerCarouselIndex = remaining - 1;
+    }
+    renderJokerCarousel();
+  }
+  updateAllUI();
+  if (getState().inShop) renderShop();
+}
+
+function closeJokerCarousel(): void {
+  const modal = $('ui-joker-carousel-modal');
+  if (modal) modal.classList.add('hidden');
+}
 
 function inspectJoker(index: number): void {
   if (isPlayfieldLocked) return;
   const state = getState();
-  const j = state.jokers[index];
-  if (!j) return;
-  const sellVal = Math.max(1, Math.floor(j.cost / 2));
-  const arch = j.archetype || 'utility';
-  const icon = j.icon || '🃏';
-  const box = $('ui-inspect-content');
-  box.innerHTML = `
-    <div class="inspect-header-wrap" style="position:relative; overflow:hidden; border-radius:6px; padding:2px;">
-      <div class="inspect-watermark">${icon}</div>
-      <div style="display:flex; justify-content:space-between; align-items:center; position:relative; z-index:2;">
-        <div style="display:flex; align-items:center; gap:8px;">
-          <span style="font-size:22px; line-height:1;">${icon}</span>
-          <h3 style="color:var(--gold); margin:0;">${j.name}</h3>
-          <span class="rarity-badge rarity-${j.rarity || 'common'}">${(j.rarity || 'common').toUpperCase()}</span>
-          <span class="archetype-badge archetype-${arch}">${arch.toUpperCase()}</span>
-        </div>
-        <button class="btn btn-secondary" onclick="closeInspector()">Close</button>
-      </div>
-    </div>
-    <div style="font-size:13px; color:#e2e8f0; line-height:1.4; position:relative; z-index:2; margin-top:8px;">${getJokerFullDesc(j)}</div>
-    <div style="font-size:12px; color:#94a3b8; position:relative; z-index:2; margin-top:6px;">Tip: Jokers trigger Left ➔ Right. Put +Mult Jokers to the left of ×Mult Jokers!</div>
-    <div style="display:flex; gap:6px; position:relative; z-index:2; margin-top:10px;">
-      <button class="btn btn-secondary" style="flex:1;" onclick="uiMoveJoker(${index}, -1)" ${index === 0 ? 'disabled' : ''}>◀ Move Left</button>
-      <button class="btn btn-secondary" style="flex:1;" onclick="uiMoveJoker(${index}, 1)" ${index === state.jokers.length - 1 ? 'disabled' : ''}>Move Right ▶</button>
-    </div>
-    <button class="btn btn-redeal" style="padding:10px; position:relative; z-index:2; margin-top:8px;" onclick="uiSellJoker(${index})">Sell Joker for $${sellVal}</button>
-  `;
-  $('ui-inspect-modal').classList.remove('hidden');
+  if (!state.jokers || state.jokers.length === 0) return;
+  if (index < 0 || index >= state.jokers.length) index = 0;
+
+  currentJokerCarouselIndex = index;
+  renderJokerCarousel();
+
+  if (typeof (window as any).playCardDealSound === 'function') {
+    (window as any).playCardDealSound();
+  }
 }
 
 function inspectConsumable(index: number): void {
@@ -318,7 +666,8 @@ function inspectConsumable(index: number): void {
 }
 
 function closeInspector(): void {
-  $('ui-inspect-modal').classList.add('hidden');
+  $('ui-inspect-modal')?.classList.add('hidden');
+  closeJokerCarousel();
 }
 
 /* ---------- HUD, cards, shop rendering ---------- */
@@ -3282,6 +3631,17 @@ function renderRunStats(): void {
 (window as any).inspectJoker = inspectJoker;
 (window as any).inspectConsumable = inspectConsumable;
 (window as any).closeInspector = closeInspector;
+(window as any).closeJokerCarousel = closeJokerCarousel;
+(window as any).renderJokerCarousel = renderJokerCarousel;
+(window as any).updateJokerCarouselLayout = updateJokerCarouselLayout;
+(window as any).uiJokerCarouselNavNext = uiJokerCarouselNavNext;
+(window as any).uiJokerCarouselNavPrev = uiJokerCarouselNavPrev;
+(window as any).uiSetJokerCarouselActiveCard = uiSetJokerCarouselActiveCard;
+(window as any).uiClickJokerCarouselCard = uiClickJokerCarouselCard;
+(window as any).handleJokerStageClick = handleJokerStageClick;
+(window as any).uiMoveJokerInCarousel = uiMoveJokerInCarousel;
+(window as any).uiSellJokerInCarousel = uiSellJokerInCarousel;
+(window as any).getCurrentJokerCarouselIndex = () => currentJokerCarouselIndex;
 (window as any).uiBuyShopItem = uiBuyShopItem;
 (window as any).uiBuyPack = uiBuyPack;
 (window as any).uiChoosePackOption = uiChoosePackOption;
