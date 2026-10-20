@@ -1281,14 +1281,281 @@ function uiBuyShopItem(listName: 'shopJokers' | 'shopExtras', idx: number): void
   updateAllUI();
 }
 
-function renderPackOpeningScreen(): void {
+let currentPackCardIndex = 0;
+let packAnimTimer1: any = null;
+let packAnimTimer2: any = null;
+let packStageTouchAttached = false;
+
+function clearPackAnimationTimers(): void {
+  if (packAnimTimer1) { clearTimeout(packAnimTimer1); packAnimTimer1 = null; }
+  if (packAnimTimer2) { clearTimeout(packAnimTimer2); packAnimTimer2 = null; }
+}
+
+function uiSkipPackAnimation(): void {
+  clearPackAnimationTimers();
+  const animContainer = $('ui-pack-booster-container');
+  if (animContainer) animContainer.classList.add('hidden');
+  const flash = $('ui-pack-burst-flash');
+  if (flash) flash.classList.remove('active');
+  const stage = $('ui-pack-stage');
+  if (stage) {
+    stage.classList.remove('pack-cards-hidden');
+    stage.classList.remove('pack-cards-reveal');
+  }
+  updatePackCardsLayout();
+}
+
+function updatePackCardsLayout(): void {
+  const stage = $('ui-pack-stage');
+  if (!stage) return;
+  const cards = stage.querySelectorAll<HTMLElement>('.pack-option-card');
+  const total = cards.length;
+  if (total === 0) return;
+
+  if (currentPackCardIndex < 0) currentPackCardIndex = 0;
+  if (currentPackCardIndex >= total) currentPackCardIndex = total - 1;
+
+  cards.forEach((cardEl, idx) => {
+    const delta = idx - currentPackCardIndex;
+    cardEl.classList.remove('pack-card-active', 'pack-card-prev', 'pack-card-next', 'pack-card-far-prev', 'pack-card-far-next');
+
+    if (delta === 0) {
+      cardEl.classList.add('pack-card-active');
+      cardEl.style.transform = 'translateX(0px) scale(1) translateZ(0px) rotate(0deg)';
+      cardEl.style.zIndex = '10';
+      cardEl.style.opacity = '1';
+      cardEl.style.filter = 'none';
+      cardEl.style.pointerEvents = 'auto';
+    } else if (delta === 1) {
+      cardEl.classList.add('pack-card-next');
+      cardEl.style.transform = 'translateX(min(125px, 32vw)) scale(0.85) translateZ(-60px) rotate(3deg)';
+      cardEl.style.zIndex = '6';
+      cardEl.style.opacity = '0.78';
+      cardEl.style.filter = 'brightness(0.72)';
+      cardEl.style.pointerEvents = 'auto';
+    } else if (delta === 2) {
+      cardEl.classList.add('pack-card-far-next');
+      cardEl.style.transform = 'translateX(min(220px, 58vw)) scale(0.70) translateZ(-120px) rotate(6deg)';
+      cardEl.style.zIndex = '3';
+      cardEl.style.opacity = '0.52';
+      cardEl.style.filter = 'brightness(0.50)';
+      cardEl.style.pointerEvents = 'auto';
+    } else if (delta > 2) {
+      cardEl.classList.add('pack-card-far-next');
+      cardEl.style.transform = 'translateX(min(290px, 78vw)) scale(0.58) translateZ(-180px) rotate(9deg)';
+      cardEl.style.zIndex = '1';
+      cardEl.style.opacity = '0';
+      cardEl.style.filter = 'brightness(0.3)';
+      cardEl.style.pointerEvents = 'none';
+    } else if (delta === -1) {
+      cardEl.classList.add('pack-card-prev');
+      cardEl.style.transform = 'translateX(max(-125px, -32vw)) scale(0.85) translateZ(-60px) rotate(-3deg)';
+      cardEl.style.zIndex = '6';
+      cardEl.style.opacity = '0.78';
+      cardEl.style.filter = 'brightness(0.72)';
+      cardEl.style.pointerEvents = 'auto';
+    } else if (delta === -2) {
+      cardEl.classList.add('pack-card-far-prev');
+      cardEl.style.transform = 'translateX(max(-220px, -58vw)) scale(0.70) translateZ(-120px) rotate(-6deg)';
+      cardEl.style.zIndex = '3';
+      cardEl.style.opacity = '0.52';
+      cardEl.style.filter = 'brightness(0.50)';
+      cardEl.style.pointerEvents = 'auto';
+    } else {
+      cardEl.classList.add('pack-card-far-prev');
+      cardEl.style.transform = 'translateX(max(-290px, -78vw)) scale(0.58) translateZ(-180px) rotate(-9deg)';
+      cardEl.style.zIndex = '1';
+      cardEl.style.opacity = '0';
+      cardEl.style.filter = 'brightness(0.3)';
+      cardEl.style.pointerEvents = 'none';
+    }
+  });
+
+  // Update nav arrows
+  const prevBtn = $('btn-pack-prev');
+  const nextBtn = $('btn-pack-next');
+  if (prevBtn) {
+    if (currentPackCardIndex > 0) {
+      prevBtn.classList.remove('disabled');
+      prevBtn.style.opacity = '1';
+      prevBtn.style.pointerEvents = 'auto';
+    } else {
+      prevBtn.classList.add('disabled');
+      prevBtn.style.opacity = '0.15';
+      prevBtn.style.pointerEvents = 'none';
+    }
+  }
+  if (nextBtn) {
+    if (currentPackCardIndex < total - 1) {
+      nextBtn.classList.remove('disabled');
+      nextBtn.style.opacity = '1';
+      nextBtn.style.pointerEvents = 'auto';
+    } else {
+      nextBtn.classList.add('disabled');
+      nextBtn.style.opacity = '0.15';
+      nextBtn.style.pointerEvents = 'none';
+    }
+  }
+
+  // Update footer nav buttons
+  const prevFootBtn = $('btn-pack-prev-foot') as HTMLButtonElement | null;
+  const nextFootBtn = $('btn-pack-next-foot') as HTMLButtonElement | null;
+  if (prevFootBtn) prevFootBtn.disabled = currentPackCardIndex <= 0;
+  if (nextFootBtn) nextFootBtn.disabled = currentPackCardIndex >= total - 1;
+
+  // Update dots
+  const dotsEl = $('ui-pack-dots');
+  if (dotsEl) {
+    dotsEl.innerHTML = Array.from({ length: total }, (_, i) => `
+      <span class="pack-dot ${i === currentPackCardIndex ? 'active' : ''}" onclick="uiSetPackActiveCard(${i})"></span>
+    `).join('');
+  }
+
+  // Update hint text
+  const hintEl = $('ui-pack-nav-hint');
+  if (hintEl) {
+    hintEl.textContent = `Card ${currentPackCardIndex + 1} of ${total} • Swipe or click right side to browse`;
+  }
+}
+
+function uiPackNavNext(): void {
+  const state = getState();
+  const total = state.activePackOpening?.options.length || 0;
+  if (currentPackCardIndex < total - 1) {
+    currentPackCardIndex++;
+    if (typeof (window as any).playCardSlideSound === 'function') {
+      (window as any).playCardSlideSound();
+    }
+    updatePackCardsLayout();
+  }
+}
+
+function uiPackNavPrev(): void {
+  if (currentPackCardIndex > 0) {
+    currentPackCardIndex--;
+    if (typeof (window as any).playCardSlideSound === 'function') {
+      (window as any).playCardSlideSound();
+    }
+    updatePackCardsLayout();
+  }
+}
+
+function uiSetPackActiveCard(idx: number): void {
+  const state = getState();
+  const total = state.activePackOpening?.options.length || 0;
+  if (idx >= 0 && idx < total && idx !== currentPackCardIndex) {
+    currentPackCardIndex = idx;
+    if (typeof (window as any).playCardSlideSound === 'function') {
+      (window as any).playCardSlideSound();
+    }
+    updatePackCardsLayout();
+  }
+}
+
+function uiClickPackCard(optIdx: number): void {
+  if (isPlayfieldLocked) return;
+  if (optIdx !== currentPackCardIndex) {
+    uiSetPackActiveCard(optIdx);
+  } else {
+    uiChoosePackOption(optIdx);
+  }
+}
+
+function handlePackStageClick(e: MouseEvent): void {
+  const target = e.target as HTMLElement;
+  if (!target) return;
+  if (target.closest('button') || target.closest('.pack-dot')) return;
+  if (target.closest('.pack-option-card')) return;
+
+  const stage = $('ui-pack-stage');
+  if (!stage) return;
+  const rect = stage.getBoundingClientRect();
+  const clickX = e.clientX;
+  if (clickX > rect.left + rect.width * 0.6) {
+    uiPackNavNext();
+  } else if (clickX < rect.left + rect.width * 0.4) {
+    uiPackNavPrev();
+  }
+}
+
+function initPackTouchGestures(): void {
+  if (packStageTouchAttached) return;
+  const stage = $('ui-pack-stage');
+  if (!stage) return;
+  packStageTouchAttached = true;
+
+  let startX = 0;
+  let startY = 0;
+  let startTime = 0;
+
+  stage.addEventListener('touchstart', (e: TouchEvent) => {
+    if (e.touches.length !== 1) return;
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    startTime = Date.now();
+  }, { passive: true });
+
+  stage.addEventListener('touchend', (e: TouchEvent) => {
+    if (e.changedTouches.length !== 1) return;
+    const endX = e.changedTouches[0].clientX;
+    const endY = e.changedTouches[0].clientY;
+    const deltaX = endX - startX;
+    const deltaY = endY - startY;
+    const elapsed = Date.now() - startTime;
+
+    if (Math.abs(deltaX) > 30 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2 && elapsed < 800) {
+      if (deltaX < 0) {
+        uiPackNavNext();
+      } else {
+        uiPackNavPrev();
+      }
+    }
+  }, { passive: true });
+
+  // Mouse drag support for desktop
+  let isMouseDown = false;
+  let mouseStartX = 0;
+  stage.addEventListener('mousedown', (e: MouseEvent) => {
+    if (e.button !== 0) return;
+    isMouseDown = true;
+    mouseStartX = e.clientX;
+  });
+  window.addEventListener('mouseup', (e: MouseEvent) => {
+    if (!isMouseDown) return;
+    isMouseDown = false;
+    const deltaX = e.clientX - mouseStartX;
+    if (Math.abs(deltaX) > 45) {
+      if (deltaX < 0) uiPackNavNext();
+      else uiPackNavPrev();
+    }
+  });
+
+  // Keyboard navigation
+  window.addEventListener('keydown', (e: KeyboardEvent) => {
+    const overlay = $('ui-pack-overlay');
+    if (!overlay || overlay.classList.contains('hidden')) return;
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      uiPackNavNext();
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      uiPackNavPrev();
+    }
+  });
+}
+
+function renderPackOpeningScreen(triggerAnim: boolean = false): void {
   const state = getState();
   const active = state.activePackOpening;
   const overlay = $('ui-pack-overlay');
   if (!active || !overlay) {
     if (overlay) overlay.classList.add('hidden');
+    clearPackAnimationTimers();
     return;
   }
+
+  currentPackCardIndex = 0;
+  initPackTouchGestures();
 
   const badgeEl = $('ui-pack-badge');
   const titleEl = $('ui-pack-title');
@@ -1306,6 +1573,7 @@ function renderPackOpeningScreen(): void {
     let cardTitle = '';
     let cardSub = '';
     let extraCardClass = '';
+    let chooseBtnText = 'CHOOSE';
 
     if (opt.kind === 'joker') {
       const j = opt.data;
@@ -1315,13 +1583,16 @@ function renderPackOpeningScreen(): void {
       cardTitle = j.name;
       cardSub = getJokerFullDesc(j);
       extraCardClass = `pack-opt-joker rarity-${j.rarity || 'common'} archetype-${arch}`;
+      chooseBtnText = 'CHOOSE JOKER';
       cardContentHtml = `
         <div class="pack-opt-watermark">${icon}</div>
-        <div class="pack-opt-inner" style="position:relative; z-index:2;">
+        <div class="pack-opt-inner">
           <div class="pack-opt-badge-row">
             <span class="pack-opt-type">${cardTypeLabel}</span>
+            <span class="pack-opt-archetype">${arch.toUpperCase()}</span>
           </div>
-          <div class="pack-opt-title"><span class="joker-icon-mini">${icon}</span> ${cardTitle}</div>
+          <div class="pack-card-art-box"><span class="pack-card-big-icon">${icon}</span></div>
+          <div class="pack-opt-title">${cardTitle}</div>
           <div class="pack-opt-desc">${cardSub}</div>
         </div>
       `;
@@ -1331,11 +1602,14 @@ function renderPackOpeningScreen(): void {
       cardTitle = t.name;
       cardSub = t.desc;
       extraCardClass = 'pack-opt-tarot';
+      chooseBtnText = 'TAKE TAROT';
       cardContentHtml = `
         <div class="pack-opt-inner">
           <div class="pack-opt-badge-row">
             <span class="pack-opt-type">${cardTypeLabel}</span>
+            <span class="pack-opt-archetype">SPELL</span>
           </div>
+          <div class="pack-card-art-box"><span class="pack-card-big-icon">🔮</span></div>
           <div class="pack-opt-title">${cardTitle}</div>
           <div class="pack-opt-desc">${cardSub}</div>
         </div>
@@ -1353,15 +1627,17 @@ function renderPackOpeningScreen(): void {
       else if (c.enhancement === 'gold') enhBlurb = '+$3 Bonus Cash';
       cardSub = enhBlurb;
       extraCardClass = `pack-opt-card enh-${c.enhancement || 'none'} ${isRed ? 'card-red' : 'card-black'}`;
+      chooseBtnText = 'ADD TO DECK';
 
-      const cardVisual = renderCardHTML({ uid: 0, rank: c.rank, suit: c.suit, enhancement: c.enhancement }, false, 'pack-mini-card');
+      const cardVisual = renderCardHTML({ uid: 0, rank: c.rank, suit: c.suit, enhancement: c.enhancement }, false, 'pack-showcase-card');
 
       cardContentHtml = `
         <div class="pack-opt-inner">
           <div class="pack-opt-badge-row">
             <span class="pack-opt-type">${cardTypeLabel}</span>
+            <span class="pack-opt-archetype">${enhName}</span>
           </div>
-          <div class="pack-opt-card-visual">${cardVisual}</div>
+          <div class="pack-card-playing-box">${cardVisual}</div>
           <div class="pack-opt-title">${cardTitle}</div>
           <div class="pack-opt-desc">${cardSub}</div>
         </div>
@@ -1369,16 +1645,74 @@ function renderPackOpeningScreen(): void {
     }
 
     return `
-      <div class="pack-option-card ${extraCardClass}" onclick="uiChoosePackOption(${optIdx})">
+      <div class="pack-option-card ${extraCardClass}" onclick="uiClickPackCard(${optIdx})">
         ${cardContentHtml}
         <button class="btn btn-deal btn-pack-choose" onclick="event.stopPropagation(); uiChoosePackOption(${optIdx})">
-          CHOOSE
+          ${chooseBtnText}
         </button>
       </div>
     `;
   }).join('');
 
   overlay.classList.remove('hidden');
+  updatePackCardsLayout();
+
+  // Check if headless test environment
+  const isHeadlessTest = typeof navigator !== 'undefined' && (/jsdom/i.test(navigator.userAgent) || !!(window as any).__TEST__);
+
+  clearPackAnimationTimers();
+  const boosterContainer = $('ui-pack-booster-container');
+  const boosterWrapper = $('ui-pack-booster-wrapper');
+  const burstFlash = $('ui-pack-burst-flash');
+
+  if (triggerAnim && boosterContainer && boosterWrapper && !isHeadlessTest) {
+    const packType = active.pack.packType;
+    let packIcon = '🃏';
+    if (packType === 'tarot') packIcon = '🔮';
+    else if (packType === 'card') packIcon = '🎴';
+    else if (packType === 'variety') packIcon = '🎲';
+
+    const bBadge = $('ui-pack-booster-badge');
+    const bIcon = $('ui-pack-booster-icon');
+    const bName = $('ui-pack-booster-name');
+    const bTag = $('ui-pack-booster-tag');
+
+    if (bBadge) bBadge.textContent = (active.pack.badge || packType).toUpperCase() + ' PACK';
+    if (bIcon) bIcon.textContent = packIcon;
+    if (bName) bName.textContent = active.pack.name;
+    if (bTag) bTag.textContent = `Choose ${active.pack.chooseCount} of ${active.options.length}`;
+
+    boosterWrapper.className = `pack-booster-wrapper pack-${packType} anim-shake`;
+    boosterContainer.classList.remove('hidden');
+    if (burstFlash) burstFlash.classList.remove('active');
+
+    stage.classList.add('pack-cards-hidden');
+
+    if (typeof (window as any).playPackRipPopSound === 'function') {
+      (window as any).playPackRipPopSound();
+    } else if (typeof playPackRipPopSound === 'function') {
+      playPackRipPopSound();
+    }
+
+    // Step 2: Pop burst at 420ms
+    packAnimTimer1 = setTimeout(() => {
+      boosterWrapper.classList.remove('anim-shake');
+      boosterWrapper.classList.add('anim-burst');
+      if (burstFlash) burstFlash.classList.add('active');
+
+      stage.classList.remove('pack-cards-hidden');
+      stage.classList.add('pack-cards-reveal');
+
+      // Step 3: Complete animation at 780ms
+      packAnimTimer2 = setTimeout(() => {
+        uiSkipPackAnimation();
+      }, 360);
+    }, 420);
+  } else {
+    if (boosterContainer) boosterContainer.classList.add('hidden');
+    stage.classList.remove('pack-cards-hidden');
+    stage.classList.remove('pack-cards-reveal');
+  }
 }
 
 function uiBuyPack(idx: number): void {
@@ -1391,7 +1725,7 @@ function uiBuyPack(idx: number): void {
   playCardDealSound();
   renderShop();
   updateAllUI();
-  renderPackOpeningScreen();
+  renderPackOpeningScreen(true);
 }
 
 function uiChoosePackOption(optIdx: number): void {
@@ -1402,6 +1736,7 @@ function uiChoosePackOption(optIdx: number): void {
     if (res.reason === 'tarots_full') alert('Tarot slots full! Tap an active Tarot at the top to use/sell it, or tap Skip Pack.');
     return;
   }
+  uiSkipPackAnimation();
   playCardDealSound();
   const overlay = $('ui-pack-overlay');
   if (overlay) overlay.classList.add('hidden');
@@ -1418,6 +1753,7 @@ function uiChoosePackOption(optIdx: number): void {
 
 function uiSkipPack(): void {
   if (isPlayfieldLocked) return;
+  uiSkipPackAnimation();
   skipPackOpening();
   const overlay = $('ui-pack-overlay');
   if (overlay) overlay.classList.add('hidden');
@@ -2951,6 +3287,13 @@ function renderRunStats(): void {
 (window as any).uiChoosePackOption = uiChoosePackOption;
 (window as any).uiSkipPack = uiSkipPack;
 (window as any).renderPackOpeningScreen = renderPackOpeningScreen;
+(window as any).uiPackNavNext = uiPackNavNext;
+(window as any).uiPackNavPrev = uiPackNavPrev;
+(window as any).uiSetPackActiveCard = uiSetPackActiveCard;
+(window as any).uiClickPackCard = uiClickPackCard;
+(window as any).uiSkipPackAnimation = uiSkipPackAnimation;
+(window as any).handlePackStageClick = handlePackStageClick;
+(window as any).getCurrentPackCardIndex = () => currentPackCardIndex;
 (window as any).uiRerollShop = uiRerollShop;
 (window as any).uiMoveJoker = uiMoveJoker;
 (window as any).uiSellJoker = uiSellJoker;

@@ -231,15 +231,45 @@
 
     <!-- PACK OPENING OVERLAY -->
     <div class="overlay-panel hidden pack-opening-overlay" id="ui-pack-overlay">
+      <!-- Animated Booster Pack Reveal (Shakes and pops open) -->
+      <div class="pack-booster-container hidden" id="ui-pack-booster-container" onclick="uiSkipPackAnimation()">
+        <div class="pack-booster-wrapper" id="ui-pack-booster-wrapper">
+          <div class="pack-booster-crimp top"></div>
+          <div class="pack-booster-foil-sheen"></div>
+          <div class="pack-booster-badge" id="ui-pack-booster-badge">JOKER PACK</div>
+          <div class="pack-booster-icon" id="ui-pack-booster-icon">🃏</div>
+          <div class="pack-booster-name" id="ui-pack-booster-name">JOKER BOOSTER</div>
+          <div class="pack-booster-tagline" id="ui-pack-booster-tag">CONTAINS 3 JOKERS</div>
+          <div class="pack-booster-crimp bottom"></div>
+        </div>
+        <div class="pack-burst-flash" id="ui-pack-burst-flash"></div>
+        <div class="pack-anim-hint">Tap to skip</div>
+      </div>
+
       <div class="pack-opening-header">
         <div class="pack-opening-badge" id="ui-pack-badge">JOKER PACK</div>
         <h2 class="pack-opening-title" id="ui-pack-title">Open Booster Pack</h2>
         <div class="pack-opening-sub" id="ui-pack-sub">Choose 1 option to take</div>
       </div>
 
-      <div class="pack-opening-stage" id="ui-pack-stage">
-        <!-- Rendered revealed cards -->
+      <!-- Carousel Stage Container with Navigation Chevrons -->
+      <div class="pack-stage-container">
+        <button class="pack-stage-arrow pack-arrow-left" id="btn-pack-prev" onclick="uiPackNavPrev()" aria-label="Previous card">&#9664;</button>
+
+        <div class="pack-opening-stage" id="ui-pack-stage" onclick="handlePackStageClick(event)">
+          <!-- Rendered revealed cards -->
+        </div>
+
+        <button class="pack-stage-arrow pack-arrow-right" id="btn-pack-next" onclick="uiPackNavNext()" aria-label="Next card">&#9654;</button>
       </div>
+
+      <!-- Pagination Dots & Counter Footer -->
+      <div class="pack-carousel-footer" id="ui-pack-carousel-footer">
+        <button class="btn btn-secondary pack-footer-nav" id="btn-pack-prev-foot" onclick="uiPackNavPrev()">&#9664; Prev</button>
+        <div class="pack-dots-row" id="ui-pack-dots"></div>
+        <button class="btn btn-secondary pack-footer-nav" id="btn-pack-next-foot" onclick="uiPackNavNext()">Next &#9654;</button>
+      </div>
+      <div class="pack-nav-hint" id="ui-pack-nav-hint">Card 1 of 3 &bull; Swipe or click right side to browse</div>
 
       <div class="pack-opening-actions">
         <button class="btn btn-secondary btn-skip-pack" id="btn-skip-pack" onclick="uiSkipPack()">

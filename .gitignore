@@ -11,3 +11,9 @@ android/.idea/
 android/local.properties
 *.apk
 *.aab
+
+# Telegram bridge secrets
+telegram_bridge/bridge_config.json
+__pycache__/
+*.pyc
+

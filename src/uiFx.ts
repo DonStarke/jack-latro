@@ -221,6 +221,64 @@ function playCardSlideSound(): void {
   } catch (e) {}
 }
 
+/**
+ * Synthesizes a crisp booster pack foil rip followed by an energetic pop burst and bright chime.
+ */
+function playPackRipPopSound(): void {
+  try {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    // 1. Foil tear/rip crinkle: filtered noise with resonant sweeping bandpass
+    const ripDuration = 0.22;
+    const bufferSize = Math.floor(ctx.sampleRate * ripDuration);
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      const envelope = Math.sin((i / bufferSize) * Math.PI);
+      data[i] = (Math.random() * 2 - 1) * envelope;
+    }
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(2400, now);
+    filter.frequency.exponentialRampToValueAtTime(800, now + ripDuration);
+    filter.Q.setValueAtTime(3.0, now);
+
+    const ripGain = ctx.createGain();
+    ripGain.gain.setValueAtTime(0.32, now);
+    ripGain.gain.exponentialRampToValueAtTime(0.001, now + ripDuration);
+
+    noise.connect(filter);
+    filter.connect(ripGain);
+    ripGain.connect(getMasterOutput(ctx));
+    noise.start(now);
+    noise.stop(now + ripDuration);
+
+    // 2. Resonant energetic pop body: descending triangle pitch sweep
+    const popOsc = ctx.createOscillator();
+    const popGain = ctx.createGain();
+    popOsc.type = 'triangle';
+    popOsc.frequency.setValueAtTime(420, now + 0.16);
+    popOsc.frequency.exponentialRampToValueAtTime(140, now + 0.36);
+
+    popGain.gain.setValueAtTime(0.001, now + 0.16);
+    popGain.gain.linearRampToValueAtTime(0.35, now + 0.19);
+    popGain.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
+
+    popOsc.connect(popGain);
+    popGain.connect(getMasterOutput(ctx));
+    popOsc.start(now + 0.16);
+    popOsc.stop(now + 0.40);
+
+    // 3. Bright magical sparkle bells
+    playTone(1174.66, 'sine', now + 0.20, 0.26, 0.16); // D6
+    playTone(1760.0, 'sine', now + 0.25, 0.32, 0.14);  // A6
+  } catch (e) {}
+}
+
 /** Crisp ceramic ping when Blue Chips are scored and sink into the Chip counter. */
 function playChipSound(): void {
   try {
@@ -1142,6 +1200,10 @@ if (typeof window !== 'undefined') {
     updateMusicUI();
     tryAutostartMusic();
   }
+}
+
+if (typeof window !== 'undefined') {
+  (window as any).playPackRipPopSound = playPackRipPopSound;
 }
 
 

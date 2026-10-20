@@ -62,6 +62,17 @@
   * **Category Items Grid:** Dedicated browsable views for each category with rarity filtering for Jokers (All/Common/Uncommon/Rare), full item descriptions, cost, badges, and artwork.
   * **Enlarged Center Stage & Stat Telemetry Inspection:** Clicking any item opens an enlarged detail modal centered on the screen with full visuals, archetype/rarity badges, game strategy tips, and a structured lifetime telemetry stats panel prepared for future stat tracking.
   * **Automated Verification:** Added `tests/library.test.js` validating all 97 checks across navigation, categories, zoom modals, and placeholder stats. All suites passing cleanly.
+* **Booster Pack Opening Animation & 3D Carousel Showcase**:
+  * **Tactile Shake & Pop Reveal Animation:** Foil booster wrapper styled to pack archetype (Joker, Tarot, Playing Card, Variety) with crimped metallic ridges, sweeping holographic sheen, energetic 420ms anticipation rumble/shake, a synthesized WebAudio foil rip + resonant pop burst chime (`playPackRipPopSound`), radiant flash ring (`#ui-pack-burst-flash`), and cards bursting into view. Tap-to-skip supported for rapid opening.
+  * **Large Un-Squashed Card Stage:** Replaced side-by-side cramped 3-card layout (which squeezed cards into 110px) with full-sized 255px x 375px cards featuring generous typography, dedicated icon/art showcase box, clear archetype/rarity badges, and prominent selection buttons.
+  * **3D Depth-Stacked Carousel (Coverflow):** First card is displayed front-and-center in large format. The other 2 cards appear staggered to the right in the background (scaled down to 0.84x and 0.70x, dimmed, with depth perspective). Scrolling smoothly slides cards with 3D transforms (`translateZ`, `rotate`, `scale`).
+  * **Bi-Directional Gestures & Multi-Input Navigation:**
+    * **Touch Swipes:** Horizontal swipe gestures (`touchstart`, `touchend`) to flick back and forth between cards.
+    * **Screen Sides Click & Tap:** Floating glass chevrons (`#btn-pack-prev`, `#btn-pack-next`) and tap zones on left/right screen sides.
+    * **Direct Background Card Click:** Tapping any background card immediately glides it into front focus.
+    * **Pagination Dots & Counter:** Interactive pagination dots (`● ○ ○`) and dynamic counter (`Card 1 of 3`).
+    * **Keyboard Controls:** Left and right arrow keys scroll cards.
+  * **Automated Verification:** Added `tests/pack-carousel-animation.test.js` validating all 38 checks across DOM elements, initial 3D positions, bi-directional navigation, card focus transitions, and inventory additions. All 9 test suites passing 100%.
 
 
 
