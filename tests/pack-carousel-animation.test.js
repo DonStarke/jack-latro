@@ -52,7 +52,6 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   const burstFlash = $('ui-pack-burst-flash');
   const prevBtn = $('btn-pack-prev');
   const nextBtn = $('btn-pack-next');
-  const dotsRow = $('ui-pack-dots');
   const navHint = $('ui-pack-nav-hint');
 
   ck('Booster anim container exists in DOM', !!boosterContainer);
@@ -60,7 +59,8 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   ck('Burst flash ring exists in DOM', !!burstFlash);
   ck('Left nav chevron exists in DOM', !!prevBtn);
   ck('Right nav chevron exists in DOM', !!nextBtn);
-  ck('Carousel dots container exists in DOM', !!dotsRow);
+  ck('Prev and Next footer buttons removed from pack overlay', !$('btn-pack-prev-foot') && !$('btn-pack-next-foot'));
+  ck('Pagination dots removed from pack overlay', !$('ui-pack-dots'));
   ck('Navigation hint exists in DOM', !!navHint);
 
   console.log('\n--- TEST 2: PACK BUYING & INITIAL CARD FOCUS ---');
@@ -68,7 +68,7 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   await sleep(50);
 
   ck('Pack overlay is open', !isHidden($('ui-pack-overlay')));
-  ck('Current active card index initialized to 0', w.getCurrentPackCardIndex() === 0);
+  ck('Current active card index initialized to 0', w.getCurrentPackPackIndex ? w.getCurrentPackPackIndex() === 0 : w.getCurrentPackCardIndex() === 0);
 
   const stage = $('ui-pack-stage');
   const cards = stage.querySelectorAll('.pack-option-card');
@@ -82,11 +82,6 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   // Left arrow should be disabled initially (at index 0)
   ck('Left nav arrow is disabled on first card', prevBtn.classList.contains('disabled'));
   ck('Right nav arrow is enabled on first card', !nextBtn.classList.contains('disabled'));
-
-  // Dots indicator
-  const dots = dotsRow.querySelectorAll('.pack-dot');
-  ck('Renders 3 pagination dots', dots.length === 3);
-  ck('First dot is marked active', dots[0].classList.contains('active'));
   ck('Hint indicates Card 1 of 3', navHint.textContent.includes('Card 1 of 3'));
 
   console.log('\n--- TEST 3: SCROLLING TO NEXT CARD (SWIPE / RIGHT CLICK) ---');
@@ -100,7 +95,6 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   ck('Card 2 moved to pack-card-next', cards[2].classList.contains('pack-card-next'));
   ck('Left nav arrow is now enabled', !prevBtn.classList.contains('disabled'));
   ck('Right nav arrow remains enabled', !nextBtn.classList.contains('disabled'));
-  ck('Dot 1 is now active', dotsRow.querySelectorAll('.pack-dot')[1].classList.contains('active'));
   ck('Hint indicates Card 2 of 3', navHint.textContent.includes('Card 2 of 3'));
 
   console.log('\n--- TEST 4: SCROLLING TO THIRD CARD ---');
@@ -113,7 +107,6 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   ck('Card 2 is now pack-card-active', cards[2].classList.contains('pack-card-active'));
   ck('Left nav arrow is enabled', !prevBtn.classList.contains('disabled'));
   ck('Right nav arrow is now disabled on last card', nextBtn.classList.contains('disabled'));
-  ck('Dot 2 is now active', dotsRow.querySelectorAll('.pack-dot')[2].classList.contains('active'));
   ck('Hint indicates Card 3 of 3', navHint.textContent.includes('Card 3 of 3'));
 
   // Attempting to advance past the end does nothing
@@ -141,10 +134,10 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   ck('Clicking card 2 directly brought it to active focus', w.getCurrentPackCardIndex() === 2);
   ck('Card 2 is pack-card-active', cards[2].classList.contains('pack-card-active'));
 
-  // Clicking dot 0 directly
+  // Programmatic jump to card 0 via uiSetPackActiveCard
   w.uiSetPackActiveCard(0);
   await sleep(20);
-  ck('Clicking dot 0 directly brought card 0 into active focus', w.getCurrentPackCardIndex() === 0);
+  ck('uiSetPackActiveCard(0) directly brought card 0 into active focus', w.getCurrentPackCardIndex() === 0);
   ck('Card 0 is pack-card-active', cards[0].classList.contains('pack-card-active'));
 
   console.log('\n--- TEST 7: CHOOSING ACTIVE CARD ADDS TO INVENTORY ---');

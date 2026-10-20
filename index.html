@@ -12,7 +12,7 @@
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="styles.css?v=2.6">
+<link rel="stylesheet" href="styles.css?v=2.7">
 <style>
   /* Critical fallback layout: ensures splash screen and modals are immediately fixed and centered */
   .splash-screen {
@@ -263,13 +263,7 @@
         <button class="pack-stage-arrow pack-arrow-right" id="btn-pack-next" onclick="uiPackNavNext()" aria-label="Next card">&#9654;</button>
       </div>
 
-      <!-- Pagination Dots & Counter Footer -->
-      <div class="pack-carousel-footer" id="ui-pack-carousel-footer">
-        <button class="btn btn-secondary pack-footer-nav" id="btn-pack-prev-foot" onclick="uiPackNavPrev()">&#9664; Prev</button>
-        <div class="pack-dots-row" id="ui-pack-dots"></div>
-        <button class="btn btn-secondary pack-footer-nav" id="btn-pack-next-foot" onclick="uiPackNavNext()">Next &#9654;</button>
-      </div>
-      <div class="pack-nav-hint" id="ui-pack-nav-hint">Card 1 of 3 &bull; Swipe or click right side to browse</div>
+      <div class="pack-nav-hint" id="ui-pack-nav-hint">Card 1 of 3 &bull; Swipe or click arrows to browse</div>
 
       <div class="pack-opening-actions">
         <button class="btn btn-secondary btn-skip-pack" id="btn-skip-pack" onclick="uiSkipPack()">
@@ -921,12 +915,12 @@
 </div>
 
 <!-- Compiled TypeScript (npx.cmd tsc: src/*.ts -> dist/*.js). Plain global scripts; order matters. -->
-<script src="dist/gameState.js?v=2.6"></script>
-<script src="dist/deckEngine.js?v=2.6"></script>
-<script src="dist/modifierEngine.js?v=2.6"></script>
-<script src="dist/shopEngine.js?v=2.6"></script>
-<script src="dist/simulator.js?v=2.6"></script>
-<script src="dist/uiFx.js?v=2.6"></script>
-<script src="dist/main.js?v=2.6"></script>
+<script src="dist/gameState.js?v=2.7"></script>
+<script src="dist/deckEngine.js?v=2.7"></script>
+<script src="dist/modifierEngine.js?v=2.7"></script>
+<script src="dist/shopEngine.js?v=2.7"></script>
+<script src="dist/simulator.js?v=2.7"></script>
+<script src="dist/uiFx.js?v=2.7"></script>
+<script src="dist/main.js?v=2.7"></script>
 </body>
 </html>

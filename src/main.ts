@@ -1741,24 +1741,10 @@ function updatePackCardsLayout(): void {
     }
   }
 
-  // Update footer nav buttons
-  const prevFootBtn = $('btn-pack-prev-foot') as HTMLButtonElement | null;
-  const nextFootBtn = $('btn-pack-next-foot') as HTMLButtonElement | null;
-  if (prevFootBtn) prevFootBtn.disabled = currentPackCardIndex <= 0;
-  if (nextFootBtn) nextFootBtn.disabled = currentPackCardIndex >= total - 1;
-
-  // Update dots
-  const dotsEl = $('ui-pack-dots');
-  if (dotsEl) {
-    dotsEl.innerHTML = Array.from({ length: total }, (_, i) => `
-      <span class="pack-dot ${i === currentPackCardIndex ? 'active' : ''}" onclick="uiSetPackActiveCard(${i})"></span>
-    `).join('');
-  }
-
   // Update hint text
   const hintEl = $('ui-pack-nav-hint');
   if (hintEl) {
-    hintEl.textContent = `Card ${currentPackCardIndex + 1} of ${total} • Swipe or click right side to browse`;
+    hintEl.textContent = `Card ${currentPackCardIndex + 1} of ${total} • Swipe or click arrows to browse`;
   }
 }
 
