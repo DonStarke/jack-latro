@@ -95,6 +95,16 @@
   * **Starting Target Score Scaling**: Set default starting `targetScalePct` to `50` (50% target scaling). Ante 1 Small Blind starts at 150 (down from 300) and Big Blind starts at 218.
   * **Starting Unused Deal Cash Cap**: Set default starting `unusedDealCashCap` to `1` ($1 per blind clear for unused deals).
   * **Monte Carlo Balance Lab Slider Range Expansion**: Modified `#sim-dealcap` range input from `min="2"` to `min="1"` so players can configure and test a $1 deal cash cap directly in the Balance Lab. Initialized both `#sim-dealcap` and `#sim-scale` default values to $1 and 50% respectively.
+* **Item Lifetime Telemetry & Compendium Stats Tracking**:
+  * **Full Lifetime Persistence & Schema Versioning**: Implemented versioned `LifetimeTelemetryStore` (`CURRENT_TELEMETRY_SCHEMA_VERSION = 1`) in `src/gameState.ts` with local persistence (`jacklatro_library_telemetry` in `localStorage`), tracking historical metrics across all runs with resilient auto-migration and fail-safes.
+  * **Non-Destructive Auto-Migration**: Updates deep-merge catalogs and historical data safely. Adding new jokers, tarots, vouchers, or metrics never wipes existing player numbers. Malformed/corrupt numeric entries are sanitized without resetting records.
+  * **Emergency Archival & Dual Storage**: Simultaneous write to secondary backup key (`jacklatro_library_telemetry_backup`) prevents data loss during sudden shutdowns; corrupted raw JSON strings are safely archived to `jacklatro_library_telemetry_corrupted_raw` while restoring from backup.
+  * **Jokers Telemetry (35 Cards)**: Tracks `Times Discovered` (shop rolls & packs), `Rounds Held` (active blinds completed), `Hands Triggered` (scoring activations), cumulative `Chips Contributed` (`+Xc`), cumulative `Mult Contributed` (`+Xm`), and `Win Rate When Held` (percentage of completed blinds won).
+  * **Tarot Telemetry (10 Spells)**: Tracks `Times Acquired` (shop purchases & drafted cards), `Times Cast` (in-hand activations), `Times Sold` (liquidations), and `Win Rate When Cast` (victories on hands where spell was cast).
+  * **Vouchers Telemetry (10 Upgrades)**: Tracks `Times Redeemed`, `Earliest Ante Acquired` (lowest ante number ever purchased), `Runs Won With Voucher` (Ante 8 Boss victories with perk active), and `Est. Value Contributed` (cumulative bonus chips, deals, interest, and discounts).
+  * **Card Editions Telemetry (4 Effects)**: Tracks `Cards Enhanced` (upgrades created via spells or drafts), `Times Scored In Hand`, `Bonus Impact` (chips for Foil, mult for Holo/Poly, cash for Gold), and `Deck Saturation Peak` (highest percentage of the deck enhanced).
+  * **Booster Packs Telemetry (4 Packs)**: Tracks `Packs Opened`, `Cards Drafted`, `Packs Skipped`, and `Total Money Invested`.
+  * **Automated Verification**: Added `tests/item-telemetry-tracking.test.js` covering 84 checks across schema migration (v0 -> v1), corrupt field sanitization, emergency archival/recovery, dual storage buffers, live tracking updates, and live UI detail modal rendering. All 13 test suites (500+ checks) passing 100%.
 
 
 

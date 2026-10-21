@@ -86,6 +86,8 @@ function beginBlindState(): void {
   if (s.bossBlind && s.bossBlind.id === 'the_cooler') {
     handsLeft = Math.max(1, handsLeft - 1);
   }
+  resetBlindOutcomeFlag();
+  clearTarotsInHand();
   patchState({
     inShop: false,
     isDealing: false,
@@ -100,7 +102,8 @@ function beginBlindState(): void {
     doubledDown: false,
     tempBonusChips: 0,
     handsWonInBlind: 0,
-    previousHandTotal: null
+    previousHandTotal: null,
+    roundCashEarned: 0
   });
   setShoe(buildShoeFromDeck());
 }
@@ -336,6 +339,14 @@ function generateShopStock(): void {
   }
 
   setShopStock([], voucherOffer, packsOffered);
+
+  // Lifetime Telemetry: Record offered items
+  for (const p of packsOffered) {
+    recordPackDiscovered(p.id);
+  }
+  if (voucherOffer.length > 0 && !voucherOffer[0].bought) {
+    recordVoucherDiscovered(voucherOffer[0].id);
+  }
 }
 
 /** Hook for special effects (like a future joker or voucher) that allow additional vouchers per ante. */
@@ -355,6 +366,9 @@ function rerollShop(): ShopActionResult {
   if (s.money < s.rerollCost) return { ok: false, reason: 'too_poor' };
   spendMoney(s.rerollCost);
   recordMoneySpent('rerolls', s.rerollCost);
+  if (s.vouchersBought.includes('clearance_sale')) {
+    recordVoucherValue('clearance_sale', 1);
+  }
   patchState({ rerollCost: s.rerollCost + 1 });
   generateShopStock();
   return { ok: true };
@@ -381,6 +395,7 @@ function applyVoucher(id: string): void {
   const s = getState();
   const d = getVoucherDeltas(id);
   addVoucher(id);
+  recordVoucherRedeemed(id, s.ante);
   const patch: Partial<GameState> = {
     maxHands: s.maxHands + (d.maxHands || 0),
     baseWinMultBonus: s.baseWinMultBonus + (d.baseWinMultBonus || 0),
@@ -409,8 +424,14 @@ function buyAndOpenPack(idx: number): { ok: boolean; reason?: ShopFailReason; pa
   else recordMoneySpent('cards', pack.cost);
 
   markShopPackBought(idx);
+  recordPackOpened(pack.id, pack.cost);
 
   const options = generatePackOptions(pack);
+  for (const opt of options) {
+    if (opt.kind === 'joker' && opt.data) recordJokerDiscovered(opt.data.id);
+    else if (opt.kind === 'tarot' && opt.data) recordTarotDiscovered(opt.data.id);
+  }
+
   const active: ActivePackOpening = {
     pack,
     options,
@@ -434,6 +455,7 @@ function pickPackOption(optIdx: number): { ok: boolean; reason?: ShopFailReason;
       return { ok: false, reason: 'jokers_full' };
     }
     addJoker({ ...opt.data, bonusMult: 0, bonusChips: 0 });
+    recordJokerAcquired(opt.data.id);
     if (opt.data.id === 'loan_shark') {
       addMoney(15);
       recordMoneyEarned('loanShark', 15);
@@ -444,12 +466,17 @@ function pickPackOption(optIdx: number): { ok: boolean; reason?: ShopFailReason;
       return { ok: false, reason: 'tarots_full' };
     }
     addConsumable({ ...opt.data });
+    recordTarotAcquired(opt.data.id);
   } else if (opt.kind === 'card') {
     const newCard: Card = { uid: takeNextCardUid(), rank: opt.data.rank, suit: opt.data.suit, enhancement: opt.data.enhancement };
     addCardToDeck(newCard);
     addCardToShoe({ ...newCard });
+    if (opt.data.enhancement) {
+      recordEffectEnhanced(opt.data.enhancement);
+    }
   }
 
+  recordPackCardDrafted(active.pack.id);
   active.chosen = true;
   patchState({ activePackOpening: null });
   return { ok: true, picked: opt };
@@ -458,6 +485,7 @@ function pickPackOption(optIdx: number): { ok: boolean; reason?: ShopFailReason;
 function skipPackOpening(): boolean {
   const s = getState();
   if (!s.activePackOpening) return false;
+  recordPackSkipped(s.activePackOpening.pack.id);
   patchState({ activePackOpening: null });
   return true;
 }
@@ -478,6 +506,7 @@ function buyShopItem(listName: 'shopJokers' | 'shopExtras' | 'shopPacks', idx: n
     recordMoneySpent('jokers', item.cost);
     markShopItemBought(listName as any, idx);
     addJoker({ ...item, bonusMult: item.bonusMult || 0, bonusChips: item.bonusChips || 0 });
+    recordJokerAcquired(item.id);
     if (item.id === 'loan_shark') {
       addMoney(15);
       recordMoneyEarned('loanShark', 15);
@@ -489,6 +518,7 @@ function buyShopItem(listName: 'shopJokers' | 'shopExtras' | 'shopPacks', idx: n
     recordMoneySpent('tarots', item.cost);
     markShopItemBought(listName as any, idx);
     addConsumable({ ...item });
+    recordTarotAcquired(item.id);
   } else if (item.shopType === 'card') {
     spendMoney(item.cost);
     recordMoneySpent('cards', item.cost);
@@ -496,6 +526,9 @@ function buyShopItem(listName: 'shopJokers' | 'shopExtras' | 'shopPacks', idx: n
     const newCard: Card = { uid: takeNextCardUid(), ...item.cardData };
     addCardToDeck(newCard);
     addCardToShoe({ ...newCard });
+    if (item.cardData?.enhancement) {
+      recordEffectEnhanced(item.cardData.enhancement);
+    }
   } else if (item.shopType === 'voucher') {
     spendMoney(item.cost);
     recordMoneySpent('vouchers', item.cost);
@@ -521,7 +554,10 @@ function sellJoker(index: number): number | null {
 }
 
 function sellConsumable(index: number): boolean {
+  const s = getState();
+  const c = s.consumables[index];
   if (!removeConsumableAt(index)) return false;
+  if (c) recordTarotSold(c.id);
   addMoney(1);
   recordMoneyEarned('sales', 1);
   return true;
@@ -550,6 +586,7 @@ function useConsumable(index: number): ConsumableResult {
     const ace: Card = { uid: takeNextCardUid(), rank: 'A', suit: '♠', enhancement: 'foil' };
     addCardToDeck({ ...ace });
     addCardToPlayerHand(ace);
+    recordEffectEnhanced('foil');
     message = 'Loaded Ace drawn into hand!';
   } else if (c.id === 'card_shave') {
     const target = s.playerHand.find(card => !['A', '2', '3'].includes(card.rank));
@@ -561,6 +598,7 @@ function useConsumable(index: number): ConsumableResult {
     const lastCard = s.playerHand[s.playerHand.length - 1];
     if (lastCard) {
       setCardEnhancement(lastCard, 'gold');
+      recordEffectEnhanced('gold');
       message = `${lastCard.rank}${lastCard.suit} turned Gold!`;
     }
   } else if (c.id === 'double_vision') {
@@ -571,6 +609,7 @@ function useConsumable(index: number): ConsumableResult {
     const firstCard = s.playerHand[0];
     if (firstCard) {
       setCardEnhancement(firstCard, 'poly');
+      recordEffectEnhanced('poly');
       message = `${firstCard.rank}${firstCard.suit} enhanced to Polychrome (×1.5 Mult)!`;
     }
   } else if (c.id === 'the_guillotine') {
@@ -592,16 +631,19 @@ function useConsumable(index: number): ConsumableResult {
     const firstCard = s.playerHand[0];
     if (firstCard) {
       setCardEnhancement(firstCard, 'foil');
+      recordEffectEnhanced('foil');
       message = `${firstCard.rank}${firstCard.suit} enhanced to Foil (+30 Chips)!`;
     }
   } else if (c.id === 'lucky_charm') {
     const lastCard = s.playerHand[s.playerHand.length - 1];
     if (lastCard) {
       setCardEnhancement(lastCard, 'holo');
+      recordEffectEnhanced('holo');
       message = `${lastCard.rank}${lastCard.suit} enhanced to Holo (+4 Mult)!`;
     }
   }
 
+  recordTarotCastInHand(c.id);
   _state.runStats.tarotsUsed++;
   removeConsumableAt(index);
   return { ok: true, message };

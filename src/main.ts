@@ -908,6 +908,113 @@ function renderScoringBanner(
   setBanner(topHTML, breakdownHTML);
 }
 
+function hideRoundCashBreakdown(): void {
+  const container = document.getElementById('ui-round-cash-breakdown');
+  if (container) {
+    container.classList.add('hidden');
+    container.innerHTML = '';
+  }
+}
+
+function renderRoundCashBreakdown(payout?: PendingPayout | null): void {
+  const container = document.getElementById('ui-round-cash-breakdown');
+  if (!container) return;
+
+  const state = getState();
+  const currentPayout = payout || state.pendingPayout;
+  if (!currentPayout) return;
+
+  const blindName = state.blindIndex === 0
+    ? 'Small Blind'
+    : state.blindIndex === 1
+      ? 'Big Blind'
+      : (state.bossBlind ? state.bossBlind.name : 'Boss Blind');
+
+  const dealsLeft = state.handsLeft;
+  const dealCap = getBalanceConfig().unusedDealCashCap;
+  const dealsText = dealsLeft === 1 ? '1 deal saved' : `${dealsLeft} deals saved`;
+  const capNote = dealCap < dealsLeft ? `, cap $${dealCap}` : '';
+
+  const interestRate = state.vouchersBought.includes('liquidity_pass') ? 4 : 5;
+  const interestCap = state.vouchersBought.includes('deep_pockets') ? 8 : 5;
+
+  const inHandCash = state.roundCashEarned || 0;
+  const hasLoanShark = state.jokers.some(j => j.id === 'loan_shark');
+
+  const inHandRow = inHandCash > 0 ? `
+    <div class="rcb-row">
+      <span class="rcb-label">
+        <span class="rcb-icon">💰</span>
+        <span>In-Hand Cash <span class="rcb-sub">(Gold cards & Jokers)</span></span>
+      </span>
+      <span class="rcb-val gold-txt">+$${inHandCash}</span>
+    </div>
+  ` : '';
+
+  const loanSharkRow = hasLoanShark ? `
+    <div class="rcb-row rcb-fee">
+      <span class="rcb-label">
+        <span class="rcb-icon">🦈</span>
+        <span>Loan Shark Fee <span class="rcb-sub">(Debt interest)</span></span>
+      </span>
+      <span class="rcb-val red-txt">-$1</span>
+    </div>
+  ` : '';
+
+  container.innerHTML = `
+    <div class="rcb-card">
+      <div class="rcb-header">
+        <div class="rcb-header-title">
+          <span class="rcb-badge">ROUND CLEARED</span>
+          <span class="rcb-main-title">CASH EARNED BREAKDOWN</span>
+        </div>
+        <div class="rcb-header-total">
+          <span class="rcb-total-label">ROUND PAYOUT</span>
+          <span class="rcb-total-num">+$${currentPayout.totalEarned}</span>
+        </div>
+      </div>
+
+      <div class="rcb-rows">
+        <div class="rcb-row">
+          <span class="rcb-label">
+            <span class="rcb-icon">🎯</span>
+            <span>${blindName} Clear Reward</span>
+          </span>
+          <span class="rcb-val gold-txt">+$${currentPayout.blindReward}</span>
+        </div>
+
+        <div class="rcb-row">
+          <span class="rcb-label">
+            <span class="rcb-icon">🎴</span>
+            <span>Unused Deals <span class="rcb-sub">(${dealsText}${capNote})</span></span>
+          </span>
+          <span class="rcb-val gold-txt">+$${currentPayout.handBonus}</span>
+        </div>
+
+        <div class="rcb-row">
+          <span class="rcb-label">
+            <span class="rcb-icon">🏦</span>
+            <span>Interest Earned <span class="rcb-sub">($${state.money} held • $1 per $${interestRate}, max $${interestCap})</span></span>
+          </span>
+          <span class="rcb-val gold-txt">+$${currentPayout.interest}</span>
+        </div>
+
+        ${inHandRow}
+        ${loanSharkRow}
+      </div>
+
+      <div class="rcb-footer">
+        <div class="rcb-footer-line">
+          <span>TOTAL CASH EARNED</span>
+          <span class="rcb-footer-sum">+$${currentPayout.totalEarned}</span>
+        </div>
+      </div>
+    </div>
+  `;
+
+  container.classList.remove('hidden');
+}
+
 function renderCardHTML(card: Card, faceDown: boolean = false, extraClasses: string = '', onClickAttr: string = ''): string {
   if (faceDown) return `<div class="playing-card face-down ${extraClasses}" ${onClickAttr}></div>`;
   const isRed = ['♥', '♦'].includes(card.suit);
@@ -1558,6 +1665,7 @@ function startNewRun(): void {
   hideDefeatModal();
   hideVictoryModal();
   stopVictoryMusic();
+  hideRoundCashBreakdown();
   setPlayfieldLocked(false);
   startNewRunState();
   $('ui-rules-deals-count').textContent = String(getBalanceConfig().startingDeals);
@@ -1569,6 +1677,7 @@ function startNewRun(): void {
 
 function startBlindPlay(): void {
   stopConfetti();
+  hideRoundCashBreakdown();
   beginBlindState();
   refreshBlindStartUI();
 }
@@ -1587,8 +1696,10 @@ function uiCashOut(): void {
 
   stopConfetti();
   hideOutcomeHeadline();
+  const hasLoanShark = getState().jokers.some(j => j.id === 'loan_shark');
+  const loanSharkNote = hasLoanShark ? ' - $1 Loan Shark' : '';
   $('ui-shop-payout-note').textContent =
-    `Earned +$${payout.totalEarned} ($${payout.blindReward} Blind + $${payout.handBonus} Deals + $${payout.interest} Interest).`;
+    `Earned +$${payout.totalEarned} ($${payout.blindReward} Blind + $${payout.handBonus} Deals + $${payout.interest} Interest${loanSharkNote}).`;
   renderShop();
   $('ui-shop-overlay').classList.remove('hidden');
   updateAllUI();
@@ -2152,6 +2263,8 @@ async function dealHand(): Promise<void> {
   if (isPlayfieldLocked || state.inHand || state.isDealing || state.handsLeft <= 0 || state.blindClearedReady || state.blindFailedReady) return;
 
   hideOutcomeHeadline();
+  hideRoundCashBreakdown();
+  clearTarotsInHand();
   patchState({
     handsLeft: state.handsLeft - 1,
     inHand: true,
@@ -2593,32 +2706,75 @@ async function resolveRound(): Promise<void> {
 
   if (res.moneyGained > 0) {
     recordMoneyEarned('inHandScoring', res.moneyGained);
+    patchState({ roundCashEarned: (getState().roundCashEarned || 0) + res.moneyGained });
   }
 
-  // Record joker triggers from this hand
+  // Hand-level consumable tracking: resolve win rate for tarots cast this hand
+  resolveTarotsHandResult(res.isWin);
+
+  // Record joker triggers from this hand & lifetime scoring contribution
   for (const step of res.steps) {
     if (step.kind === 'joker' && step.jokerId) {
       recordJokerTrigger(step.jokerId, step.sourceName);
+      recordJokerTriggerStats(step.jokerId, step.deltaChips || 0, step.deltaMult || 0);
     } else if (step.kind === 'double' && step.jokerId === 'double_or_nothing') {
       recordJokerTrigger('double_or_nothing', 'Double or Nothing');
+      recordJokerTriggerStats('double_or_nothing', 0, 3);
+    } else if (step.kind === 'card' && step.cardIndex !== undefined) {
+      const card = state.playerHand[step.cardIndex];
+      if (card && card.enhancement) {
+        recordEffectScored(
+          card.enhancement,
+          step.deltaChips || 0,
+          step.deltaMult || 0,
+          !!step.isXMult,
+          step.deltaMoney || 0
+        );
+      }
     }
   }
   if (res.cushioned) {
     recordJokerTrigger('bust_cushion', 'Bust Cushion');
+    recordJokerTriggerStats('bust_cushion', 0, 0);
   }
   if (res.safetyNetSaved) {
     recordJokerTrigger('safety_net', 'Safety Net');
+    recordJokerTriggerStats('safety_net', 40, 2);
   }
   if (res.rawOutcomeType === 'PUSH' && state.jokers.some(j => j.id === 'push_it_good')) {
     recordJokerTrigger('push_it_good', 'Push It Good');
+    recordJokerTriggerStats('push_it_good', 50, 4);
   }
   if (res.chipStackerNewBonus !== null && !res.steps.some(s => s.kind === 'joker' && s.jokerId === 'chip_stacker')) {
     recordJokerTrigger('chip_stacker', 'Chip Stacker');
+    recordJokerTriggerStats('chip_stacker', 10, 0);
+  }
+
+  // Peak deck saturation check
+  const enhList: Array<'foil' | 'holo' | 'poly' | 'gold'> = ['foil', 'holo', 'poly', 'gold'];
+  const totalDeckCards = Math.max(1, state.deck.length);
+  for (const enh of enhList) {
+    const cCount = state.deck.filter(c => c.enhancement === enh).length;
+    recordDeckSaturation(enh, (cCount / totalDeckCards) * 100);
   }
 
   if (state.roundScore >= state.targetScore) {
+    // Record lifetime telemetry for Jokers held during cleared blind
+    recordBlindOutcomeTelemetry(true);
+
+    // Record voucher estimated values
+    for (const vId of state.vouchersBought) {
+      if (vId === 'extra_hand') recordVoucherValue('extra_hand', 1);
+      else if (vId === 'table_leverage') recordVoucherValue('table_leverage', 1);
+      else if (vId === 'base_boost') recordVoucherValue('base_boost', 30);
+    }
+
     const isAnte8Victory = (state.ante === 8 && state.blindIndex === 2 && !state.endlessMode);
     if (isAnte8Victory) {
+      for (const vId of state.vouchersBought) {
+        recordVoucherRunWon(vId);
+      }
+
       setPlayfieldLocked(true);
       const payout = computeBlindPayout();
       patchState({ pendingPayout: payout });
@@ -2626,6 +2782,7 @@ async function resolveRound(): Promise<void> {
       showOutcomeHeadline('ANTE 8 CONQUERED!', 'WIN');
       launchConfetti();
       renderScoringBanner(res, state.playerHand, 'ANTE8_VICTORY');
+      renderRoundCashBreakdown(payout);
       updateAllUI();
 
       // Give the player a moment to see the last hand and scoring animations!
@@ -2641,9 +2798,13 @@ async function resolveRound(): Promise<void> {
       showOutcomeHeadline('YOU WON!', 'WIN');
       launchConfetti();
       renderScoringBanner(res, state.playerHand, 'BLIND_CLEARED', payout.totalEarned);
+      renderRoundCashBreakdown(payout);
       updateAllUI();
     }
   } else if (state.handsLeft <= 0) {
+    // Record lifetime telemetry for Jokers held during failed blind
+    recordBlindOutcomeTelemetry(false);
+
     setPlayfieldLocked(true);
     patchState({ blindFailedReady: true });
     showOutcomeHeadline('BUSTED OUT!', 'LOSS');
@@ -2682,57 +2843,74 @@ interface ItemTelemetryStats {
 }
 
 function getItemTelemetryStats(category: LibraryCategory, itemId: string): ItemTelemetryStats {
-  // Primed for future telemetry persistence; displays clean structured placeholders for now
   if (category === 'jokers') {
+    const data = getJokerTelemetry(itemId);
+    const winRate = data.roundsHeld > 0 ? `${Math.round((data.roundsWon / data.roundsHeld) * 100)}%` : '--%';
     return {
       statusText: 'Joker Lifetime Telemetry',
       metrics: [
-        { label: 'Times Discovered', value: '--', hint: 'Seen in shop & booster packs' },
-        { label: 'Rounds Held', value: '--', hint: 'Active blinds with this joker' },
-        { label: 'Hands Triggered', value: '--', hint: 'Scoring activations recorded' },
-        { label: 'Chips Contributed', value: '--', hint: 'Total chips generated' },
-        { label: 'Mult Contributed', value: '--', hint: 'Total mult generated' },
-        { label: 'Win Rate When Held', value: '--%', hint: 'Ante clears when owned' }
+        { label: 'Times Discovered', value: data.discovered > 0 ? String(data.discovered) : '--', hint: 'Seen in shop & booster packs' },
+        { label: 'Rounds Held', value: data.roundsHeld > 0 ? String(data.roundsHeld) : '--', hint: 'Active blinds with this joker' },
+        { label: 'Hands Triggered', value: data.handsTriggered > 0 ? String(data.handsTriggered) : '--', hint: 'Scoring activations recorded' },
+        { label: 'Chips Contributed', value: data.chipsContributed > 0 ? `+${formatScoringVal(data.chipsContributed)}c` : '--', hint: 'Total chips generated' },
+        { label: 'Mult Contributed', value: data.multContributed > 0 ? `+${formatScoringVal(Math.round(data.multContributed * 10) / 10)}m` : '--', hint: 'Total mult generated' },
+        { label: 'Win Rate When Held', value: winRate, hint: 'Ante clears when owned' }
       ]
     };
   } else if (category === 'tarots') {
+    const data = getTarotTelemetry(itemId);
+    const winRate = data.cast > 0 ? `${Math.round((data.castWon / data.cast) * 100)}%` : '--%';
     return {
       statusText: 'Consumable Spell Telemetry',
       metrics: [
-        { label: 'Times Acquired', value: '--', hint: 'Purchased in shop or packs' },
-        { label: 'Times Cast', value: '--', hint: 'Used during active hands' },
-        { label: 'Times Sold', value: '--', hint: 'Liquidated for cash' },
-        { label: 'Win Rate When Cast', value: '--%', hint: 'Victories on cast hands' }
+        { label: 'Times Acquired', value: data.acquired > 0 ? String(data.acquired) : '--', hint: 'Purchased in shop or packs' },
+        { label: 'Times Cast', value: data.cast > 0 ? String(data.cast) : '--', hint: 'Used during active hands' },
+        { label: 'Times Sold', value: data.sold > 0 ? String(data.sold) : '--', hint: 'Liquidated for cash' },
+        { label: 'Win Rate When Cast', value: winRate, hint: 'Victories on cast hands' }
       ]
     };
   } else if (category === 'vouchers') {
+    const data = getVoucherTelemetry(itemId);
+    let estValStr = '--';
+    if (data.estValue > 0) {
+      estValStr = `+$${data.estValue}`;
+    }
     return {
       statusText: 'Table Voucher Telemetry',
       metrics: [
-        { label: 'Times Redeemed', value: '--', hint: 'Purchased across all runs' },
-        { label: 'Earliest Ante Acquired', value: '--', hint: 'Earliest ante redeemed' },
-        { label: 'Runs Won With Voucher', value: '--', hint: 'Ante 8 victories with perk' },
-        { label: 'Est. Value Contributed', value: '--', hint: 'Bonus chips, deals, money' }
+        { label: 'Times Redeemed', value: data.redeemed > 0 ? String(data.redeemed) : '--', hint: 'Purchased across all runs' },
+        { label: 'Earliest Ante Acquired', value: data.earliestAnte !== null ? `Ante ${data.earliestAnte}` : '--', hint: 'Earliest ante redeemed' },
+        { label: 'Runs Won With Voucher', value: data.runsWon > 0 ? String(data.runsWon) : '--', hint: 'Ante 8 victories with perk' },
+        { label: 'Est. Value Contributed', value: estValStr, hint: 'Bonus chips, deals, money' }
       ]
     };
   } else if (category === 'effects') {
+    const data = getEffectTelemetry(itemId);
+    let bonusImpactStr = '--';
+    if (data.bonusImpact > 0) {
+      if (itemId === 'foil') bonusImpactStr = `+${formatScoringVal(data.bonusImpact)}c`;
+      else if (itemId === 'holo') bonusImpactStr = `+${formatScoringVal(Math.round(data.bonusImpact * 10) / 10)}m`;
+      else if (itemId === 'poly') bonusImpactStr = `×${(1 + data.bonusImpact).toFixed(1)}m`;
+      else if (itemId === 'gold') bonusImpactStr = `+$${data.bonusImpact}`;
+    }
     return {
       statusText: 'Card Edition Telemetry',
       metrics: [
-        { label: 'Cards Enhanced', value: '--', hint: 'Permanent upgrades created' },
-        { label: 'Times Scored In Hand', value: '--', hint: 'Played in scoring hands' },
-        { label: 'Bonus Impact', value: '--', hint: 'Total chips/mult/cash scored' },
-        { label: 'Deck Saturation Peak', value: '--%', hint: 'Highest % of deck enhanced' }
+        { label: 'Cards Enhanced', value: data.enhanced > 0 ? String(data.enhanced) : '--', hint: 'Permanent upgrades created' },
+        { label: 'Times Scored In Hand', value: data.timesScored > 0 ? String(data.timesScored) : '--', hint: 'Played in scoring hands' },
+        { label: 'Bonus Impact', value: bonusImpactStr, hint: 'Total chips/mult/cash scored' },
+        { label: 'Deck Saturation Peak', value: data.deckSaturationPeak > 0 ? `${Math.round(data.deckSaturationPeak)}%` : '--%', hint: 'Highest % of deck enhanced' }
       ]
     };
   } else {
+    const data = getPackTelemetry(itemId);
     return {
       statusText: 'Booster Pack Telemetry',
       metrics: [
-        { label: 'Packs Opened', value: '--', hint: 'Purchased in Pit Boss Shop' },
-        { label: 'Cards Drafted', value: '--', hint: 'Options chosen from pack' },
-        { label: 'Packs Skipped', value: '--', hint: 'Pack contents bypassed' },
-        { label: 'Total Money Invested', value: '$0', hint: 'Cash spent on this pack' }
+        { label: 'Packs Opened', value: data.opened > 0 ? String(data.opened) : '--', hint: 'Purchased in Pit Boss Shop' },
+        { label: 'Cards Drafted', value: data.drafted > 0 ? String(data.drafted) : '--', hint: 'Options chosen from pack' },
+        { label: 'Packs Skipped', value: data.skipped > 0 ? String(data.skipped) : '--', hint: 'Pack contents bypassed' },
+        { label: 'Total Money Invested', value: `$${data.moneyInvested}`, hint: 'Cash spent on this pack' }
       ]
     };
   }
@@ -3671,6 +3849,8 @@ function renderRunStats(): void {
 (window as any).closeLibraryDetail = closeLibraryDetail;
 (window as any).getItemTelemetryStats = getItemTelemetryStats;
 (window as any).CARD_EFFECTS_CATALOG = CARD_EFFECTS_CATALOG;
+(window as any).renderRoundCashBreakdown = renderRoundCashBreakdown;
+(window as any).hideRoundCashBreakdown = hideRoundCashBreakdown;
 
 /* ==========================================================
    BOOT

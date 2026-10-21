@@ -59,16 +59,16 @@ const TAROT_CATALOG: ReadonlyArray<TarotDef> = [
 ];
 
 const VOUCHER_CATALOG: ReadonlyArray<VoucherDef> = [
-  { id: 'extra_hand', name: 'Extra Cushion', cost: 7, desc: '+1 Max Deal per Blind permanently.' },
-  { id: 'table_leverage', name: 'Table Leverage', cost: 6, desc: '+1 Base Mult on all Winning & Push hands permanently.' },
-  { id: 'joker_slot', name: 'VIP Lounge Pass', cost: 8, desc: '+1 Max Joker Slot permanently.' },
-  { id: 'base_boost', name: 'High Stakes Table', cost: 7, desc: '+30 Base Chips on all Winning & Push hands.' },
-  { id: 'deep_pockets', name: 'High Roller Credit', cost: 7, desc: 'Raises interest cap from $5 to $8 (earn interest up to $40).' },
-  { id: 'card_sharp', name: 'Precision Edge', cost: 7, desc: '+30 Chips & +2 Mult on all Natural Blackjacks and Exact 21s.' },
-  { id: 'clearance_sale', name: 'Clearance Rack', cost: 6, desc: 'Shop rerolls start at $1 permanently.' },
-  { id: 'liquidity_pass', name: 'Liquid Assets', cost: 7, desc: 'Earn interest for every $4 held instead of every $5 permanently.' },
-  { id: 'card_shark_voucher', name: 'Card Sharp License', cost: 8, desc: '+1 Max Deal and +20 Base Chips on all hands permanently.' },
-  { id: 'overstock', name: 'Overstock Shelves', cost: 7, desc: 'Shop offers +1 additional card/item slot permanently.' }
+  { id: 'extra_hand', name: 'Extra Cushion', cost: 10, desc: '+1 Max Deal per Blind permanently.' },
+  { id: 'table_leverage', name: 'Table Leverage', cost: 10, desc: '+1 Base Mult on all Winning & Push hands permanently.' },
+  { id: 'joker_slot', name: 'VIP Lounge Pass', cost: 10, desc: '+1 Max Joker Slot permanently.' },
+  { id: 'base_boost', name: 'High Stakes Table', cost: 10, desc: '+30 Base Chips on all Winning & Push hands.' },
+  { id: 'deep_pockets', name: 'High Roller Credit', cost: 10, desc: 'Raises interest cap from $5 to $8 (earn interest up to $40).' },
+  { id: 'card_sharp', name: 'Precision Edge', cost: 10, desc: '+30 Chips & +2 Mult on all Natural Blackjacks and Exact 21s.' },
+  { id: 'clearance_sale', name: 'Clearance Rack', cost: 10, desc: 'Shop rerolls start at $1 permanently.' },
+  { id: 'liquidity_pass', name: 'Liquid Assets', cost: 10, desc: 'Earn interest for every $4 held instead of every $5 permanently.' },
+  { id: 'card_shark_voucher', name: 'Card Sharp License', cost: 10, desc: '+1 Max Deal and +20 Base Chips on all hands permanently.' },
+  { id: 'overstock', name: 'Overstock Shelves', cost: 10, desc: 'Shop offers +1 additional card/item slot permanently.' }
 ];
 
 const BOSS_BLINDS: ReadonlyArray<BossBlindDef> = [

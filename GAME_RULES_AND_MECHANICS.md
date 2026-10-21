@@ -245,7 +245,7 @@ $$\text{Total Payout} = \text{Blind Reward} + \text{Unused Deals Bonus} + \text{
 - **Joker Purchase**: Costs listed catalog price ($\$4\text{--}\$7$).
 - **Tarot Purchase**: Costs listed catalog price ($\$3\text{--}\$4$).
 - **Shoe Card Purchase**: Enhanced card added to deck ($\$4$ for Foil/Holo/Gold, $\$5$ for Poly).
-- **Voucher Purchase**: Permanent perk ($\$6\text{--}\$8$).
+- **Voucher Purchase**: Permanent perk ($\$10$).
 - **Shop Reroll**:
   - Starts at **$\$2$** per shop visit.
   - Increases by **$+\$1$** with every reroll in that visit ($\$2 \to \$3 \to \$4 \dots$).
@@ -338,12 +338,16 @@ Vouchers appear in the shop extra slot. Once bought, they grant **permanent run-
 
 | ID | Name | Cost | Permanent Benefit | Mathematical Impact |
 | :--- | :--- | :---: | :--- | :--- |
-| `extra_hand` | **Extra Cushion** | $7 | $+1$ Deal per Blind | Increases `maxHands` from 7 to 8. Yields more score chances or $+\$1$ cash bonus if unused. |
-| `table_leverage` | **Table Leverage** | $6 | $+1$ Base Mult on Win/Push | Increases `baseWinMultBonus` by $+1$. Applies to all scoring hands permanently. |
-| `joker_slot` | **VIP Lounge Pass**| $8 | $+1$ Joker Slot | Increases `maxJokers` from 5 to 6. Massive late-game scaling headroom. |
-| `base_boost` | **High Stakes Table** | $7 | $+30$ Base Chips on Win/Push | Increases `baseWinChipBonus` by $+30$. Elevates the baseline of all hands. |
-| `deep_pockets` | **High Roller Credit**| $7 | Interest Cap raised to $8 | Increases max interest from $\$5$ to $\$8$ per blind (interest earned on up to $\$40$). |
-| `card_sharp` | **Precision Edge** | $7 | $+30\text{ Chips}$ & $+2\text{ Mult}$ on 21s | Adds $+30\text{ Chips}$ and $+2\text{ Mult}$ on all Natural Blackjacks and Exact 21s. |
+| `extra_hand` | **Extra Cushion** | $10 | $+1$ Deal per Blind | Increases `maxHands` from 7 to 8. Yields more score chances or $+\$1$ cash bonus if unused. |
+| `table_leverage` | **Table Leverage** | $10 | $+1$ Base Mult on Win/Push | Increases `baseWinMultBonus` by $+1$. Applies to all scoring hands permanently. |
+| `joker_slot` | **VIP Lounge Pass**| $10 | $+1$ Joker Slot | Increases `maxJokers` from 5 to 6. Massive late-game scaling headroom. |
+| `base_boost` | **High Stakes Table** | $10 | $+30$ Base Chips on Win/Push | Increases `baseWinChipBonus` by $+30$. Elevates the baseline of all hands. |
+| `deep_pockets` | **High Roller Credit**| $10 | Interest Cap raised to $8 | Increases max interest from $\$5$ to $\$8$ per blind (interest earned on up to $\$40$). |
+| `card_sharp` | **Precision Edge** | $10 | $+30\text{ Chips}$ & $+2\text{ Mult}$ on 21s | Adds $+30\text{ Chips}$ and $+2\text{ Mult}$ on all Natural Blackjacks and Exact 21s. |
+| `clearance_sale` | **Clearance Rack** | $10 | Shop Rerolls start at $1 | Shop rerolls start at $1 permanently. |
+| `liquidity_pass` | **Liquid Assets** | $10 | Interest per $4 | Earn interest for every $4 held instead of every $5 permanently. |
+| `card_shark_voucher` | **Card Sharp License** | $10 | +1 Deal & +20 Chips | +1 Max Deal and +20 Base Chips on all hands permanently. |
+| `overstock` | **Overstock Shelves** | $10 | +1 Shop Slot | Shop offers +1 additional card/item slot permanently. |
 
 ---
 
