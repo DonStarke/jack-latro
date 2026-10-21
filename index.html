@@ -308,15 +308,51 @@
       📖 VIEW COMPENDIUM / LIBRARY
     </button>
 
-    <div style="display:flex; justify-content:space-between; align-items:center; background:#111622; padding:7px 10px; border-radius:6px; border:1px solid #222938; margin: 6px 0;">
-      <div style="display:flex; align-items:center; gap:8px;">
-        <span style="font-size:16px;">🎵</span>
-        <div>
-          <div style="font-size:12px; font-weight:700; color:#e2e8f0;">Background Music</div>
-          <div style="font-size:11px; color:#94a3b8;">Synthesized Lo-Fi Groove</div>
+    <!-- AUDIO & SOUND SETTINGS PANEL -->
+    <div style="background:#111622; padding:9px 12px; border-radius:8px; border:1px solid #222938; margin: 6px 0; display:flex; flex-direction:column; gap:9px;">
+      <!-- SOUND EFFECTS -->
+      <div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:16px;" id="ui-icon-sfx">🔊</span>
+            <div>
+              <div style="font-size:12px; font-weight:700; color:#e2e8f0;">Sound Effects</div>
+              <div style="font-size:10px; color:#94a3b8;">Scoring cascade, chips, cards & pops</div>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span id="ui-lbl-sfx-volume" style="font-size:11px; color:#38bdf8; font-weight:bold; min-width:32px; text-align:right;">80%</span>
+            <button class="btn btn-deal" id="btn-modal-sfx-toggle" onclick="toggleSfx()" style="padding:4px 8px; font-size:11px;">SFX: ON</button>
+          </div>
+        </div>
+        <div style="margin-top:4px;">
+          <input type="range" id="setting-sfx-volume" min="0" max="100" value="80"
+            style="width:100%; accent-color:#38bdf8; cursor:pointer;"
+            oninput="setSfxVolume(parseFloat(this.value)/100)">
         </div>
       </div>
-      <button class="btn btn-deal" id="btn-modal-music-toggle" onclick="toggleMusic()" style="padding:4px 10px; font-size:12px;">MUSIC: ON</button>
+
+      <!-- BACKGROUND MUSIC -->
+      <div style="border-top:1px solid #1e293b; padding-top:8px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:16px;" id="ui-icon-music">🎵</span>
+            <div>
+              <div style="font-size:12px; font-weight:700; color:#e2e8f0;">Background Music</div>
+              <div style="font-size:10px; color:#94a3b8;">Synthesized Lo-Fi Groove</div>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span id="ui-lbl-music-volume" style="font-size:11px; color:#38bdf8; font-weight:bold; min-width:32px; text-align:right;">80%</span>
+            <button class="btn btn-deal" id="btn-modal-music-toggle" onclick="toggleMusic()" style="padding:4px 8px; font-size:11px;">MUSIC: ON</button>
+          </div>
+        </div>
+        <div style="margin-top:4px;">
+          <input type="range" id="setting-music-volume" min="0" max="100" value="80"
+            style="width:100%; accent-color:#38bdf8; cursor:pointer;"
+            oninput="setMusicVolume(parseFloat(this.value)/100)">
+        </div>
+      </div>
     </div>
 
     <p style="font-size:13px; color:#cbd5e1; line-height:1.4;">
@@ -348,13 +384,13 @@
     <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid #334155;">
       <label style="font-size: 12px; color: var(--gold); font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
         <span>Scoring Animation Pace</span>
-        <span id="ui-lbl-anim-speed" style="font-size:12px; color:#38bdf8;">0.10× (Slow / Educational)</span>
+        <span id="ui-lbl-anim-speed" style="font-size:12px; color:#38bdf8;">1.00× (Brisk / Original)</span>
       </label>
       <select id="setting-anim-speed" style="width:100%; margin-top:4px; padding:6px; background:#0b0e14; color:#fff; border:1px solid #334155; border-radius:4px; font-size:12px;" onchange="updateScoringSpeed(parseFloat(this.value))">
-        <option value="0.10" selected>0.10× (Slow / Educational - 10% Speed)</option>
+        <option value="0.10">0.10× (Slow / Educational - 10% Speed)</option>
         <option value="0.25">0.25× (Relaxed - 25% Speed)</option>
         <option value="0.50">0.50× (Medium - 50% Speed)</option>
-        <option value="1.00">1.00× (Brisk / Original)</option>
+        <option value="1.00" selected>1.00× (Brisk / Original)</option>
       </select>
     </div>
   </div>
@@ -400,14 +436,14 @@
       </div>
 
       <div class="sim-field">
-        <label><span>Target Score Scaling</span><span id="sim-lbl-scale">100%</span></label>
-        <input type="range" id="sim-scale" min="50" max="130" step="5" value="100"
+        <label><span>Target Score Scaling</span><span id="sim-lbl-scale">50%</span></label>
+        <input type="range" id="sim-scale" min="50" max="130" step="5" value="50"
           oninput="document.getElementById('sim-lbl-scale').textContent=this.value+'%'">
       </div>
 
       <div class="sim-field">
-        <label><span>Unused Deal Cash Cap</span><span id="sim-lbl-dealcap">$6</span></label>
-        <input type="range" id="sim-dealcap" min="2" max="10" step="1" value="6"
+        <label><span>Unused Deal Cash Cap</span><span id="sim-lbl-dealcap">$1</span></label>
+        <input type="range" id="sim-dealcap" min="1" max="10" step="1" value="1"
           oninput="document.getElementById('sim-lbl-dealcap').textContent='$'+this.value">
       </div>
 

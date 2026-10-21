@@ -34,7 +34,7 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
 
 (async () => {
   const w = dom.window, d = w.document;
-  await sleep(600);
+  for (let i = 0; i < 60 && typeof w.openLibraryModal !== 'function'; i++) await sleep(50);
   const $ = id => d.getElementById(id);
   const click = id => $(id).click();
   const text = id => $(id).textContent;

@@ -126,7 +126,7 @@ function showOutcomeHeadline(text: string, styleType: 'WIN' | 'LOSS'): void {
 
 /* ---------- Score popups ---------- */
 
-let scoringSpeedMultiplier = 0.10; // Default to 10% speed as requested
+let scoringSpeedMultiplier = 1.00; // Default to 1.00 (fastest / brisk speed)
 let skipScoringAnimation = false;
 
 function popPlayerCard(cardIdx: number, text: string): void {
@@ -937,21 +937,27 @@ function renderShop() {
     packGrid.innerHTML = state.shopPacks.map((item, idx) => {
       const badgeText = item.badge || item.packType.toUpperCase();
       const badgeClass = `pack-badge-${item.packType}`;
+      let packIcon = '🃏';
+      if (item.packType === 'tarot') packIcon = '🔮';
+      else if (item.packType === 'card') packIcon = '🎴';
+      else if (item.packType === 'variety') packIcon = '🎲';
+
       return `
-        <div class="shop-item shop-pack type-pack pack-${item.packType}">
-          <div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
-              <div class="shop-item-sub">BOOSTER PACK</div>
-              <span class="pack-badge ${badgeClass}">${badgeText}</span>
-            </div>
-            <div class="shop-item-title">${item.name}</div>
-            <div class="shop-item-desc">${item.desc}</div>
+        <div class="shop-item shop-pack type-pack shop-pack-wrapper pack-booster-wrapper pack-${item.packType} ${item.bought ? 'pack-bought' : ''}">
+          <div class="pack-booster-crimp top"></div>
+          <div class="pack-booster-foil-sheen"></div>
+          <div class="pack-booster-badge ${badgeClass}">${badgeText} PACK</div>
+          <div class="pack-booster-icon">${packIcon}</div>
+          <div class="pack-booster-name">${item.name}</div>
+          <div class="pack-booster-tagline">${item.desc}</div>
+          <div class="shop-pack-action">
+            <button class="btn btn-deal btn-buy-pack" style="width:100%; padding:6px 10px; font-size:12px;"
+              onclick="uiBuyPack(${idx})"
+              ${item.bought || state.money < item.cost ? 'disabled' : ''}>
+              ${item.bought ? 'OPENED' : 'OPEN $' + item.cost}
+            </button>
           </div>
-          <button class="btn btn-deal btn-buy-pack" style="padding:6px; font-size:12px;"
-            onclick="uiBuyPack(${idx})"
-            ${item.bought || state.money < item.cost ? 'disabled' : ''}>
-            ${item.bought ? 'OPENED' : 'OPEN $' + item.cost}
-          </button>
+          <div class="pack-booster-crimp bottom"></div>
         </div>
       `;
     }).join('');
@@ -1279,7 +1285,7 @@ function inspectDeckCard(uid: number): void {
     } else if (card.enhancement === 'gold') {
       enhHtml = `
         <div style="margin-top:6px; padding-top:6px; border-top:1px dashed #334155;">
-          <strong style="color:var(--gold);">🪙 GOLD ENHANCEMENT</strong><br>
+          <strong style="color:var(--gold);">💰 GOLD ENHANCEMENT</strong><br>
           Earns <strong style="color:var(--gold);">+$3 bonus cash</strong> permanently whenever a scoring hand is won with this card.
         </div>
       `;
@@ -2024,7 +2030,7 @@ function renderPackOpeningScreen(triggerAnim: boolean = false): void {
       playPackRipPopSound();
     }
 
-    // Step 2: Pop burst at 650ms (50% slower shaking)
+    // Step 2: Pop burst at 2600ms (slowed down to 25% of current shaking speed)
     packAnimTimer1 = setTimeout(() => {
       boosterWrapper.classList.remove('anim-shake');
       boosterWrapper.classList.add('anim-burst');
@@ -2037,7 +2043,7 @@ function renderPackOpeningScreen(triggerAnim: boolean = false): void {
       packAnimTimer2 = setTimeout(() => {
         uiSkipPackAnimation();
       }, 360);
-    }, 650);
+    }, 2600);
   } else {
     if (boosterContainer) boosterContainer.classList.add('hidden');
     stage.classList.remove('pack-cards-hidden');

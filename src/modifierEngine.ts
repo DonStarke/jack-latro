@@ -8,12 +8,12 @@
 
 /* ---------- Catalogs ---------- */
 const JOKER_CATALOG: ReadonlyArray<JokerDef> = [
-  { id: 'bust_cushion', name: 'Bust Cushion', cost: 6, rarity: 'uncommon', isXMult: false, icon: '🛟', archetype: 'utility', desc: 'Rubber Table: You only bust on 23+ (a total of 22 is treated as a valid 21!).' },
+  { id: 'bust_cushion', name: 'Bust Cushion', cost: 6, rarity: 'uncommon', isXMult: false, icon: '🛡️', archetype: 'utility', desc: 'Rubber Table: You only bust on 23+ (a total of 22 is treated as a valid 21!).' },
   { id: 'daredevil', name: 'Daredevil', cost: 6, rarity: 'uncommon', isXMult: false, bonusMult: 0, icon: '⚡', archetype: 'mult', desc: 'Permanently gains +1 Mult on safe Hit on 15+ for the rest of run.' },
-  { id: 'chip_stacker', name: 'Chip Stacker', cost: 6, rarity: 'uncommon', isXMult: false, bonusChips: 0, icon: '🪙', archetype: 'chips', desc: 'Permanently gains +10 Chips for the rest of run every time you win with a Double Down or Exact 21.' },
+  { id: 'chip_stacker', name: 'Chip Stacker', cost: 6, rarity: 'uncommon', isXMult: false, bonusChips: 0, icon: '💰', archetype: 'chips', desc: 'Permanently gains +10 Chips for the rest of run every time you win with a Double Down or Exact 21.' },
   { id: 'card_counter', name: 'Card Counter', cost: 4, rarity: 'common', isXMult: false, icon: '🧮', archetype: 'chips', desc: '+40 Chips for each low card (2-6) in your hand.' },
   { id: 'vip_high_roller', name: 'VIP High Roller', cost: 5, rarity: 'common', isXMult: false, icon: '👑', archetype: 'mult', desc: '+10 Chips & +5 Mult for each Face Card (J, Q, K) in your hand.' },
-  { id: 'ace_up_sleeve', name: 'Ace Up Sleeve', cost: 5, rarity: 'common', isXMult: false, icon: '🪄', archetype: 'chips', desc: '+50 Chips & +5 Mult if your hand contains an Ace.' },
+  { id: 'ace_up_sleeve', name: 'Ace Up Sleeve', cost: 5, rarity: 'common', isXMult: false, icon: '🎴', archetype: 'chips', desc: '+50 Chips & +5 Mult if your hand contains an Ace.' },
   { id: 'sweet_16', name: 'Sweet Sixteen', cost: 5, rarity: 'uncommon', isXMult: false, icon: '🎂', archetype: 'mult', desc: 'Standing on 16 or less grants +50 Chips & +15 Mult on a Win or Push.' },
   { id: 'lucky_sevens', name: 'Lucky Sevens', cost: 5, rarity: 'common', isXMult: false, icon: '🎰', archetype: 'mult', desc: 'Each 7 in hand grants +77 Chips & +7 Mult. Standing on 17 or 21 grants an extra +7 Mult.' },
   { id: 'hit_me_baby', name: 'Hit Me Baby', cost: 5, rarity: 'common', isXMult: false, icon: '🥊', archetype: 'mult', desc: '+5 Mult for every card in your hand beyond 2.' },
@@ -117,7 +117,7 @@ const CARD_EFFECTS_CATALOG: ReadonlyArray<CardEffectDef> = [
     name: 'Gold',
     enhancement: 'gold',
     badge: 'GOLD',
-    icon: '🪙',
+    icon: '💰',
     bonusText: '+$3 Cash',
     desc: 'Earns +$3 bonus cash permanently whenever a scoring hand is won with this card.',
     color: '#eab308',

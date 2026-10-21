@@ -35,7 +35,7 @@
 * Active Hand Tiers (Chips x Mult, before card/joker bonuses): 5-Card Charlie (5+ cards, not bust) 160 x 5; Natural Blackjack 120 x 4; Exact 21 (win) 75 x 3; Win 40 x 2; Push 25 x 1; Loss/Bust 0 (Safety Net: Bust = 50 x 2). Dealer natural vs player natural = Push. Double Down = final mult x2.
 * Passive Systems:
   * Blind structure: 8 Antes x 3 Blinds + Endless Mode (Ante 9+ scaling). Targets `[300, 600, 1200, 2400, 4500, 8500, 15000, 25000]` x (1.0 / 1.45 / 2.0 for Small/Big/Boss), then scaled by $1.6^{\text{ante}-8}$ in endless mode.
-  * Config (`balanceConfig`): startingDeals 7, targetScalePct 100, unusedDealCashCap 6, pushRefundsDeal true, anteHandScaling true.
+  * Config (`balanceConfig`): startingDeals 7, targetScalePct 50, unusedDealCashCap 1, pushRefundsDeal true, anteHandScaling true.
 
 ## 🛠️ Last Modification & Structural Changes
 * **Splash Screen Main Menu**: Created interactive splash overlay with glowing 3D fanned cards (Jack of Spades + Ace of Spades) featuring foil/holo sweep shimmer, floating neon suit particles, and options for "New Game" and "Settings".
@@ -73,6 +73,29 @@
     * **Pagination Dots & Counter:** Interactive pagination dots (`● ○ ○`) and dynamic counter (`Card 1 of 3`).
     * **Keyboard Controls:** Left and right arrow keys scroll cards.
   * **Automated Verification:** Added `tests/pack-carousel-animation.test.js` validating all 38 checks across DOM elements, initial 3D positions, bi-directional navigation, card focus transitions, and inventory additions. All 9 test suites passing 100%.
+* **Quality of Life, Settings, Sound & Visual Polish**:
+  * **Default Fastest Game Speed**: Initialized `scoringSpeedMultiplier` to 1.00 (fastest / brisk speed) and marked `1.00× (Brisk / Original)` as selected by default in `#setting-anim-speed` and `#ui-lbl-anim-speed`.
+  * **Joker Icons Replaced**: Replaced missing glyphs (tofu boxes) with universally supported emojis:
+    * `Bust Cushion`: `🛡️` (Shield)
+    * `Chip Stacker`: `💰` (Money Bag)
+    * `Ace Up Sleeve`: `🎴` (Flower Playing Card)
+    * Also updated Gold enhancement icon to `💰`.
+  * **Clean Joker Rarity Borders**: Removed left border suit overrides (`border-left: 3px solid #f43f5e;` and `border-left: 3px solid #38bdf8;`) from suit-themed jokers so that full uniform rarity borders display cleanly without broken left stripes.
+  * **Compendium Category Tabs Alignment**: Converted `.lib-tab-btn` to `display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; font-family: inherit; line-height: 1;` so all compendium tabs have proper sizing, centered vertical alignment, and matching pill aesthetics.
+  * **Audio Settings & Dual Volume Sliders**:
+    * Added comprehensive Sound & Audio panel in the settings modal with volume sliders for both Sound Effects (`#setting-sfx-volume`) and Background Music (`#setting-music-volume`) with live percentage labels.
+    * Added dedicated Sound Effects mute button (`#btn-modal-sfx-toggle`) next to Background Music mute button.
+    * Integrated `sfxMasterGain` bus in `src/uiFx.ts` controlling all sound effects, and persisted volume settings to `localStorage`.
+  * **Shop Booster Pack Wrappers & Slower Anticipation Shake**:
+    * Transformed shop booster packs to match the opening animation styling: metallic crimps top and bottom, foil sheen sweep, archetype badges, large icons, titles, taglines, and action buttons.
+    * Converted `#ui-shop-packs` into a smooth horizontal scroll container (`overflow-x: auto`) to accommodate the booster pack wrappers.
+    * Slowed down the initial pack anticipation shake rumble to 25% speed (2.6s duration) with synchronized foil rip and pop burst audio.
+  * **Automated Verification**: Added `tests/settings-sound-packs.test.js` validating all 36 checks across speed, icons, borders, tabs, audio sliders/mutes, and shop pack wrappers. All 11 test suites passing 100%.
+* **Starting Rules & Monte Carlo Balance Lab Calibration**:
+  * **Starting Target Score Scaling**: Set default starting `targetScalePct` to `50` (50% target scaling). Ante 1 Small Blind starts at 150 (down from 300) and Big Blind starts at 218.
+  * **Starting Unused Deal Cash Cap**: Set default starting `unusedDealCashCap` to `1` ($1 per blind clear for unused deals).
+  * **Monte Carlo Balance Lab Slider Range Expansion**: Modified `#sim-dealcap` range input from `min="2"` to `min="1"` so players can configure and test a $1 deal cash cap directly in the Balance Lab. Initialized both `#sim-dealcap` and `#sim-scale` default values to $1 and 50% respectively.
+
 
 
 

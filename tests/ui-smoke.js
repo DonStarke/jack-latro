@@ -34,7 +34,9 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
 
 (async () => {
   const w = dom.window, d = w.document;
-  await sleep(600);
+  for (let i = 0; i < 60 && typeof w.updateAllUI !== 'function'; i++) {
+    await sleep(50);
+  }
   const $ = id => d.getElementById(id);
   const click = id => $(id).click();
   const text = id => $(id).textContent;
@@ -43,7 +45,12 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   ck('scripts loaded without errors', errors.length === 0);
   ck('boot: deal button shows 7 deals', /DEAL \(7\)/.test(text('btn-deal')));
   ck('boot: money $6, ante 1/8', text('ui-money') === '$6' && /Ante 1\/8/.test(text('ui-ante')));
-  ck('boot: target 300', text('ui-target-score') === '300');
+  ck('boot: target 150 (50% scale)', text('ui-target-score') === '150');
+  ck('boot: balanceConfig targetScalePct is 50', w.getBalanceConfig().targetScalePct === 50);
+  ck('boot: balanceConfig unusedDealCashCap is 1', w.getBalanceConfig().unusedDealCashCap === 1);
+  ck('balance lab: sim-dealcap min is 1', $('sim-dealcap').min === '1');
+  ck('balance lab: sim-dealcap default is 1', $('sim-dealcap').value === '1' && text('sim-lbl-dealcap') === '$1');
+  ck('balance lab: sim-scale default is 50', $('sim-scale').value === '50' && text('sim-lbl-scale') === '50%');
   ck('boot: shoe 52/52', text('ui-shoe-count') === '52/52');
 
   // Play hands: deal, then stand/hit like a simple bot until the blind ends
@@ -72,7 +79,7 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
     ck('shop overlay visible after cash out', !$('ui-shop-overlay').classList.contains('hidden'));
     ck('shop shows packs and vouchers', $('ui-shop-packs').children.length >= 2 && $('ui-shop-extras').children.length >= 1);
     ck('shop payout note', /^Earned \+\$\d+/.test(text('ui-shop-payout-note')));
-    ck('target now 435 (Big Blind)', text('ui-target-score') === '435');
+    ck('target now 218 (Big Blind @ 50% scale)', text('ui-target-score') === '218');
     // buy a pack, open screen appears, pick an option
     const packBuys = [...$('ui-shop-packs').querySelectorAll('button')].filter(b => !b.disabled);
     if (packBuys.length) {

@@ -232,8 +232,8 @@ const STARTING_MAX_JOKERS = 5;
 /* ---------- Private state (not reachable outside the API) ---------- */
 const DEFAULT_BALANCE_CONFIG: BalanceConfig = {
   startingDeals: 7,
-  targetScalePct: 100,
-  unusedDealCashCap: 6,
+  targetScalePct: 50,
+  unusedDealCashCap: 1,
   pushRefundsDeal: true,
   anteHandScaling: true
 };

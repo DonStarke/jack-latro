@@ -1132,14 +1132,14 @@
       </div>
 
       <div class="sim-field">
-        <label><span>Target Score Scaling</span><span id="sim-lbl-scale">100%</span></label>
-        <input type="range" id="sim-scale" min="50" max="130" step="5" value="100"
+        <label><span>Target Score Scaling</span><span id="sim-lbl-scale">50%</span></label>
+        <input type="range" id="sim-scale" min="50" max="130" step="5" value="50"
           oninput="document.getElementById('sim-lbl-scale').textContent=this.value+'%'">
       </div>
 
       <div class="sim-field">
-        <label><span>Unused Deal Cash Cap</span><span id="sim-lbl-dealcap">$6</span></label>
-        <input type="range" id="sim-dealcap" min="2" max="10" step="1" value="6"
+        <label><span>Unused Deal Cash Cap</span><span id="sim-lbl-dealcap">$1</span></label>
+        <input type="range" id="sim-dealcap" min="1" max="10" step="1" value="1"
           oninput="document.getElementById('sim-lbl-dealcap').textContent='$'+this.value">
       </div>
 
@@ -1198,8 +1198,8 @@
 ========================================================== */
 let balanceConfig = {
   startingDeals: 7,
-  targetScalePct: 100,
-  unusedDealCashCap: 6,
+  targetScalePct: 50,
+  unusedDealCashCap: 1,
   pushRefundsDeal: false,
   anteHandScaling: false
 };

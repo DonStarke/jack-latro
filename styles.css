@@ -420,12 +420,10 @@
   .mini-card.archetype-suit.suit-hearts,
   .mini-card.archetype-suit.suit-diamonds {
     background: radial-gradient(circle at 85% 85%, rgba(244, 63, 94, 0.24) 0%, rgba(37, 43, 59, 1) 75%);
-    border-left: 3px solid #f43f5e;
   }
   .mini-card.archetype-suit.suit-spades,
   .mini-card.archetype-suit.suit-clubs {
     background: radial-gradient(circle at 85% 85%, rgba(56, 189, 248, 0.20) 0%, rgba(37, 43, 59, 1) 75%);
-    border-left: 3px solid #38bdf8;
   }
 
   /* Archetype Badges */
@@ -1142,6 +1140,46 @@
   }
 
   /* BOOSTER PACKS IN SHOP */
+  #ui-shop-packs {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 6px 4px 14px 4px;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+  }
+  .shop-pack-wrapper.pack-booster-wrapper {
+    position: relative;
+    width: 155px;
+    min-width: 155px;
+    max-width: 165px;
+    height: 235px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 10px 10px 10px;
+    border-radius: 12px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+    cursor: default;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .shop-pack-wrapper.pack-booster-wrapper:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.75);
+  }
+  .shop-pack-wrapper.pack-bought {
+    opacity: 0.55;
+    filter: grayscale(45%);
+  }
+  .shop-pack-action {
+    width: 100%;
+    z-index: 5;
+    margin-top: 4px;
+  }
+
   .shop-item.type-pack {
     position: relative;
     border-width: 2px;
@@ -1364,9 +1402,9 @@
     50% { opacity: 1; }
   }
 
-  /* Shake Keyframe: energetic anticipation rumble (50% slower, ~0.65s) */
+  /* Shake Keyframe: slowed down to 25% of current speed (2.6s rumble) */
   .pack-booster-wrapper.anim-shake {
-    animation: packShakeRumble 0.65s ease-in-out forwards;
+    animation: packShakeRumble 2.6s ease-in-out forwards;
   }
   @keyframes packShakeRumble {
     0% { transform: scale(1) translate(0, 0) rotate(0deg); }
@@ -3360,21 +3398,28 @@
   /* CATEGORY TABS */
   .library-category-tabs {
     display: flex;
-    gap: 6px;
-    padding: 8px 14px;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
     background: #0c121e;
     border-bottom: 1px solid #1e293b;
     overflow-x: auto;
     scrollbar-width: thin;
   }
   .lib-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     background: #141b26;
     border: 1px solid #283548;
     color: #94a3b8;
-    padding: 6px 12px;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 700;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+    font-family: inherit;
+    line-height: 1;
     white-space: nowrap;
     cursor: pointer;
     transition: all 0.15s ease;

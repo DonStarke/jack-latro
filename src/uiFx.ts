@@ -90,6 +90,27 @@ function animateConfetti(): void {
 ========================================================== */
 let audioCtx: AudioContext | null = null;
 let masterCompressor: DynamicsCompressorNode | null = null;
+let sfxMasterGain: GainNode | null = null;
+let sfxMuted: boolean = false;
+let sfxVolume: number = 0.8;
+let musicVolume: number = 0.8;
+
+try {
+  if (typeof localStorage !== 'undefined') {
+    const savedSfxMuted = localStorage.getItem('jacklatro_sfx_muted');
+    if (savedSfxMuted !== null) sfxMuted = savedSfxMuted === 'true';
+    const savedSfxVol = localStorage.getItem('jacklatro_sfx_volume');
+    if (savedSfxVol !== null) {
+      const v = parseFloat(savedSfxVol);
+      if (!isNaN(v) && v >= 0 && v <= 1) sfxVolume = v;
+    }
+    const savedMusicVol = localStorage.getItem('jacklatro_music_volume');
+    if (savedMusicVol !== null) {
+      const v = parseFloat(savedMusicVol);
+      if (!isNaN(v) && v >= 0 && v <= 1) musicVolume = v;
+    }
+  }
+} catch (e) {}
 
 function getAudioCtx(): AudioContext | null {
   try {
@@ -124,8 +145,75 @@ function getMasterOutput(ctx: AudioContext): AudioNode {
   return masterCompressor;
 }
 
+function getSfxOutput(ctx: AudioContext): AudioNode {
+  if (!sfxMasterGain) {
+    sfxMasterGain = ctx.createGain();
+    const effective = sfxMuted ? 0.0001 : sfxVolume;
+    sfxMasterGain.gain.setValueAtTime(effective, ctx.currentTime);
+    sfxMasterGain.connect(getMasterOutput(ctx));
+  }
+  return sfxMasterGain;
+}
+
+function updateSfxGain(): void {
+  if (sfxMasterGain && audioCtx) {
+    const now = audioCtx.currentTime;
+    const target = sfxMuted ? 0.0001 : sfxVolume;
+    sfxMasterGain.gain.cancelScheduledValues(now);
+    sfxMasterGain.gain.setValueAtTime(sfxMasterGain.gain.value, now);
+    sfxMasterGain.gain.linearRampToValueAtTime(target, now + 0.04);
+  }
+}
+
+function setSfxVolume(vol: number): void {
+  sfxVolume = Math.max(0, Math.min(1, vol));
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('jacklatro_sfx_volume', String(sfxVolume));
+    }
+  } catch (e) {}
+  updateSfxGain();
+  updateSfxUI();
+}
+
+function toggleSfx(): void {
+  sfxMuted = !sfxMuted;
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('jacklatro_sfx_muted', sfxMuted ? 'true' : 'false');
+    }
+  } catch (e) {}
+  updateSfxGain();
+  updateSfxUI();
+  if (!sfxMuted && sfxVolume > 0.001) {
+    playChipSound();
+  }
+}
+
+function setMusicVolume(vol: number): void {
+  musicVolume = Math.max(0, Math.min(1, vol));
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('jacklatro_music_volume', String(musicVolume));
+    }
+  } catch (e) {}
+  if (musicMasterGain && audioCtx) {
+    const now = audioCtx.currentTime;
+    musicMasterGain.gain.cancelScheduledValues(now);
+    musicMasterGain.gain.setValueAtTime(musicMasterGain.gain.value, now);
+    musicMasterGain.gain.linearRampToValueAtTime(getTargetMusicVolume(), now + 0.05);
+  }
+  updateMusicUI();
+}
+
+function getTargetMusicVolume(): number {
+  if (musicMuted) return 0.0001;
+  return MUSIC_MASTER_VOLUME * musicVolume;
+}
+
 function playCardDealSound(): void {
   try {
+    if (sfxMuted || sfxVolume <= 0.001) return;
     const ctx = getAudioCtx();
     if (!ctx) return;
     const now = ctx.currentTime;
@@ -149,7 +237,7 @@ function playCardDealSound(): void {
 
     noise.connect(filter);
     filter.connect(gain);
-    gain.connect(getMasterOutput(ctx));
+    gain.connect(getSfxOutput(ctx));
     noise.onended = () => {
       try { noise.disconnect(); filter.disconnect(); gain.disconnect(); } catch (_) {}
     };
@@ -159,6 +247,7 @@ function playCardDealSound(): void {
 }
 
 function playTone(freq: number, type: OscillatorType, startTime: number, duration: number, peakGain: number = 0.14): void {
+  if (sfxMuted || sfxVolume <= 0.001) return;
   const ctx = getAudioCtx();
   if (!ctx) return;
   const t = Math.max(ctx.currentTime, startTime);
@@ -170,7 +259,7 @@ function playTone(freq: number, type: OscillatorType, startTime: number, duratio
   gain.gain.linearRampToValueAtTime(peakGain, t + 0.015);
   gain.gain.exponentialRampToValueAtTime(0.0001, t + duration);
   osc.connect(gain);
-  gain.connect(getMasterOutput(ctx));
+  gain.connect(getSfxOutput(ctx));
   osc.onended = () => {
     try { osc.disconnect(); gain.disconnect(); } catch (_) {}
   };
@@ -180,6 +269,7 @@ function playTone(freq: number, type: OscillatorType, startTime: number, duratio
 
 function playScoreTickSound(stepIndex: number): void {
   try {
+    if (sfxMuted || sfxVolume <= 0.001) return;
     const ctx = getAudioCtx();
     if (!ctx) return;
     const freq = 370 * Math.pow(1.075, Math.min(stepIndex, 14));
@@ -190,6 +280,7 @@ function playScoreTickSound(stepIndex: number): void {
 /** Synthesizes a soft felt card scrape/slide sound when Jokers or cards slide into focus. */
 function playCardSlideSound(): void {
   try {
+    if (sfxMuted || sfxVolume <= 0.001) return;
     const ctx = getAudioCtx();
     if (!ctx) return;
     const now = ctx.currentTime;
@@ -212,7 +303,7 @@ function playCardSlideSound(): void {
     gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
     noise.connect(filter);
     filter.connect(gain);
-    gain.connect(getMasterOutput(ctx));
+    gain.connect(getSfxOutput(ctx));
     noise.onended = () => {
       try { noise.disconnect(); filter.disconnect(); gain.disconnect(); } catch (_) {}
     };
@@ -223,15 +314,17 @@ function playCardSlideSound(): void {
 
 /**
  * Synthesizes a crisp booster pack foil rip followed by an energetic pop burst and bright chime.
+ * Slowed down by 4x to match the 2.6s anticipation rumble shake.
  */
 function playPackRipPopSound(): void {
   try {
+    if (sfxMuted || sfxVolume <= 0.001) return;
     const ctx = getAudioCtx();
     if (!ctx) return;
     const now = ctx.currentTime;
 
-    // 1. Foil tear/rip crinkle: filtered noise with resonant sweeping bandpass during 0.65s shake
-    const ripDuration = 0.48;
+    // 1. Foil tear/rip crinkle: filtered noise with resonant sweeping bandpass during 2.6s shake
+    const ripDuration = 2.1;
     const bufferSize = Math.floor(ctx.sampleRate * ripDuration);
     const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     const data = buffer.getChannelData(0);
@@ -243,39 +336,39 @@ function playPackRipPopSound(): void {
     noise.buffer = buffer;
     const filter = ctx.createBiquadFilter();
     filter.type = 'bandpass';
-    filter.frequency.setValueAtTime(2600, now);
-    filter.frequency.exponentialRampToValueAtTime(700, now + ripDuration);
-    filter.Q.setValueAtTime(3.2, now);
+    filter.frequency.setValueAtTime(2400, now);
+    filter.frequency.exponentialRampToValueAtTime(650, now + ripDuration);
+    filter.Q.setValueAtTime(3.0, now);
 
     const ripGain = ctx.createGain();
-    ripGain.gain.setValueAtTime(0.32, now);
+    ripGain.gain.setValueAtTime(0.30, now);
     ripGain.gain.exponentialRampToValueAtTime(0.001, now + ripDuration);
 
     noise.connect(filter);
     filter.connect(ripGain);
-    ripGain.connect(getMasterOutput(ctx));
+    ripGain.connect(getSfxOutput(ctx));
     noise.start(now);
     noise.stop(now + ripDuration);
 
-    // 2. Resonant energetic pop body: descending triangle pitch sweep right as pack pops at ~0.65s
+    // 2. Resonant energetic pop body: descending triangle pitch sweep right as pack pops at ~2.55s
     const popOsc = ctx.createOscillator();
     const popGain = ctx.createGain();
     popOsc.type = 'triangle';
-    popOsc.frequency.setValueAtTime(440, now + 0.60);
-    popOsc.frequency.exponentialRampToValueAtTime(130, now + 0.84);
+    popOsc.frequency.setValueAtTime(440, now + 2.50);
+    popOsc.frequency.exponentialRampToValueAtTime(130, now + 2.74);
 
-    popGain.gain.setValueAtTime(0.001, now + 0.60);
-    popGain.gain.linearRampToValueAtTime(0.38, now + 0.63);
-    popGain.gain.exponentialRampToValueAtTime(0.001, now + 0.86);
+    popGain.gain.setValueAtTime(0.001, now + 2.50);
+    popGain.gain.linearRampToValueAtTime(0.38, now + 2.53);
+    popGain.gain.exponentialRampToValueAtTime(0.001, now + 2.76);
 
     popOsc.connect(popGain);
-    popGain.connect(getMasterOutput(ctx));
-    popOsc.start(now + 0.60);
-    popOsc.stop(now + 0.88);
+    popGain.connect(getSfxOutput(ctx));
+    popOsc.start(now + 2.50);
+    popOsc.stop(now + 2.78);
 
     // 3. Bright magical sparkle bells right as cards burst out
-    playTone(1174.66, 'sine', now + 0.64, 0.28, 0.18); // D6
-    playTone(1760.0, 'sine', now + 0.70, 0.35, 0.15);  // A6
+    playTone(1174.66, 'sine', now + 2.55, 0.28, 0.18); // D6
+    playTone(1760.0, 'sine', now + 2.62, 0.35, 0.15);  // A6
   } catch (e) {}
 }
 
@@ -739,7 +832,7 @@ function startMusic(): void {
     const now = ctx.currentTime;
     musicMasterGain!.gain.cancelScheduledValues(now);
     musicMasterGain!.gain.setValueAtTime(0.0001, now);
-    musicMasterGain!.gain.linearRampToValueAtTime(MUSIC_MASTER_VOLUME, now + 0.35);
+    musicMasterGain!.gain.linearRampToValueAtTime(getTargetMusicVolume(), now + 0.35);
 
     if (musicSchedulerTimer) clearInterval(musicSchedulerTimer);
     musicSchedulerTimer = setInterval(musicScheduler, 25);
@@ -933,7 +1026,7 @@ function startVictoryMusic(): void {
     const now = ctx.currentTime;
     musicMasterGain!.gain.cancelScheduledValues(now);
     musicMasterGain!.gain.setValueAtTime(0.0001, now);
-    musicMasterGain!.gain.linearRampToValueAtTime(MUSIC_MASTER_VOLUME * 1.15, now + 0.25);
+    musicMasterGain!.gain.linearRampToValueAtTime(getTargetMusicVolume() * 1.15, now + 0.25);
 
     if (victorySchedulerTimer) clearInterval(victorySchedulerTimer);
     victorySchedulerTimer = setInterval(victoryMusicScheduler, 25);
@@ -1015,10 +1108,11 @@ function duckMusic(durationSec: number = 0.8): void {
     const active = isMusicPlaying || isVictoryMusicPlaying;
     if (!active || !musicMasterGain || !audioCtx) return;
     const now = audioCtx.currentTime;
+    const target = getTargetMusicVolume();
     musicMasterGain.gain.cancelScheduledValues(now);
     musicMasterGain.gain.setValueAtTime(musicMasterGain.gain.value, now);
-    musicMasterGain.gain.linearRampToValueAtTime(MUSIC_MASTER_VOLUME * 0.28, now + 0.04);
-    musicMasterGain.gain.exponentialRampToValueAtTime(MUSIC_MASTER_VOLUME, now + durationSec);
+    musicMasterGain.gain.linearRampToValueAtTime(target * 0.28, now + 0.04);
+    musicMasterGain.gain.exponentialRampToValueAtTime(Math.max(0.0001, target), now + durationSec);
   } catch (e) {}
 }
 
@@ -1061,6 +1155,33 @@ function updateMusicUI(): void {
         btnSplash.classList.add('muted');
       }
     }
+    const slider = document.getElementById('setting-music-volume') as HTMLInputElement | null;
+    if (slider) slider.value = String(Math.round(musicVolume * 100));
+    const lbl = document.getElementById('ui-lbl-music-volume');
+    if (lbl) lbl.textContent = `${Math.round(musicVolume * 100)}%`;
+  } catch (e) {}
+}
+
+function updateSfxUI(): void {
+  try {
+    const isEnabled = !sfxMuted && sfxVolume > 0.001;
+    const btnModal = document.getElementById('btn-modal-sfx-toggle');
+    if (btnModal) {
+      btnModal.textContent = isEnabled ? 'SFX: ON' : 'SFX: OFF';
+      if (!isEnabled) {
+        btnModal.classList.remove('btn-deal');
+        btnModal.classList.add('btn-secondary');
+      } else {
+        btnModal.classList.add('btn-deal');
+        btnModal.classList.remove('btn-secondary');
+      }
+    }
+    const icon = document.getElementById('ui-icon-sfx');
+    if (icon) icon.textContent = isEnabled ? '🔊' : '🔇';
+    const slider = document.getElementById('setting-sfx-volume') as HTMLInputElement | null;
+    if (slider) slider.value = String(Math.round(sfxVolume * 100));
+    const lbl = document.getElementById('ui-lbl-sfx-volume');
+    if (lbl) lbl.textContent = `${Math.round(sfxVolume * 100)}%`;
   } catch (e) {}
 }
 
@@ -1194,16 +1315,24 @@ if (typeof window !== 'undefined') {
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
       updateMusicUI();
+      updateSfxUI();
       tryAutostartMusic();
     });
   } else {
     updateMusicUI();
+    updateSfxUI();
     tryAutostartMusic();
   }
 }
 
 if (typeof window !== 'undefined') {
   (window as any).playPackRipPopSound = playPackRipPopSound;
+  (window as any).toggleMusic = toggleMusic;
+  (window as any).toggleSfx = toggleSfx;
+  (window as any).setMusicVolume = setMusicVolume;
+  (window as any).setSfxVolume = setSfxVolume;
+  (window as any).updateMusicUI = updateMusicUI;
+  (window as any).updateSfxUI = updateSfxUI;
 }
 
 
