@@ -48,15 +48,37 @@ const JOKER_CATALOG: ReadonlyArray<JokerDef> = [
 const TAROT_CATALOG: ReadonlyArray<TarotDef> = [
   { id: 'x_ray', name: 'X-Ray Specs', cost: 3, desc: 'Reveal Dealer hole card and gain +75 Chips this hand.' },
   { id: 'loaded_ace', name: 'Loaded Ace', cost: 4, desc: 'Draw a Foil Ace of Spades directly into your hand.' },
-  { id: 'card_shave', name: 'Card Shave', cost: 3, desc: 'Reduce your highest non-Ace card rank by 3.' },
-  { id: 'midas_touch', name: 'Midas Touch', cost: 3, desc: 'Enhance rightmost card in hand to Gold (+$3 when scored).' },
+  { id: 'card_shave', name: 'Card Shave', cost: 3, desc: 'Reduce the rank of a selected card by 3 (min 2).' },
+  { id: 'midas_touch', name: 'Midas Touch', cost: 3, desc: 'Enhance a selected card in hand to Gold (+$3 when scored).' },
   { id: 'double_vision', name: 'Double Vision', cost: 3, desc: 'Apply Double Down (×2 Mult) to your active hand without forcing a Stand.' },
-  { id: 'polychrome_dice', name: 'Polychrome Dice', cost: 4, desc: 'Enhance leftmost card in hand to Polychrome (×1.5 Mult).' },
-  { id: 'the_guillotine', name: 'The Guillotine', cost: 4, desc: 'Permanently destroy the leftmost card in your hand from your deck.' },
-  { id: 'card_forge', name: 'Card Forge', cost: 3, desc: 'Increase the rank of your highest non-Ace card by 2.' },
-  { id: 'wild_suit', name: 'Prism Dye', cost: 3, desc: 'Enhance leftmost card in hand to Foil (+30 Chips permanently).' },
-  { id: 'lucky_charm', name: 'Lucky Charm', cost: 4, desc: 'Enhance rightmost card in hand to Holo (+4 Mult permanently).' }
+  { id: 'polychrome_dice', name: 'Polychrome Dice', cost: 4, desc: 'Enhance a selected card in hand to Polychrome (×1.5 Mult).' },
+  { id: 'the_guillotine', name: 'The Guillotine', cost: 4, desc: 'Permanently destroy a selected card in your hand from your deck.' },
+  { id: 'card_forge', name: 'Card Forge', cost: 3, desc: 'Increase the rank of a selected card by 2.' },
+  { id: 'wild_suit', name: 'Prism Dye', cost: 3, desc: 'Enhance a selected card in hand to Foil (+30 Chips permanently).' },
+  { id: 'lucky_charm', name: 'Lucky Charm', cost: 4, desc: 'Enhance a selected card in hand to Holo (+4 Mult permanently).' }
 ];
+
+function isTarotCardTargeted(tarotId: string): boolean {
+  return [
+    'midas_touch',
+    'polychrome_dice',
+    'wild_suit',
+    'lucky_charm',
+    'the_guillotine',
+    'card_shave',
+    'card_forge'
+  ].includes(tarotId);
+}
+
+function isCardEligibleForTarot(tarotId: string, card: Card): boolean {
+  if (tarotId === 'card_shave') {
+    return card.rank !== 'A' && card.rank !== '2';
+  }
+  if (tarotId === 'card_forge') {
+    return card.rank !== 'A' && card.rank !== 'K';
+  }
+  return true;
+}
 
 const VOUCHER_CATALOG: ReadonlyArray<VoucherDef> = [
   { id: 'extra_hand', name: 'Extra Cushion', cost: 10, desc: '+1 Max Deal per Blind permanently.' },
@@ -516,4 +538,6 @@ if (typeof window !== 'undefined') {
   (window as any).TAROT_CATALOG = TAROT_CATALOG;
   (window as any).VOUCHER_CATALOG = VOUCHER_CATALOG;
   (window as any).BOSS_BLINDS = BOSS_BLINDS;
+  (window as any).isTarotCardTargeted = isTarotCardTargeted;
+  (window as any).isCardEligibleForTarot = isCardEligibleForTarot;
 }

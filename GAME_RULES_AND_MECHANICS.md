@@ -320,15 +320,20 @@ Player begins with **5 Joker slots** (expandable to 6 with VIP Lounge Pass).
 Player has **2 Consumable slots**.
 > [!NOTE]
 > Consumables can **only be activated while a hand is actively in progress** (`inHand = true`, not dealing). Selling yields flat **$\$1$**.
+> Card-targeted Tarots enter an interactive selection mode: animated glowing outlines appear around eligible cards in hand. The player taps the card they wish to target. Clicking outside the outlines cancels targeting mode and keeps the Tarot safe in inventory.
 
 | ID | Name | Cost | Effect | Operational Mechanics |
 | :--- | :--- | :---: | :--- | :--- |
 | `x_ray` | **X-Ray Specs** | $3 | Reveal Dealer Hole & $+75\text{ Chips}$ | Sets `dealerHoleRevealed = true` immediately and adds $+75$ to `tempBonusChips` for the current hand. |
 | `loaded_ace` | **Loaded Ace** | $4 | Draw Foil $\text{A}\spadesuit$ directly into hand | Instantly adds a card with rank $\text{A}$, suit $\spadesuit$, and `foil` enhancement directly into the player's active hand. |
-| `card_shave` | **Card Shave** | $3 | Reduce highest non-Ace rank by 3 | Finds highest card not in $\{\text{A}, 2, 3\}$. Reduces rank by 3 (Face cards count as 10 $\to 7$; $9 \to 6$; min rank 2). Prevents busts! |
-| `midas_touch` | **Midas Touch** | $3 | Turn rightmost card Gold | Sets `enhancement = 'gold'` on `playerHand[playerHand.length - 1]`. That card now earns $+\$3$ when scored. |
+| `card_shave` | **Card Shave** | $3 | Reduce selected card rank by 3 | Player selects an eligible non-Ace card in hand. Reduces rank by 3 (Face cards count as 10 $\to 7$; min rank 2). Prevents busts! |
+| `midas_touch` | **Midas Touch** | $3 | Turn selected card Gold | Player selects any card in hand. Sets `enhancement = 'gold'`. That card now earns $+\$3$ when scored. |
 | `double_vision` | **Double Vision** | $3 | Apply Double Down (×2 Mult) | Applies $\times 2\text{ Mult}$ to the active hand without forcing a stand. |
-| `polychrome_dice` | **Polychrome Dice**| $4 | Enhance leftmost card Poly | Sets `enhancement = 'poly'` ($\times 1.5\text{ Mult}$) on `playerHand[0]`. |
+| `polychrome_dice` | **Polychrome Dice**| $4 | Enhance selected card Poly | Player selects any card in hand. Sets `enhancement = 'poly'` ($\times 1.5\text{ Mult}$). |
+| `the_guillotine` | **The Guillotine** | $4 | Permanently destroy selected card | Player selects any card in hand. Permanently destroys it from the deck. |
+| `card_forge` | **Card Forge** | $3 | Increase selected card rank by 2 | Player selects an eligible non-Ace card in hand. Upgrades rank by 2. |
+| `wild_suit` | **Prism Dye** | $3 | Enhance selected card Foil | Player selects any card in hand. Sets `enhancement = 'foil'` ($+30\text{ Chips}$). |
+| `lucky_charm` | **Lucky Charm** | $4 | Enhance selected card Holo | Player selects any card in hand. Sets `enhancement = 'holo'` ($+4\text{ Mult}$). |
 
 ---
 

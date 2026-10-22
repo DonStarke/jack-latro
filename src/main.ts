@@ -1082,9 +1082,11 @@ function renderCardHTML(card: Card, faceDown: boolean = false, extraClasses: str
   const enhClass = card.enhancement ? `enh-${card.enhancement}` : '';
   const enhLabel = card.enhancement ? `<div class="card-enh-tag">${card.enhancement.toUpperCase()}</div>` : '';
   const chipVal = getCardChipValue(card);
+  const targetTag = extraClasses.includes('tarot-selectable') ? `<div class="tarot-target-tag">TARGET</div>` : '';
 
   return `
-    <div class="playing-card ${isRed ? 'red' : 'black'} ${enhClass} ${extraClasses}" ${onClickAttr}>
+    <div class="playing-card ${isRed ? 'red' : 'black'} ${enhClass} ${extraClasses}" data-uid="${card.uid}" ${onClickAttr}>
+      ${targetTag}
       <div class="card-corner-top">${card.rank}<br>${card.suit}</div>
       <div class="card-suit-center">${card.suit}</div>
       ${enhLabel}
@@ -1279,7 +1281,22 @@ function updateAllUI() {
     $('ui-dealer-total').textContent = String(dEval.total);
   }
 
-  $('ui-player-cards').innerHTML = state.playerHand.map(c => renderCardHTML(c, false)).join('');
+  $('ui-player-cards').innerHTML = state.playerHand.map(c => {
+    if (activeTarotSelection) {
+      const eligible = isCardEligibleForTarot(activeTarotSelection.tarotId, c);
+      if (eligible) {
+        return renderCardHTML(
+          c,
+          false,
+          'tarot-selectable',
+          `onclick="event.stopPropagation(); uiSelectCardForTarot(${c.uid})"`
+        );
+      } else {
+        return renderCardHTML(c, false, 'tarot-ineligible', '');
+      }
+    }
+    return renderCardHTML(c, false);
+  }).join('');
   if (state.playerHand.length === 0) {
     $('ui-player-total').textContent = '0';
   } else {
@@ -1737,6 +1754,7 @@ function refreshBlindStartUI(): void {
 }
 
 function startNewRun(): void {
+  cancelTarotTargeting(false);
   cancelAllScoringAnimations();
   stopConfetti();
   hideDefeatModal();
@@ -2329,9 +2347,196 @@ function uiSellConsumable(index: number): void {
   updateAllUI();
 }
 
-function uiUseConsumable(index: number): void {
+interface ActiveTarotSelection {
+  consumableIndex: number;
+  tarotId: string;
+  tarotName: string;
+}
+
+let activeTarotSelection: ActiveTarotSelection | null = null;
+
+function isTarotTargetingActive(): boolean {
+  return activeTarotSelection !== null;
+}
+
+function startTarotTargeting(index: number): boolean {
+  if (isPlayfieldLocked) return false;
+  const state = getState();
+  if (!state.inHand || state.isDealing) {
+    alert('Tarots can only be cast while a hand is actively in progress!');
+    return false;
+  }
+  const c = state.consumables[index];
+  if (!c) return false;
+  if (!state.playerHand || state.playerHand.length === 0) {
+    alert('No cards in hand to target!');
+    return false;
+  }
+
+  const eligibleCount = state.playerHand.filter(card => isCardEligibleForTarot(c.id, card)).length;
+  if (eligibleCount === 0) {
+    alert(`No eligible cards in hand for ${c.name}!`);
+    return false;
+  }
+
+  activeTarotSelection = {
+    consumableIndex: index,
+    tarotId: c.id,
+    tarotName: c.name
+  };
+
+  closeInspector();
+  if (typeof document !== 'undefined') {
+    document.body.classList.add('tarot-targeting-active');
+  }
+
+  const backdrop = $('ui-tarot-target-backdrop');
+  if (backdrop) {
+    backdrop.classList.remove('hidden');
+    const titleEl = $('ui-tarot-target-title');
+    if (titleEl) titleEl.textContent = `🔮 SELECT A CARD FOR ${c.name.toUpperCase()}`;
+    const hintEl = $('ui-tarot-target-hint');
+    if (hintEl) hintEl.textContent = `Tap an outlined card to apply • Tap anywhere else to cancel`;
+  }
+
+  setBanner(`🔮 ${c.name.toUpperCase()}: SELECT A CARD`, 'Tap an outlined card below • Tap anywhere else to cancel');
+
+  if (typeof document !== 'undefined') {
+    document.addEventListener('pointerdown', handleTarotTargetingOutsidePointerDown, true);
+    document.addEventListener('click', handleTarotTargetingOutsideClick, true);
+    window.addEventListener('keydown', handleTarotTargetingKeyDown, true);
+  }
+
+  updateAllUI();
+  return true;
+}
+
+function cancelTarotTargeting(showFeedback: boolean = true): void {
+  if (!activeTarotSelection) return;
+  const name = activeTarotSelection.tarotName;
+  activeTarotSelection = null;
+  cleanUpTarotTargetingUI();
+
+  if (showFeedback) {
+    setBanner(`${name} cancelled`, 'Tarot kept in inventory • No card was modified');
+  }
+  updateAllUI();
+}
+
+function cleanUpTarotTargetingUI(): void {
+  if (typeof document !== 'undefined') {
+    document.body.classList.remove('tarot-targeting-active');
+    document.removeEventListener('pointerdown', handleTarotTargetingOutsidePointerDown, true);
+    document.removeEventListener('click', handleTarotTargetingOutsideClick, true);
+    window.removeEventListener('keydown', handleTarotTargetingKeyDown, true);
+  }
+  const backdrop = $('ui-tarot-target-backdrop');
+  if (backdrop) backdrop.classList.add('hidden');
+}
+
+function handleTarotTargetingOutsidePointerDown(e: Event): void {
+  if (!activeTarotSelection) return;
+  const target = e.target as HTMLElement | null;
+  if (!target) return;
+
+  if (target.closest('.tarot-selectable')) {
+    // Clicked an outlined card, allow card click handler to process
+    return;
+  }
+
+  e.stopPropagation();
+  e.preventDefault();
+  cancelTarotTargeting(true);
+}
+
+function handleTarotTargetingOutsideClick(e: MouseEvent): void {
+  if (!activeTarotSelection) return;
+  const target = e.target as HTMLElement | null;
+  if (!target) return;
+
+  if (target.closest('.tarot-selectable')) {
+    return;
+  }
+
+  e.stopPropagation();
+  e.preventDefault();
+  cancelTarotTargeting(true);
+}
+
+function handleTarotTargetingKeyDown(e: KeyboardEvent): void {
+  if (!activeTarotSelection) return;
+  if (e.key === 'Escape') {
+    e.stopPropagation();
+    e.preventDefault();
+    cancelTarotTargeting(true);
+  }
+}
+
+function triggerCardTarotFeedback(cardUid: number | string, tarotId: string): void {
+  const numUid = typeof cardUid === 'number' ? cardUid : Number(cardUid);
+  const cardEl = document.querySelector(`.playing-card[data-uid="${numUid}"]`) as HTMLElement | null;
+  if (!cardEl) return;
+
+  cardEl.classList.remove('scoring-pop');
+  void cardEl.offsetWidth;
+  cardEl.classList.add('scoring-pop');
+
+  let popText = '✨';
+  if (tarotId === 'midas_touch') popText = '+GOLD ($3)';
+  else if (tarotId === 'polychrome_dice') popText = '×1.5m POLY';
+  else if (tarotId === 'wild_suit') popText = '+30c FOIL';
+  else if (tarotId === 'lucky_charm') popText = '+4m HOLO';
+  else if (tarotId === 'card_shave') popText = '-3 RANK';
+  else if (tarotId === 'card_forge') popText = '+2 RANK';
+
+  const pop = document.createElement('div');
+  pop.className = 'card-float-pop';
+  pop.textContent = popText;
+  cardEl.appendChild(pop);
+
+  setTimeout(() => {
+    cardEl.classList.remove('scoring-pop');
+    pop.remove();
+  }, 1200);
+}
+
+function uiSelectCardForTarot(cardUid: number | string): void {
+  if (isPlayfieldLocked || !activeTarotSelection) return;
+  const selection = activeTarotSelection;
+  activeTarotSelection = null;
+  cleanUpTarotTargetingUI();
+
+  const res = useConsumable(selection.consumableIndex, cardUid);
+  if (!res.ok) {
+    if (res.warning) alert(res.warning);
+    updateAllUI();
+    return;
+  }
+
+  playCardDealSound();
+  if (res.message) setBanner(res.message, '');
+  updateAllUI();
+  triggerCardTarotFeedback(cardUid, selection.tarotId);
+}
+
+function uiUseConsumable(index: number, targetCardUid?: number | string): void {
   if (isPlayfieldLocked) return;
-  const res = useConsumable(index);
+  const state = getState();
+  const c = state.consumables[index];
+  if (!c) return;
+
+  if (!state.inHand || state.isDealing) {
+    alert('You can only use Tarots while a hand is actively in progress!');
+    return;
+  }
+
+  // If this tarot requires card targeting and no target card was explicitly provided:
+  if (isTarotCardTargeted(c.id) && targetCardUid === undefined) {
+    startTarotTargeting(index);
+    return;
+  }
+
+  const res = useConsumable(index, targetCardUid);
   if (!res.ok) {
     if (res.warning) alert(res.warning);
     return;
@@ -2339,7 +2544,11 @@ function uiUseConsumable(index: number): void {
   playCardDealSound();
   if (res.message) setBanner(res.message, '');
   closeInspector();
+  cancelTarotTargeting(false);
   updateAllUI();
+  if (targetCardUid !== undefined) {
+    triggerCardTarotFeedback(targetCardUid, c.id);
+  }
 }
 
 /* ==========================================================
@@ -2358,6 +2567,7 @@ async function dealHand(): Promise<void> {
   const state = getState();
   if (isPlayfieldLocked || state.inHand || state.isDealing || state.handsLeft <= 0 || state.blindClearedReady || state.blindFailedReady) return;
 
+  cancelTarotTargeting(false);
   cancelAllScoringAnimations();
   hideOutcomeHeadline();
   hideRoundCashBreakdown();
@@ -3958,6 +4168,10 @@ function renderRunStats(): void {
 (window as any).uiSellJoker = uiSellJoker;
 (window as any).uiSellConsumable = uiSellConsumable;
 (window as any).uiUseConsumable = uiUseConsumable;
+(window as any).startTarotTargeting = startTarotTargeting;
+(window as any).cancelTarotTargeting = cancelTarotTargeting;
+(window as any).uiSelectCardForTarot = uiSelectCardForTarot;
+(window as any).isTarotTargetingActive = isTarotTargetingActive;
 (window as any).startNextBlindFromShop = startNextBlindFromShop;
 (window as any).dealHand = dealHand;
 (window as any).playerHit = playerHit;

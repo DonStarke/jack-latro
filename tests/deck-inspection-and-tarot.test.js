@@ -74,28 +74,56 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   ck('Holo enhancement applied to playerHand card', lastCard.enhancement === 'holo');
   ck('Holo enhancement synchronized to deck card object', deckCardLast && deckCardLast.enhancement === 'holo');
 
-  // Test Tarot use: Polychrome Dye
-  state.consumables = [{ id: 'polychrome_dice', name: 'Polychrome Dye', cost: 5, desc: 'Enhance leftmost card' }];
+  // Test Tarot use: Polychrome Dice targeting and selection
+  state.consumables = [{ id: 'polychrome_dice', name: 'Polychrome Dice', cost: 4, desc: 'Enhance a selected card' }];
   w.uiUseConsumable(0);
-  ck('Polychrome Dye updated first card enhancement', firstCard.enhancement === 'poly');
-  ck('Polychrome Dye synchronized to deck card object', deckCardFirst.enhancement === 'poly');
+  ck('Targeting mode active after clicking use on card tarot', w.isTarotTargetingActive());
+  ck('Selectable card outline rendered in player hand', d.querySelector('.playing-card.tarot-selectable') !== null);
 
-  // Test Tarot use: Loaded Ace
+  // Test cancel targeting (clicking outside)
+  w.cancelTarotTargeting();
+  ck('Targeting mode deactivated after cancel', !w.isTarotTargetingActive());
+  ck('Consumable retained after cancel', state.consumables.length === 1 && state.consumables[0].id === 'polychrome_dice');
+
+  // Re-start targeting and select first card
+  w.uiUseConsumable(0);
+  w.uiSelectCardForTarot(firstCardUid);
+  ck('Targeting mode deactivated after card selection', !w.isTarotTargetingActive());
+  ck('Polychrome Dice updated selected card enhancement', firstCard.enhancement === 'poly');
+  ck('Polychrome Dice synchronized to deck card object', deckCardFirst.enhancement === 'poly');
+
+  // Test Tarot use: Loaded Ace (instant tarot does not enter card targeting mode)
   state.consumables = [{ id: 'loaded_ace', name: 'Loaded Ace', cost: 4, desc: 'Draw Foil Ace' }];
   const deckLenBeforeAce = state.deck.length;
   w.uiUseConsumable(0);
+  ck('Loaded Ace does not enter targeting mode', !w.isTarotTargetingActive());
   ck('Loaded Ace added card to player hand', state.playerHand.some(c => c.rank === 'A' && c.suit === '♠' && c.enhancement === 'foil'));
   ck('Loaded Ace added card permanently to deck', state.deck.length === deckLenBeforeAce + 1 && state.deck.some(c => c.rank === 'A' && c.suit === '♠' && c.enhancement === 'foil'));
 
-  // Test Tarot use: Card Shave
+  // Test Tarot use: Card Shave targeting specific card
   const tenCard = state.playerHand.find(c => c.rank === '10') || state.playerHand[0];
   tenCard.rank = '10'; // ensure it's a 10 for the shave test
   const tenCardUid = tenCard.uid;
   state.consumables = [{ id: 'card_shave', name: 'Card Shave', cost: 3, desc: 'Reduce rank' }];
   w.uiUseConsumable(0);
+  ck('Card Shave activated card targeting mode', w.isTarotTargetingActive());
+  w.uiSelectCardForTarot(tenCardUid);
   const shavedDeckCard = state.deck.find(c => c.uid === tenCardUid);
   ck('Card Shave reduced rank on hand card', tenCard.rank === '7');
   ck('Card Shave synchronized reduced rank to deck card', shavedDeckCard && shavedDeckCard.rank === '7');
+
+  // Test Tarot use: Midas Touch targeting specific card
+  const midasCard = { uid: w.takeNextCardUid(), rank: '9', suit: '♦', enhancement: null };
+  w.addCardToDeck({ ...midasCard });
+  w.addCardToPlayerHand(midasCard);
+  const midasCardUid = midasCard.uid;
+  state.consumables = [{ id: 'midas_touch', name: 'Midas Touch', cost: 3, desc: 'Enhance a selected card to Gold' }];
+  w.uiUseConsumable(0);
+  ck('Midas Touch activated targeting mode', w.isTarotTargetingActive());
+  w.uiSelectCardForTarot(midasCardUid);
+  ck('Midas Touch turned selected card to Gold', midasCard.enhancement === 'gold');
+  const midasDeckCard = state.deck.find(c => c.uid === midasCardUid);
+  ck('Midas Touch synchronized Gold to deck card', midasDeckCard && midasDeckCard.enhancement === 'gold');
 
   console.log('\n--- TEST 2: DECK VIEW RENDERING & ZOOM INSPECTION MODAL ---');
 

@@ -68,10 +68,10 @@ All 4 core balance, content, rarity, and simulation milestones are 100% complete
 16. **Deja Vu** ($7, isXMult): ×1.5 Mult if your final hand total matches your final total from the previous hand. *(Pattern)*
 
 ### B. 4 New Tarots (Catalog expanding from 6 to 10)
-1. **The Guillotine** ($4): Permanently destroy the leftmost card in your hand from your deck. *(Deck thinning)*
-2. **Card Forge** ($3): Increase the rank of your highest non-Ace card by 2 (or turn 10/J/Q into K). *(Rank manipulation)*
+1. **The Guillotine** ($4): Permanently destroy a selected card in your hand from your deck. *(Deck thinning)*
+2. **Card Forge** ($3): Increase the rank of a selected card by 2 (or turn 10/J/Q into K). *(Rank manipulation)*
 3. **Prism Dye** ($3): Enhance a selected card to Foil (+30 Chips permanently). *(Targeted enhancement)*
-4. **Lucky Charm** ($4): Apply Holo (+4 Mult) to your rightmost card permanently. *(Targeted enhancement)*
+4. **Lucky Charm** ($4): Apply Holo (+4 Mult) to a selected card permanently. *(Targeted enhancement)*
 
 ### C. 4 New Vouchers (Catalog expanding from 6 to 10)
 1. **Clearance Rack** ($6): Shop reroll starting cost is reduced from $2 to $1 permanently.

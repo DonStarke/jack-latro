@@ -29,6 +29,7 @@
     padding: 10px;
   }
   .modal-backdrop.hidden { display: none !important; }
+  .tarot-target-backdrop.hidden { display: none !important; }
   .view-table-bar.hidden, .inspect-touch-shield.hidden { display: none !important; }
 </style>
 </head>
@@ -207,6 +208,15 @@
       <button class="btn btn-hit" id="btn-hit" onclick="playerHit()" disabled>HIT</button>
       <button class="btn btn-stand" id="btn-stand" onclick="playerStand()" disabled>STAND</button>
       <button class="btn btn-double" id="btn-double" onclick="playerDouble()" disabled>DOUBLE ×2</button>
+    </div>
+
+    <!-- TAROT CARD TARGETING BACKDROP -->
+    <div id="ui-tarot-target-backdrop" class="tarot-target-backdrop hidden" onclick="cancelTarotTargeting()">
+      <div class="tarot-target-banner" onclick="event.stopPropagation()">
+        <div class="tarot-target-title" id="ui-tarot-target-title">🔮 SELECT A CARD</div>
+        <div class="tarot-target-hint" id="ui-tarot-target-hint">Tap an outlined card to apply • Tap anywhere else to cancel</div>
+        <button class="btn btn-secondary btn-tarot-cancel" onclick="cancelTarotTargeting()">Cancel</button>
+      </div>
     </div>
 
     <!-- SHOP OVERLAY -->

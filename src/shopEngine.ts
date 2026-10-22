@@ -572,11 +572,17 @@ interface ConsumableResult {
   warning?: string;
 }
 
-function useConsumable(index: number): ConsumableResult {
+function useConsumable(index: number, targetCardUid?: number | string): ConsumableResult {
   const s = getState();
   if (!s.inHand || s.isDealing) return { ok: false };
   const c = s.consumables[index];
   if (!c) return { ok: false };
+
+  const numUid = targetCardUid !== undefined ? (typeof targetCardUid === 'number' ? targetCardUid : Number(targetCardUid)) : undefined;
+  let targetCard = numUid !== undefined ? s.playerHand.find(card => card.uid === numUid) : undefined;
+  if (targetCardUid !== undefined && !targetCard) {
+    return { ok: false, warning: 'Selected card is not in your active hand!' };
+  }
 
   let message = '';
   if (c.id === 'x_ray') {
@@ -589,62 +595,80 @@ function useConsumable(index: number): ConsumableResult {
     recordEffectEnhanced('foil');
     message = 'Loaded Ace drawn into hand!';
   } else if (c.id === 'card_shave') {
-    const target = s.playerHand.find(card => !['A', '2', '3'].includes(card.rank));
-    if (!target) return { ok: false, warning: 'No high card available to shave!' };
-    const val = FACE_RANKS.includes(target.rank) ? 10 : parseInt(target.rank, 10);
-    setCardRank(target, String(Math.max(2, val - 3)) as Rank);
-    message = `Card Shave reduced rank to ${target.rank}!`;
-  } else if (c.id === 'midas_touch') {
-    const lastCard = s.playerHand[s.playerHand.length - 1];
-    if (lastCard) {
-      setCardEnhancement(lastCard, 'gold');
-      recordEffectEnhanced('gold');
-      message = `${lastCard.rank}${lastCard.suit} turned Gold!`;
+    if (!targetCard) {
+      targetCard = s.playerHand.find(card => card.rank !== 'A' && card.rank !== '2') || s.playerHand.find(card => card.rank !== 'A');
     }
+    if (!targetCard) return { ok: false, warning: 'No eligible high card available to shave!' };
+    if (targetCard.rank === 'A') return { ok: false, warning: 'Aces cannot be shaved!' };
+    const val = FACE_RANKS.includes(targetCard.rank) ? 10 : parseInt(targetCard.rank, 10);
+    const newRank = String(Math.max(2, val - 3)) as Rank;
+    setCardRank(targetCard, newRank);
+    message = `Card Shave reduced rank to ${targetCard.rank}!`;
+  } else if (c.id === 'midas_touch') {
+    if (!targetCard) {
+      targetCard = s.playerHand[s.playerHand.length - 1];
+    }
+    if (!targetCard) return { ok: false, warning: 'No card in hand to enhance!' };
+    setCardEnhancement(targetCard, 'gold');
+    recordEffectEnhanced('gold');
+    message = `${targetCard.rank}${targetCard.suit} turned Gold!`;
   } else if (c.id === 'double_vision') {
     patchState({ doubledDown: true });
     const dblMult = s.jokers.some(j => j.id === 'double_or_nothing') ? 3 : 2;
     message = `Double Vision: Hand Doubled Down (×${dblMult} Mult)!`;
   } else if (c.id === 'polychrome_dice') {
-    const firstCard = s.playerHand[0];
-    if (firstCard) {
-      setCardEnhancement(firstCard, 'poly');
-      recordEffectEnhanced('poly');
-      message = `${firstCard.rank}${firstCard.suit} enhanced to Polychrome (×1.5 Mult)!`;
+    if (!targetCard) {
+      targetCard = s.playerHand[0];
     }
+    if (!targetCard) return { ok: false, warning: 'No card in hand to enhance!' };
+    setCardEnhancement(targetCard, 'poly');
+    recordEffectEnhanced('poly');
+    message = `${targetCard.rank}${targetCard.suit} enhanced to Polychrome (×1.5 Mult)!`;
   } else if (c.id === 'the_guillotine') {
     if (s.playerHand.length === 0) return { ok: false, warning: 'No card in hand to destroy!' };
-    const target = s.playerHand[0];
-    removeCardFromGame(target.uid);
-    message = `The Guillotine permanently destroyed ${target.rank}${target.suit}!`;
+    if (!targetCard) {
+      targetCard = s.playerHand[0];
+    }
+    removeCardFromGame(targetCard.uid);
+    message = `The Guillotine permanently destroyed ${targetCard.rank}${targetCard.suit}!`;
   } else if (c.id === 'card_forge') {
-    const nonAces = s.playerHand.filter(card => card.rank !== 'A');
-    if (nonAces.length === 0) return { ok: false, warning: 'No non-Ace card in hand!' };
+    if (!targetCard) {
+      const nonAces = s.playerHand.filter(card => card.rank !== 'A');
+      if (nonAces.length === 0) return { ok: false, warning: 'No non-Ace card in hand!' };
+      const rankOrder: Rank[] = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+      nonAces.sort((a, b) => rankOrder.indexOf(b.rank) - rankOrder.indexOf(a.rank));
+      targetCard = nonAces[0];
+    }
+    if (targetCard.rank === 'A') return { ok: false, warning: 'Aces cannot be upgraded!' };
     const rankOrder: Rank[] = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-    nonAces.sort((a, b) => rankOrder.indexOf(b.rank) - rankOrder.indexOf(a.rank));
-    const target = nonAces[0];
-    const curIdx = rankOrder.indexOf(target.rank);
+    const curIdx = rankOrder.indexOf(targetCard.rank);
     const newIdx = Math.min(rankOrder.length - 1, curIdx + 2);
-    setCardRank(target, rankOrder[newIdx]);
-    message = `Card Forge upgraded card to ${target.rank}!`;
+    setCardRank(targetCard, rankOrder[newIdx]);
+    message = `Card Forge upgraded card to ${targetCard.rank}!`;
   } else if (c.id === 'wild_suit') {
-    const firstCard = s.playerHand[0];
-    if (firstCard) {
-      setCardEnhancement(firstCard, 'foil');
-      recordEffectEnhanced('foil');
-      message = `${firstCard.rank}${firstCard.suit} enhanced to Foil (+30 Chips)!`;
+    if (!targetCard) {
+      targetCard = s.playerHand[0];
     }
+    if (!targetCard) return { ok: false, warning: 'No card in hand to enhance!' };
+    setCardEnhancement(targetCard, 'foil');
+    recordEffectEnhanced('foil');
+    message = `${targetCard.rank}${targetCard.suit} enhanced to Foil (+30 Chips)!`;
   } else if (c.id === 'lucky_charm') {
-    const lastCard = s.playerHand[s.playerHand.length - 1];
-    if (lastCard) {
-      setCardEnhancement(lastCard, 'holo');
-      recordEffectEnhanced('holo');
-      message = `${lastCard.rank}${lastCard.suit} enhanced to Holo (+4 Mult)!`;
+    if (!targetCard) {
+      targetCard = s.playerHand[s.playerHand.length - 1];
     }
+    if (!targetCard) return { ok: false, warning: 'No card in hand to enhance!' };
+    setCardEnhancement(targetCard, 'holo');
+    recordEffectEnhanced('holo');
+    message = `${targetCard.rank}${targetCard.suit} enhanced to Holo (+4 Mult)!`;
   }
 
   recordTarotCastInHand(c.id);
   _state.runStats.tarotsUsed++;
   removeConsumableAt(index);
   return { ok: true, message };
+}
+
+if (typeof window !== 'undefined') {
+  (window as any).useConsumable = useConsumable;
 }

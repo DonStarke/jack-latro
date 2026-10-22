@@ -686,6 +686,149 @@
     box-shadow: 0 0 8px rgba(255, 190, 11, 0.75);
   }
 
+  /* TAROT CARD TARGETING SELECTION & OUTLINES */
+  body.tarot-targeting-active .hand-zone {
+    position: relative;
+    z-index: 55;
+  }
+  body.tarot-targeting-active #ui-player-cards {
+    position: relative;
+    z-index: 56;
+  }
+
+  .playing-card.tarot-selectable {
+    cursor: pointer !important;
+    outline: 3.5px solid #c084fc !important;
+    outline-offset: 3px;
+    box-shadow: 0 0 18px rgba(192, 132, 252, 0.95), 0 0 36px rgba(168, 85, 247, 0.55), 0 10px 22px rgba(0, 0, 0, 0.75) !important;
+    animation: tarotSelectGlow 1.2s ease-in-out infinite alternate !important;
+    transform: translateY(-8px) scale(1.06) !important;
+    z-index: 60 !important;
+  }
+
+  @keyframes tarotSelectGlow {
+    0% {
+      outline-color: #c084fc;
+      box-shadow: 0 0 14px rgba(192, 132, 252, 0.8), 0 0 26px rgba(168, 85, 247, 0.4);
+      transform: translateY(-6px) scale(1.04);
+    }
+    100% {
+      outline-color: #f472b6;
+      box-shadow: 0 0 26px rgba(244, 114, 182, 1), 0 0 46px rgba(192, 132, 252, 0.7);
+      transform: translateY(-10px) scale(1.08);
+    }
+  }
+
+  .playing-card.tarot-selectable:hover {
+    outline-color: #38bdf8 !important;
+    box-shadow: 0 0 30px rgba(56, 189, 248, 1), 0 0 54px rgba(147, 197, 253, 0.95) !important;
+    transform: translateY(-14px) scale(1.12) !important;
+    z-index: 65 !important;
+  }
+
+  .playing-card.tarot-ineligible {
+    opacity: 0.35;
+    filter: grayscale(0.85);
+    cursor: not-allowed;
+  }
+
+  .tarot-target-tag {
+    position: absolute;
+    top: -14px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #9333ea, #db2777);
+    color: #ffffff;
+    font-size: 9px;
+    font-weight: 900;
+    padding: 1px 7px;
+    border-radius: 9999px;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 62;
+    animation: pulseTarget 1s ease-in-out infinite alternate;
+  }
+
+  @keyframes pulseTarget {
+    from { transform: translateX(-50%) scale(0.95); }
+    to { transform: translateX(-50%) scale(1.06); }
+  }
+
+  .tarot-target-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: rgba(4, 9, 7, 0.72);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    padding-top: 50px;
+    cursor: pointer;
+    animation: fadeInBackdrop 0.18s ease-out;
+  }
+
+  .tarot-target-backdrop.hidden {
+    display: none !important;
+  }
+
+  @keyframes fadeInBackdrop {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .tarot-target-banner {
+    background: linear-gradient(180deg, #1e1b4b 0%, #0f172a 100%);
+    border: 1.5px solid #a855f7;
+    border-radius: 12px;
+    padding: 12px 20px;
+    text-align: center;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.7), 0 0 20px rgba(168, 85, 247, 0.4);
+    max-width: 90vw;
+    pointer-events: auto;
+    animation: slideDownBanner 0.2s ease-out;
+  }
+
+  @keyframes slideDownBanner {
+    from { transform: translateY(-12px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  .tarot-target-title {
+    color: #f0abfc;
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .tarot-target-hint {
+    color: #cbd5e1;
+    font-size: 11px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .btn-tarot-cancel {
+    padding: 5px 14px;
+    font-size: 11px;
+    font-weight: 800;
+    border-radius: 6px;
+    background: #334155;
+    color: #f1f5f9;
+    border: 1px solid #475569;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  .btn-tarot-cancel:hover {
+    background: #475569;
+  }
+
   .card-corner-top {
     font-size: 13px;
     line-height: 1;
