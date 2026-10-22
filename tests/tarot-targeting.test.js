@@ -72,11 +72,11 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   ck('Tarot targeting is active', w.isTarotTargetingActive());
   ck('Target backdrop is visible', !$('ui-tarot-target-backdrop').classList.contains('hidden'));
   ck('Target backdrop displays title', $('ui-tarot-target-title').textContent.includes('MIDAS TOUCH'));
-  ck('Target backdrop displays instruction hint', $('ui-tarot-target-hint').textContent.includes('Tap an outlined card'));
+  ck('Target backdrop displays instruction hint', $('ui-tarot-target-hint').textContent.includes('Tap cards in hand') || $('ui-tarot-target-hint').textContent.includes('Tap an outlined card'));
 
   const selectableCards = d.querySelectorAll('#ui-player-cards .playing-card.tarot-selectable');
   ck('All cards in hand have tarot-selectable class', selectableCards.length === state.playerHand.length);
-  ck('Selectable card has TARGET badge', d.querySelector('.tarot-target-tag') !== null);
+  ck('Cards do NOT have TARGET badge', d.querySelector('.tarot-target-tag') === null);
 
   console.log('\n--- TEST 2: CANCELLING OUTSIDE THE OUTLINE ---');
 
@@ -106,8 +106,9 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   w.uiUseConsumable(0);
   ck('Targeting active for middle card selection', w.isTarotTargetingActive());
 
-  // Click middle card
+  // Click middle card and confirm
   w.uiSelectCardForTarot(middleCardUid);
+  w.uiConfirmTarotTargeting();
   ck('Targeting closed after selection', !w.isTarotTargetingActive());
   ck('Midas Touch consumed from inventory', state.consumables.length === 0);
   ck('Middle card received Gold enhancement', middleCard.enhancement === 'gold');
@@ -123,6 +124,7 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   state.consumables = [{ id: 'wild_suit', name: 'Prism Dye', cost: 3, desc: 'Enhance selected card to Foil' }];
   w.uiUseConsumable(0);
   w.uiSelectCardForTarot(rightCard.uid);
+  w.uiConfirmTarotTargeting();
   ck('Right card enhanced to Foil', rightCard.enhancement === 'foil');
   const deckRightCard = state.deck.find(c => c.uid === rightCard.uid);
   ck('Right card Foil synced to deck', deckRightCard && deckRightCard.enhancement === 'foil');
@@ -131,6 +133,7 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   state.consumables = [{ id: 'lucky_charm', name: 'Lucky Charm', cost: 4, desc: 'Enhance selected card to Holo' }];
   w.uiUseConsumable(0);
   w.uiSelectCardForTarot(leftCard.uid);
+  w.uiConfirmTarotTargeting();
   ck('Left card enhanced to Holo', leftCard.enhancement === 'holo');
   const deckLeftCard = state.deck.find(c => c.uid === leftCard.uid);
   ck('Left card Holo synced to deck', deckLeftCard && deckLeftCard.enhancement === 'holo');

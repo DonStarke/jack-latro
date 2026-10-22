@@ -146,10 +146,18 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   const sTarotPack = w.getState();
   ck('Tarot pack opened', !!sTarotPack.activePackOpening);
   ck('All 3 options in Tarot pack are tarots', sTarotPack.activePackOpening.options.every(o => o.kind === 'tarot'));
+  // Ensure option 0 is a card-targeted tarot for testing card targeting
+  const targetedTarot = sTarotPack.activePackOpening.options.find(o => w.isTarotCardTargeted(o.data.id));
+  if (targetedTarot && sTarotPack.activePackOpening.options[0] !== targetedTarot) {
+    const idx = sTarotPack.activePackOpening.options.indexOf(targetedTarot);
+    sTarotPack.activePackOpening.options[idx] = sTarotPack.activePackOpening.options[0];
+    sTarotPack.activePackOpening.options[0] = targetedTarot;
+    w.renderPackOpeningScreen(false);
+  }
   const cheatIds = new Set((w.CHEAT_CATALOG || []).map(c => c.id));
   ck('No cheat cards appear in Tarot pack', sTarotPack.activePackOpening.options.every(o => !cheatIds.has(o.data.id)));
   ck('Tarot pack draws 5 deck cards for immediate targeting', Array.isArray(sTarotPack.activePackOpening.deckCards) && sTarotPack.activePackOpening.deckCards.length === 5);
-  ck('Tarot pack pre-selects a deck card target', typeof sTarotPack.activePackOpening.selectedDeckCardUid === 'number');
+  ck('Tarot pack starts with unselected deck cards', sTarotPack.activePackOpening.selectedDeckCardUid === null);
   ck('Deck hand tray is visible on Tarot pack screen', !isHidden($('ui-pack-deck-area')));
   ck('Deck hand tray renders 5 selectable playing cards', $('ui-pack-deck-cards').children.length === 5);
   ck('Deck hand tray does NOT render deck hand header text', $('ui-pack-deck-target-status') === null && $('ui-pack-deck-area').querySelector('.pack-deck-header') === null);

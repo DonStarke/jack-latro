@@ -117,6 +117,16 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   ck('Selected 3 cards: length is 3', w.getState().activePackOpening.selectedDeckCardUids.length === 3);
   ck('Button displays USE ON 3 CARDS', tarotBtn0().textContent.includes('USE ON 3 CARDS'));
 
+  // Select 4th card for The Sun (allowed to pick as many as player wants!)
+  w.uiSelectPackDeckCard(904);
+  ck('Player can pick 4 cards (no block while selecting)', w.getState().activePackOpening.selectedDeckCardUids.length === 4);
+  const tooManyRes = w.pickPackOption(0);
+  ck('Using tarot on 4 cards fails (too many cards)', tooManyRes.ok === false && tooManyRes.warning.includes('Too many cards'));
+
+  // Deselect 4th card
+  w.uiSelectPackDeckCard(904);
+  ck('Deselected 4th card, remaining is 3', w.getState().activePackOpening.selectedDeckCardUids.length === 3);
+
   // Deselect 2nd card by tapping it again
   w.uiSelectPackDeckCard(902);
   ck('Tapping card 902 again deselects it', !w.getState().activePackOpening.selectedDeckCardUids.includes(902));
@@ -225,7 +235,8 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   });
 
   w.uiUseConsumable(0);
-  w.uiSelectCardForTarot(501); // 1-card tarot applies immediately
+  w.uiSelectCardForTarot(501); // 1-card tarot selected and raised
+  w.uiConfirmTarotTargeting(); // apply tarot
   ck('Card suit changed to ★ (Wild)', w.getState().playerHand[0].suit === '★');
   ck('Deck card suit synced to ★', w.getState().deck[0].suit === '★');
 

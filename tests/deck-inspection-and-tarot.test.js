@@ -88,6 +88,7 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   // Re-start targeting and select first card
   w.uiUseConsumable(0);
   w.uiSelectCardForTarot(firstCardUid);
+  w.uiConfirmTarotTargeting();
   ck('Targeting mode deactivated after card selection', !w.isTarotTargetingActive());
   ck('Polychrome Dice updated selected card enhancement', firstCard.enhancement === 'poly');
   ck('Polychrome Dice synchronized to deck card object', deckCardFirst.enhancement === 'poly');
@@ -122,6 +123,7 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   w.uiUseConsumable(0);
   ck('Midas Touch activated targeting mode', w.isTarotTargetingActive());
   w.uiSelectCardForTarot(midasCardUid);
+  w.uiConfirmTarotTargeting();
   ck('Midas Touch turned selected card to Gold', midasCard.enhancement === 'gold');
   const midasDeckCard = state.deck.find(c => c.uid === midasCardUid);
   ck('Midas Touch synchronized Gold to deck card', midasDeckCard && midasDeckCard.enhancement === 'gold');

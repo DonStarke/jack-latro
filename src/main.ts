@@ -1108,16 +1108,9 @@ function renderCardHTML(card: Card, faceDown: boolean = false, extraClasses: str
   const enhClass = card.enhancement ? `enh-${card.enhancement}` : '';
   const enhLabel = card.enhancement ? `<div class="card-enh-tag">${card.enhancement.toUpperCase()}</div>` : '';
   const chipVal = getCardChipValue(card);
-  let targetTag = '';
-  if (extraClasses.includes('tarot-picked-card')) {
-    targetTag = `<div class="tarot-target-tag tarot-picked-tag">✓ SELECTED</div>`;
-  } else if (extraClasses.includes('tarot-selectable')) {
-    targetTag = `<div class="tarot-target-tag">TARGET</div>`;
-  }
 
   return `
     <div class="playing-card ${suitColorClass} ${enhClass} ${extraClasses}" data-uid="${card.uid}" ${onClickAttr}>
-      ${targetTag}
       <div class="card-corner-top">${card.rank}<br>${card.suit}</div>
       <div class="card-suit-center">${card.suit}</div>
       ${enhLabel}
@@ -2050,19 +2043,14 @@ function renderPackDeckHand(): void {
   const selectedUids = active.selectedDeckCardUids || (active.selectedDeckCardUid !== null && active.selectedDeckCardUid !== undefined ? [active.selectedDeckCardUid] : []);
 
   deckCardsEl.innerHTML = active.deckCards.map(c => {
-    const eligible = activeTarotId ? isCardEligibleForTarot(activeTarotId, c) : true;
-    const isSelected = eligible && selectedUids.includes(c.uid);
-    if (eligible) {
-      const classes = `pack-deck-card${isSelected ? ' pack-deck-card-selected' : ''}`;
-      return renderCardHTML(
-        c,
-        false,
-        classes,
-        `onclick="event.stopPropagation(); uiSelectPackDeckCard(${c.uid})"`
-      );
-    } else {
-      return renderCardHTML(c, false, 'pack-deck-card tarot-ineligible', '');
-    }
+    const isSelected = selectedUids.includes(c.uid);
+    const classes = `pack-deck-card${isSelected ? ' pack-deck-card-selected' : ''}`;
+    return renderCardHTML(
+      c,
+      false,
+      classes,
+      `onclick="event.stopPropagation(); uiSelectPackDeckCard(${c.uid})"`
+    );
   }).join('');
 
   // Synchronize Tarot option button labels with currently selected deck cards
@@ -2073,46 +2061,25 @@ function renderPackDeckHand(): void {
         const btn = stage.querySelector<HTMLButtonElement>(`.pack-option-card[data-opt-idx="${idx}"] .btn-pack-choose`);
         if (btn) {
           const max = getTarotMaxCards(opt.data.id);
+          btn.disabled = false;
           if (max === 0) {
             if (opt.data.id === 'judgement') {
-              if (state.jokers.length >= state.maxJokers) {
-                btn.textContent = 'JOKER SLOTS FULL';
-                btn.disabled = true;
-              } else {
-                btn.textContent = 'SUMMON JOKER';
-                btn.disabled = false;
-              }
+              btn.textContent = 'SUMMON JOKER';
             } else if (opt.data.id === 'nostradamus') {
-              if (!state.lastTarotUsedId || state.lastTarotUsedId === 'nostradamus') {
-                btn.textContent = 'NO TAROT TO COPY';
-                btn.disabled = true;
-              } else if (state.consumables.length >= state.maxConsumables) {
-                btn.textContent = 'CONSUMABLES FULL';
-                btn.disabled = true;
-              } else {
-                btn.textContent = `COPY ${state.lastTarotUsedName || 'TAROT'}`;
-                btn.disabled = false;
-              }
+              btn.textContent = `COPY ${state.lastTarotUsedName || 'TAROT'}`;
             } else {
               btn.textContent = 'USE TAROT';
-              btn.disabled = false;
             }
           } else {
-            const eligibleSelected = active.deckCards!.filter(c => selectedUids.includes(c.uid) && isCardEligibleForTarot(opt.data.id, c));
-            if (eligibleSelected.length === 0) {
-              if (selectedUids.length > 0) {
-                btn.textContent = 'INELIGIBLE CARD';
-                btn.disabled = true;
-              } else {
-                btn.textContent = max > 1 ? `SELECT A CARD (UP TO ${max})` : 'SELECT A CARD';
-                btn.disabled = true;
-              }
-            } else if (eligibleSelected.length === 1) {
-              const c = eligibleSelected[0];
-              btn.textContent = `USE ON ${c.rank}${c.suit}`;
+            if (selectedUids.length === 0) {
+              btn.textContent = max > 1 ? `SELECT A CARD (UP TO ${max})` : 'SELECT A CARD';
+              btn.disabled = true;
+            } else if (selectedUids.length === 1) {
+              const card = active.deckCards!.find(c => c.uid === selectedUids[0]);
+              btn.textContent = card ? `USE ON ${card.rank}${card.suit}` : 'USE ON 1 CARD';
               btn.disabled = false;
             } else {
-              btn.textContent = `USE ON ${eligibleSelected.length} CARDS`;
+              btn.textContent = `USE ON ${selectedUids.length} CARDS`;
               btn.disabled = false;
             }
           }
@@ -2124,16 +2091,7 @@ function renderPackDeckHand(): void {
 
 function uiSelectPackDeckCard(cardUid: number | string): void {
   if (isPlayfieldLocked) return;
-  const state = getState();
-  const active = state.activePackOpening;
-  let max = 1;
-  if (active && active.options && active.options[currentPackCardIndex]) {
-    const curOpt = active.options[currentPackCardIndex];
-    if (curOpt.kind === 'tarot') {
-      max = getTarotMaxCards(curOpt.data.id) || 1;
-    }
-  }
-  if (!selectPackDeckCard(cardUid, max)) return;
+  selectPackDeckCard(cardUid);
   if (typeof (window as any).playCardSlideSound === 'function') {
     (window as any).playCardSlideSound();
   }
@@ -2176,6 +2134,13 @@ function uiSetPackActiveCard(idx: number): void {
 
 function uiClickPackCard(optIdx: number): void {
   if (isPlayfieldLocked) return;
+  const active = getState().activePackOpening;
+  if (active && active.pack.packType === 'tarot') {
+    // In Tarot packs, tapping the Tarot card in the showcase only focuses it.
+    // The player must explicitly click the action button or Skip Pack.
+    uiSetPackActiveCard(optIdx);
+    return;
+  }
   if (optIdx !== currentPackCardIndex) {
     uiSetPackActiveCard(optIdx);
   } else {
@@ -2496,13 +2461,20 @@ function uiBuyPack(idx: number): void {
   renderPackOpeningScreen(true);
 }
 
-function uiChoosePackOption(optIdx: number, targetCardUid?: number | string): void {
+function uiChoosePackOption(optIdx: number, targetCardUid?: number | string | (number | string)[]): void {
   if (isPlayfieldLocked) return;
   const res = pickPackOption(optIdx, targetCardUid);
   if (!res.ok) {
-    if (res.reason === 'jokers_full') alert('Joker slots full! Tap an active Joker at the top to sell it, or tap Skip Pack.');
-    if (res.reason === 'tarots_full') alert('Consumable slots full! Tap an active card at the top to use/sell it, or tap Skip Pack.');
-    if (res.warning) alert(res.warning);
+    if (typeof (window as any).playNegativeFeedbackSound === 'function') {
+      (window as any).playNegativeFeedbackSound();
+    }
+    const warningText = res.warning || (res.reason === 'jokers_full' ? 'Joker slots full! Tap an active Joker at the top to sell it, or tap Skip Pack.' : (res.reason === 'tarots_full' ? 'Consumable slots full! Tap an active card at the top to use/sell it, or tap Skip Pack.' : 'Cannot use this Tarot!'));
+    setBanner(warningText, 'Tarot Pack');
+    const payoutNote = document.getElementById('ui-shop-payout-note');
+    if (payoutNote) payoutNote.textContent = warningText;
+    if (res.reason === 'jokers_full' || res.reason === 'tarots_full' || res.warning) {
+      alert(warningText);
+    }
     return;
   }
   uiSkipPackAnimation();
@@ -2599,32 +2571,33 @@ function updateTarotTargetingBackdrop(): void {
     const titleEl = $('ui-tarot-target-title');
     if (titleEl) {
       if (max > 1) {
-        titleEl.textContent = `🔮 ${cName}: ${count} OF ${max} SELECTED`;
+        titleEl.textContent = `🔮 ${cName}: SELECT UP TO ${max} CARDS`;
       } else {
-        titleEl.textContent = `🔮 SELECT A CARD FOR ${cName}`;
+        titleEl.textContent = `🔮 ${cName}: SELECT 1 CARD`;
       }
     }
     const hintEl = $('ui-tarot-target-hint');
     if (hintEl) {
-      if (max > 1) {
-        hintEl.innerHTML = `
-          <span>Tap outlined cards to select (1 to ${max} cards) • Tap outside to cancel</span>
-          <div style="margin-top: 10px;">
-            <button id="btn-tarot-target-confirm" class="btn btn-deal" style="padding: 8px 20px; font-size: 14px; font-weight: bold; border-radius: 8px; cursor: pointer;" onclick="event.stopPropagation(); uiConfirmTarotTargeting()" ${count === 0 ? 'disabled' : ''}>
-              APPLY TO SELECTED (${count})
-            </button>
-          </div>
-        `;
-      } else {
-        hintEl.textContent = 'Tap an outlined card to apply • Tap anywhere else to cancel';
-      }
+      hintEl.innerHTML = `
+        <div style="font-size: 13px; margin-bottom: 8px; color: #cbd5e1;">
+          ${count} card${count === 1 ? '' : 's'} selected (allows up to ${max}) • Tap cards in hand to select
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: center; align-items: center; margin-top: 6px;">
+          <button id="btn-tarot-target-confirm" class="btn btn-deal btn-tarot-apply" style="padding: 9px 24px; font-size: 14px; font-weight: bold; border-radius: 8px; cursor: pointer;" onclick="event.stopPropagation(); uiConfirmTarotTargeting()">
+            APPLY (${count})
+          </button>
+          <button class="btn btn-secondary btn-tarot-cancel" style="padding: 9px 18px; font-size: 14px; border-radius: 8px;" onclick="event.stopPropagation(); cancelTarotTargeting(true)">
+            Cancel
+          </button>
+        </div>
+      `;
     }
   }
 
   if (max > 1) {
-    setBanner(`🔮 ${cName}: SELECT UP TO ${max} CARDS`, `${count}/${max} selected • Tap confirm when ready`);
+    setBanner(`🔮 ${cName}: SELECT UP TO ${max} CARDS`, `${count} selected (max ${max}) • Tap Apply when ready`);
   } else {
-    setBanner(`🔮 ${cName}: SELECT A CARD`, 'Tap an outlined card below • Tap anywhere else to cancel');
+    setBanner(`🔮 ${cName}: SELECT 1 CARD`, `${count} selected • Tap Apply when ready`);
   }
 }
 
@@ -2769,28 +2742,7 @@ function triggerCardTarotFeedback(cardUid: number | string, tarotId: string): vo
 function uiSelectCardForTarot(cardUid: number | string): void {
   if (isPlayfieldLocked || !activeTarotSelection) return;
   const numUid = typeof cardUid === 'number' ? cardUid : Number(cardUid);
-  const max = getTarotMaxCards(activeTarotSelection.tarotId) || 1;
 
-  if (max <= 1) {
-    const selection = activeTarotSelection;
-    activeTarotSelection = null;
-    cleanUpTarotTargetingUI();
-
-    const res = useConsumable(selection.consumableIndex, numUid);
-    if (!res.ok) {
-      if (res.warning) alert(res.warning);
-      updateAllUI();
-      return;
-    }
-
-    playCardDealSound();
-    if (res.message) setBanner(res.message, '');
-    updateAllUI();
-    triggerCardTarotFeedback(numUid, selection.tarotId);
-    return;
-  }
-
-  // Multi-card selection: toggle card
   if (!activeTarotSelection.selectedUids) {
     activeTarotSelection.selectedUids = [];
   }
@@ -2798,10 +2750,13 @@ function uiSelectCardForTarot(cardUid: number | string): void {
   const idx = activeTarotSelection.selectedUids.indexOf(numUid);
   if (idx >= 0) {
     activeTarotSelection.selectedUids.splice(idx, 1);
-  } else if (activeTarotSelection.selectedUids.length < max) {
+  } else {
+    // Player can select as many cards as they want
     activeTarotSelection.selectedUids.push(numUid);
   }
-  playCardSlideSound();
+  if (typeof (window as any).playCardSlideSound === 'function') {
+    (window as any).playCardSlideSound();
+  }
   updateTarotTargetingBackdrop();
   updateAllUI();
 }
@@ -2810,15 +2765,38 @@ function uiConfirmTarotTargeting(): void {
   if (isPlayfieldLocked || !activeTarotSelection) return;
   const selection = activeTarotSelection;
   const uids = selection.selectedUids || [];
+  const max = getTarotMaxCards(selection.tarotId) || 1;
+
   if (uids.length === 0) {
-    alert('Please select at least one card to apply!');
+    if (typeof (window as any).playNegativeFeedbackSound === 'function') {
+      (window as any).playNegativeFeedbackSound();
+    }
+    const hintMsg = max > 1
+      ? `Please select up to ${max} cards for ${selection.tarotName}!`
+      : `Please select 1 card for ${selection.tarotName}!`;
+    setBanner(`🔮 ${hintMsg}`, 'Tap cards in your hand to select');
     return;
   }
+
+  if (uids.length > max) {
+    if (typeof (window as any).playNegativeFeedbackSound === 'function') {
+      (window as any).playNegativeFeedbackSound();
+    }
+    setBanner(
+      `🔮 Too many cards! ${selection.tarotName} allows up to ${max} cards (currently ${uids.length})`,
+      'Tap a selected card to deselect it'
+    );
+    return;
+  }
+
   activeTarotSelection = null;
   cleanUpTarotTargetingUI();
 
   const res = useConsumable(selection.consumableIndex, uids);
   if (!res.ok) {
+    if (typeof (window as any).playNegativeFeedbackSound === 'function') {
+      (window as any).playNegativeFeedbackSound();
+    }
     if (res.warning) alert(res.warning);
     updateAllUI();
     return;

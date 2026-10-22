@@ -510,6 +510,18 @@ function playOutcomeSound(kind: 'WIN' | 'BLIND_WIN' | 'PUSH' | 'LOSS' | 'BUST'):
   } catch (e) {}
 }
 
+function playNegativeFeedbackSound(): void {
+  if (sfxMuted || sfxVolume <= 0.001) return;
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+  try {
+    const now = ctx.currentTime;
+    // Low, buzzy descending rejection audio cue
+    playTone(220.00, 'sawtooth', now, 0.12, 0.16); // A3
+    playTone(164.81, 'sawtooth', now + 0.08, 0.16, 0.16); // E3
+  } catch (e) {}
+}
+
 const sleep = (ms: number): Promise<void> => new Promise(res => setTimeout(res, ms));
 const DEAL_DELAY_MS = 170;
 
@@ -1375,6 +1387,7 @@ if (typeof window !== 'undefined') {
 }
 
 if (typeof window !== 'undefined') {
+  (window as any).playNegativeFeedbackSound = playNegativeFeedbackSound;
   (window as any).playPackRipPopSound = playPackRipPopSound;
   (window as any).playPackOpenBurstSound = playPackOpenBurstSound;
   (window as any).stopPackRipSound = stopPackRipSound;
