@@ -234,7 +234,7 @@ const STARTING_MAX_JOKERS = 5;
 const DEFAULT_BALANCE_CONFIG: BalanceConfig = {
   startingDeals: 7,
   targetScalePct: 50,
-  unusedDealCashCap: 1,
+  unusedDealCashCap: 0,
   pushRefundsDeal: true,
   anteHandScaling: true
 };

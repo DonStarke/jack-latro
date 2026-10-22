@@ -120,6 +120,15 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
 
   // Set roundScore directly and trigger resolution
   w.patchState({ roundScore: 300 }); // Exceeds target 200
+
+  // 1. When cap is $0 (default), Unused Deals is NOT displayed
+  const payoutDefault = w.computeBlindPayout();
+  w.renderRoundCashBreakdown(payoutDefault);
+  ck('Breakdown does NOT include Unused Deals when cap is 0', !rcbEl.textContent.includes('Unused Deals'));
+  ck('Breakdown displays total payout +$9 with cap 0', rcbEl.textContent.includes('+$9'));
+
+  // 2. When cap is $1, Unused Deals IS displayed
+  w.patchBalanceConfig({ unusedDealCashCap: 1 });
   const payout = w.computeBlindPayout(); // Small Blind (4) + 5 Deals (1) + 25 Money / 5 (5) = 10
   w.renderRoundCashBreakdown(payout);
 

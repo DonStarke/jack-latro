@@ -47,9 +47,9 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   ck('boot: money $6, ante 1/8', text('ui-money') === '$6' && /Ante 1\/8/.test(text('ui-ante')));
   ck('boot: target 150 (50% scale)', text('ui-target-score') === '150');
   ck('boot: balanceConfig targetScalePct is 50', w.getBalanceConfig().targetScalePct === 50);
-  ck('boot: balanceConfig unusedDealCashCap is 1', w.getBalanceConfig().unusedDealCashCap === 1);
-  ck('balance lab: sim-dealcap min is 1', $('sim-dealcap').min === '1');
-  ck('balance lab: sim-dealcap default is 1', $('sim-dealcap').value === '1' && text('sim-lbl-dealcap') === '$1');
+  ck('boot: balanceConfig unusedDealCashCap is 0', w.getBalanceConfig().unusedDealCashCap === 0);
+  ck('balance lab: sim-dealcap min is 0', $('sim-dealcap').min === '0');
+  ck('balance lab: sim-dealcap default is 0', $('sim-dealcap').value === '0' && text('sim-lbl-dealcap') === '$0');
   ck('balance lab: sim-scale default is 50', $('sim-scale').value === '50' && text('sim-lbl-scale') === '50%');
   ck('boot: shoe 52/52', text('ui-shoe-count') === '52/52');
 

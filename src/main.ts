@@ -175,18 +175,53 @@ async function sleepScore(ms: number): Promise<void> {
   await sleep(scaledMs);
 }
 
+let _animRollGen = 0;
+
+interface ActiveFloatingToken {
+  token: HTMLElement;
+  anim?: any;
+  onArrival?: () => void;
+  aborted?: boolean;
+}
+let activeFloatingTokens: ActiveFloatingToken[] = [];
+
+function cancelAllScoringAnimations(): void {
+  ++_animRollGen;
+  for (const item of activeFloatingTokens) {
+    item.aborted = true;
+    try {
+      if (item.anim && typeof item.anim.cancel === 'function') {
+        item.anim.cancel();
+      }
+      item.token.remove();
+    } catch (_) {}
+  }
+  activeFloatingTokens = [];
+  if (typeof document !== 'undefined') {
+    document.querySelectorAll('.floating-token').forEach(t => t.remove());
+  }
+}
+
 function animateNumberRoll(el: HTMLElement, fromVal: number, toVal: number, durationMs: number = 700, isDecimal: boolean = false): Promise<void> {
   return new Promise(resolve => {
     const finalFormatted = formatScoringVal(toVal);
     if (fromVal === toVal || durationMs <= 0 || typeof window === 'undefined') {
-      el.textContent = finalFormatted;
+      if (!skipScoringAnimation) {
+        el.textContent = finalFormatted;
+      }
       resolve();
       return;
     }
+    const animId = ++_animRollGen;
+    (el as any)._currentRollAnimId = animId;
     const start = performance.now();
     const tick = (now: number) => {
+      // Abort if superseded by another animation or if scoring is skipped
+      if ((el as any)._currentRollAnimId !== animId) {
+        resolve();
+        return;
+      }
       if (skipScoringAnimation) {
-        el.textContent = finalFormatted;
         resolve();
         return;
       }
@@ -213,51 +248,68 @@ function spawnFloatingToken(
   type: 'chip' | 'mult-plus' | 'mult-x' | 'cash',
   text: string,
   onArrival?: () => void
-): void {
-  try {
-    const fromRect = fromEl instanceof HTMLElement ? fromEl.getBoundingClientRect() : { left: fromEl.x, top: fromEl.y, width: 0, height: 0 };
-    const toRect = toEl.getBoundingClientRect();
-    const startX = fromRect.left + (fromRect.width ? fromRect.width / 2 : 0);
-    const startY = fromRect.top + (fromRect.height ? fromRect.height / 2 : 0);
-    const endX = toRect.left + (toRect.width ? toRect.width / 2 : 0);
-    const endY = toRect.top + (toRect.height ? toRect.height / 2 : 0);
-
-    const token = document.createElement('div');
-    token.className = `floating-token token-${type}`;
-    token.textContent = text;
-    token.style.left = `${startX}px`;
-    token.style.top = `${startY}px`;
-    document.body.appendChild(token);
-
+): Promise<void> {
+  return new Promise(resolve => {
     if (skipScoringAnimation) {
-      token.remove();
       if (onArrival) onArrival();
+      resolve();
       return;
     }
 
-    const duration = Math.min(2600, Math.round(360 / scoringSpeedMultiplier));
+    try {
+      const fromRect = fromEl instanceof HTMLElement ? fromEl.getBoundingClientRect() : { left: fromEl.x, top: fromEl.y, width: 0, height: 0 };
+      const toRect = toEl.getBoundingClientRect();
+      const startX = fromRect.left + (fromRect.width ? fromRect.width / 2 : 0);
+      const startY = fromRect.top + (fromRect.height ? fromRect.height / 2 : 0);
+      const endX = toRect.left + (toRect.width ? toRect.width / 2 : 0);
+      const endY = toRect.top + (toRect.height ? toRect.height / 2 : 0);
 
-    if (typeof (token as any).animate === 'function') {
-      const anim = (token as any).animate([
-        { transform: 'translate(-50%, -50%) scale(0.6)', opacity: 0 },
-        { offset: 0.16, transform: 'translate(-50%, -50%) scale(1.15)', opacity: 1 },
-        { offset: 0.84, transform: `translate(${endX - startX}px, ${endY - startY}px) scale(1.0)`, opacity: 1 },
-        { transform: `translate(${endX - startX}px, ${endY - startY}px) scale(0.2)`, opacity: 0 }
-      ], {
-        duration,
-        easing: 'cubic-bezier(0.22, 0.9, 0.36, 1)'
-      });
-      anim.onfinish = () => {
-        token.remove();
-        if (onArrival) onArrival();
+      const token = document.createElement('div');
+      token.className = `floating-token token-${type}`;
+      token.textContent = text;
+      token.style.left = `${startX}px`;
+      token.style.top = `${startY}px`;
+      document.body.appendChild(token);
+
+      const duration = Math.min(2600, Math.round(360 / scoringSpeedMultiplier));
+      const entry: ActiveFloatingToken = { token, onArrival };
+      activeFloatingTokens.push(entry);
+
+      const finishToken = () => {
+        const idx = activeFloatingTokens.indexOf(entry);
+        if (idx !== -1) activeFloatingTokens.splice(idx, 1);
+        try { token.remove(); } catch (_) {}
+        if (!entry.aborted && !skipScoringAnimation) {
+          if (onArrival) onArrival();
+        }
+        resolve();
       };
-    } else {
-      token.remove();
-      if (onArrival) onArrival();
+
+      if (typeof (token as any).animate === 'function') {
+        const anim = (token as any).animate([
+          { transform: 'translate(-50%, -50%) scale(0.6)', opacity: 0 },
+          { offset: 0.16, transform: 'translate(-50%, -50%) scale(1.15)', opacity: 1 },
+          { offset: 0.84, transform: `translate(${endX - startX}px, ${endY - startY}px) scale(1.0)`, opacity: 1 },
+          { transform: `translate(${endX - startX}px, ${endY - startY}px) scale(0.2)`, opacity: 0 }
+        ], {
+          duration,
+          easing: 'cubic-bezier(0.22, 0.9, 0.36, 1)'
+        });
+        entry.anim = anim;
+        anim.onfinish = finishToken;
+        anim.oncancel = () => {
+          const idx = activeFloatingTokens.indexOf(entry);
+          if (idx !== -1) activeFloatingTokens.splice(idx, 1);
+          resolve();
+        };
+      } else {
+        finishToken();
+      }
+    } catch (e) {
+      if (onArrival && !skipScoringAnimation) onArrival();
+      resolve();
     }
-  } catch (e) {
-    if (onArrival) onArrival();
-  }
+  });
 }
 
 /* ---------- Joker 3D Carousel Viewer & Inspector ---------- */
@@ -686,12 +738,17 @@ function getBlindReward() {
   return state.blindIndex === 0 ? 4 : state.blindIndex === 1 ? 5 : 6;
 }
 
+let lastHandChips: number | null = null;
+let lastHandMult: number | null = null;
+
 function setEquationUI(chips: number, mult: number, pop: boolean = false): void {
+  lastHandChips = chips;
+  lastHandMult = mult;
   const cEl = $('ui-chips');
   const mEl = $('ui-mult');
-  cEl.textContent = formatScoringVal(chips);
-  mEl.textContent = formatScoringVal(mult);
-  if (pop) {
+  if (cEl) cEl.textContent = formatScoringVal(chips);
+  if (mEl) mEl.textContent = formatScoringVal(mult);
+  if (pop && cEl && mEl) {
     cEl.classList.add('pill-pop');
     mEl.classList.add('pill-pop');
     setTimeout(() => {
@@ -961,6 +1018,16 @@ function renderRoundCashBreakdown(payout?: PendingPayout | null): void {
     </div>
   ` : '';
 
+  const unusedDealsRow = dealCap > 0 ? `
+    <div class="rcb-row">
+      <span class="rcb-label">
+        <span class="rcb-icon">🎴</span>
+        <span>Unused Deals <span class="rcb-sub">(${dealsText}${capNote})</span></span>
+      </span>
+      <span class="rcb-val gold-txt">+$${currentPayout.handBonus}</span>
+    </div>
+  ` : '';
+
   container.innerHTML = `
     <div class="rcb-card">
       <div class="rcb-header">
@@ -983,13 +1050,7 @@ function renderRoundCashBreakdown(payout?: PendingPayout | null): void {
           <span class="rcb-val gold-txt">+$${currentPayout.blindReward}</span>
         </div>
 
-        <div class="rcb-row">
-          <span class="rcb-label">
-            <span class="rcb-icon">🎴</span>
-            <span>Unused Deals <span class="rcb-sub">(${dealsText}${capNote})</span></span>
-          </span>
-          <span class="rcb-val gold-txt">+$${currentPayout.handBonus}</span>
-        </div>
+        ${unusedDealsRow}
 
         <div class="rcb-row">
           <span class="rcb-label">
@@ -1145,6 +1206,12 @@ function updateAllUI() {
     eqBox.classList.remove('hidden');
     roundScoreWrap.innerHTML = `Score: <span id="ui-round-score">${state.roundScore.toLocaleString()}</span>`;
     scoreBarBg.classList.remove('hidden');
+    if (!state.isDealing && lastHandChips !== null && lastHandMult !== null) {
+      const cEl = $('ui-chips');
+      const mEl = $('ui-mult');
+      if (cEl) cEl.textContent = formatScoringVal(lastHandChips);
+      if (mEl) mEl.textContent = formatScoringVal(lastHandMult);
+    }
   }
 
   $('ui-blind-name').textContent = getBlindName();
@@ -1654,6 +1721,7 @@ function runAllBotsSuiteAndExport(): void {
    RUN / BLIND FLOW (engine state change + UI refresh)
 ========================================================== */
 function refreshBlindStartUI(): void {
+  cancelAllScoringAnimations();
   hideOutcomeHeadline();
   setEquationUI(0, 0);
   setBanner('Tap DEAL to begin playing this Blind.', 'Tap the deck on the left to view your remaining cards.');
@@ -1661,6 +1729,7 @@ function refreshBlindStartUI(): void {
 }
 
 function startNewRun(): void {
+  cancelAllScoringAnimations();
   stopConfetti();
   hideDefeatModal();
   hideVictoryModal();
@@ -2262,6 +2331,7 @@ async function dealHand(): Promise<void> {
   const state = getState();
   if (isPlayfieldLocked || state.inHand || state.isDealing || state.handsLeft <= 0 || state.blindClearedReady || state.blindFailedReady) return;
 
+  cancelAllScoringAnimations();
   hideOutcomeHeadline();
   hideRoundCashBreakdown();
   clearTarotsInHand();
@@ -2444,6 +2514,7 @@ async function resolveRound(): Promise<void> {
   patchState({ previousHandTotal: res.pBust ? null : res.pTotal });
 
   skipScoringAnimation = false;
+  cancelAllScoringAnimations();
 
   if (res.isScoring) {
     let tickStep = 0;
@@ -2471,75 +2542,84 @@ async function resolveRound(): Promise<void> {
         $('ui-tier-plaque-mult').textContent = `+${formatScoringVal(step.deltaMult || step.mult)}m`;
         plaqueEl.classList.remove('hidden');
         setBanner(`${res.outcomeLabel} — Baseline established!`, 'Tap table felt to skip');
-        await sleepScore(200);
+        await sleepScore(180);
+
+        if (skipScoringAnimation) break;
+
+        const tokenPromises: Promise<void>[] = [];
 
         // Spawn chips token from plaque to ui-chips
-        spawnFloatingToken(
+        tokenPromises.push(spawnFloatingToken(
           $('ui-tier-plaque-chips'),
           chipsEl,
           'chip',
           `+${formatScoringVal(step.deltaChips || step.chips)}c`,
           () => {
-            void animateNumberRoll(chipsEl, curDisplayChips, targetChips, Math.round(300 / scoringSpeedMultiplier), false);
+            void animateNumberRoll(chipsEl, curDisplayChips, targetChips, Math.round(250 / scoringSpeedMultiplier), false);
             curDisplayChips = targetChips;
             chipsEl.classList.remove('chip-absorbed');
             void chipsEl.offsetWidth;
             chipsEl.classList.add('chip-absorbed');
             playChipSound();
           }
-        );
+        ));
 
         // Spawn mult token from plaque to ui-mult
-        spawnFloatingToken(
+        tokenPromises.push(spawnFloatingToken(
           $('ui-tier-plaque-mult'),
           multEl,
           'mult-plus',
           `+${formatScoringVal(step.deltaMult || step.mult)}m`,
           () => {
-            void animateNumberRoll(multEl, curDisplayMult, targetMult, Math.round(300 / scoringSpeedMultiplier), targetMult % 1 !== 0);
+            void animateNumberRoll(multEl, curDisplayMult, targetMult, Math.round(250 / scoringSpeedMultiplier), targetMult % 1 !== 0);
             curDisplayMult = targetMult;
             multEl.classList.remove('mult-absorbed-plus');
             void multEl.offsetWidth;
             multEl.classList.add('mult-absorbed-plus');
             playMultPlusSound(tickStep++);
           }
-        );
+        ));
 
-        await sleepScore(250);
+        await Promise.all(tokenPromises);
+        curDisplayChips = targetChips;
+        curDisplayMult = targetMult;
+        await sleepScore(120);
         plaqueEl.classList.add('hidden');
-        await sleepScore(80);
+        await sleepScore(60);
 
       } else if (step.kind === 'card') {
         const cardEl = pCardsRow.children[step.cardIndex as number] as HTMLElement | undefined;
         if (cardEl) {
           popPlayerCard(step.cardIndex as number, step.popLabel as string);
 
+          const tokenPromises: Promise<void>[] = [];
+
           if (step.deltaChips && step.deltaChips > 0) {
-            spawnFloatingToken(
+            tokenPromises.push(spawnFloatingToken(
               cardEl,
               chipsEl,
               'chip',
               `+${formatScoringVal(step.deltaChips)}c`,
               () => {
-                void animateNumberRoll(chipsEl, curDisplayChips, targetChips, Math.round(300 / scoringSpeedMultiplier), false);
+                void animateNumberRoll(chipsEl, curDisplayChips, targetChips, Math.round(250 / scoringSpeedMultiplier), false);
                 curDisplayChips = targetChips;
                 chipsEl.classList.remove('chip-absorbed');
                 void chipsEl.offsetWidth;
                 chipsEl.classList.add('chip-absorbed');
                 playChipSound();
               }
-            );
+            ));
           }
 
           if (step.deltaMult && step.deltaMult > 0) {
             const isX = step.isXMult;
-            spawnFloatingToken(
+            tokenPromises.push(spawnFloatingToken(
               cardEl,
               multEl,
               isX ? 'mult-x' : 'mult-plus',
               isX ? `×${formatScoringVal(step.deltaMult)}m` : `+${formatScoringVal(step.deltaMult)}m`,
               () => {
-                void animateNumberRoll(multEl, curDisplayMult, targetMult, Math.round(300 / scoringSpeedMultiplier), targetMult % 1 !== 0);
+                void animateNumberRoll(multEl, curDisplayMult, targetMult, Math.round(250 / scoringSpeedMultiplier), targetMult % 1 !== 0);
                 curDisplayMult = targetMult;
                 multEl.classList.remove(isX ? 'mult-absorbed-x' : 'mult-absorbed-plus');
                 void multEl.offsetWidth;
@@ -2547,18 +2627,26 @@ async function resolveRound(): Promise<void> {
                 if (isX) playMultXSound();
                 else playMultPlusSound(tickStep++);
               }
-            );
+            ));
           }
 
           if (step.deltaMoney && step.deltaMoney > 0) {
-            spawnFloatingToken(cardEl, moneyEl, 'cash', `+$${step.deltaMoney}`, () => playMoneyCoinSound());
+            tokenPromises.push(spawnFloatingToken(cardEl, moneyEl, 'cash', `+$${step.deltaMoney}`, () => playMoneyCoinSound()));
           }
+
+          if (tokenPromises.length > 0) {
+            await Promise.all(tokenPromises);
+          } else {
+            setEquationUI(targetChips, targetMult, true);
+          }
+          curDisplayChips = targetChips;
+          curDisplayMult = targetMult;
         } else {
           setEquationUI(targetChips, targetMult, true);
           curDisplayChips = targetChips;
           curDisplayMult = targetMult;
         }
-        await sleepScore(220);
+        await sleepScore(140);
 
       } else if (step.kind === 'joker') {
         const jEl = jRow.children[step.jokerIndex as number] as HTMLElement | undefined;
@@ -2574,34 +2662,42 @@ async function resolveRound(): Promise<void> {
           playCardSlideSound();
 
           setBanner(`${step.sourceName || 'Joker'} triggered!`, 'Tap table felt to skip');
-          await sleepScore(180);
+          await sleepScore(140);
+
+          if (skipScoringAnimation) {
+            jEl.classList.remove('scoring-focus');
+            jRow.classList.remove('joker-row-scoring');
+            break;
+          }
+
+          const tokenPromises: Promise<void>[] = [];
 
           if (step.deltaChips && step.deltaChips > 0) {
-            spawnFloatingToken(
+            tokenPromises.push(spawnFloatingToken(
               jEl,
               chipsEl,
               'chip',
               `+${formatScoringVal(step.deltaChips)}c`,
               () => {
-                void animateNumberRoll(chipsEl, curDisplayChips, targetChips, Math.round(300 / scoringSpeedMultiplier), false);
+                void animateNumberRoll(chipsEl, curDisplayChips, targetChips, Math.round(250 / scoringSpeedMultiplier), false);
                 curDisplayChips = targetChips;
                 chipsEl.classList.remove('chip-absorbed');
                 void chipsEl.offsetWidth;
                 chipsEl.classList.add('chip-absorbed');
                 playChipSound();
               }
-            );
+            ));
           }
 
           if (step.deltaMult && step.deltaMult > 0) {
             const isX = step.isXMult;
-            spawnFloatingToken(
+            tokenPromises.push(spawnFloatingToken(
               jEl,
               multEl,
               isX ? 'mult-x' : 'mult-plus',
               isX ? `×${formatScoringVal(step.deltaMult)}m` : `+${formatScoringVal(step.deltaMult)}m`,
               () => {
-                void animateNumberRoll(multEl, curDisplayMult, targetMult, Math.round(300 / scoringSpeedMultiplier), targetMult % 1 !== 0);
+                void animateNumberRoll(multEl, curDisplayMult, targetMult, Math.round(250 / scoringSpeedMultiplier), targetMult % 1 !== 0);
                 curDisplayMult = targetMult;
                 multEl.classList.remove(isX ? 'mult-absorbed-x' : 'mult-absorbed-plus');
                 void multEl.offsetWidth;
@@ -2609,21 +2705,29 @@ async function resolveRound(): Promise<void> {
                 if (isX) playMultXSound();
                 else playMultPlusSound(tickStep++);
               }
-            );
+            ));
           }
 
           if (step.deltaMoney && step.deltaMoney > 0) {
-            spawnFloatingToken(jEl, moneyEl, 'cash', `+$${step.deltaMoney}`, () => playMoneyCoinSound());
+            tokenPromises.push(spawnFloatingToken(jEl, moneyEl, 'cash', `+$${step.deltaMoney}`, () => playMoneyCoinSound()));
           }
 
-          await sleepScore(240);
+          if (tokenPromises.length > 0) {
+            await Promise.all(tokenPromises);
+          } else {
+            setEquationUI(targetChips, targetMult, true);
+          }
+          curDisplayChips = targetChips;
+          curDisplayMult = targetMult;
+
+          await sleepScore(150);
           jEl.classList.remove('scoring-focus');
           jRow.classList.remove('joker-row-scoring');
         } else {
           setEquationUI(targetChips, targetMult, true);
           curDisplayChips = targetChips;
           curDisplayMult = targetMult;
-          await sleepScore(150);
+          await sleepScore(120);
         }
 
       } else if (step.kind === 'double') {
@@ -2647,13 +2751,13 @@ async function resolveRound(): Promise<void> {
           }
         }
 
-        spawnFloatingToken(
+        await spawnFloatingToken(
           tokenSource,
           multEl,
           'mult-x',
           `×${formatScoringVal(step.deltaMult || 2)}m`,
           () => {
-            void animateNumberRoll(multEl, curDisplayMult, targetMult, Math.round(300 / scoringSpeedMultiplier), false);
+            void animateNumberRoll(multEl, curDisplayMult, targetMult, Math.round(250 / scoringSpeedMultiplier), false);
             curDisplayMult = targetMult;
             multEl.classList.remove('mult-absorbed-x');
             void multEl.offsetWidth;
@@ -2661,7 +2765,8 @@ async function resolveRound(): Promise<void> {
             playMultXSound();
           }
         );
-        await sleepScore(240);
+        curDisplayMult = targetMult;
+        await sleepScore(160);
         if (jEl) {
           jEl.classList.remove('scoring-focus');
           jRow.classList.remove('joker-row-scoring');
@@ -2669,11 +2774,13 @@ async function resolveRound(): Promise<void> {
       }
     }
 
+    cancelAllScoringAnimations();
     $('ui-joker-row').classList.remove('joker-row-scoring');
     $('ui-tier-plaque').classList.add('hidden');
     setEquationUI(res.chips, res.mult, true);
-    await sleepScore(140);
+    await sleepScore(100);
   } else {
+    cancelAllScoringAnimations();
     setEquationUI(0, 0);
   }
 
@@ -3860,6 +3967,7 @@ $('ui-table-felt').addEventListener('click', () => {
   const s = getState();
   if (!s.inHand && s.isDealing) {
     skipScoringAnimation = true;
+    cancelAllScoringAnimations();
   }
 });
 

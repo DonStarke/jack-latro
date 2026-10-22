@@ -1138,8 +1138,8 @@
       </div>
 
       <div class="sim-field">
-        <label><span>Unused Deal Cash Cap</span><span id="sim-lbl-dealcap">$1</span></label>
-        <input type="range" id="sim-dealcap" min="1" max="10" step="1" value="1"
+        <label><span>Unused Deal Cash Cap</span><span id="sim-lbl-dealcap">$0</span></label>
+        <input type="range" id="sim-dealcap" min="0" max="10" step="1" value="0"
           oninput="document.getElementById('sim-lbl-dealcap').textContent='$'+this.value">
       </div>
 
@@ -1199,7 +1199,7 @@
 let balanceConfig = {
   startingDeals: 7,
   targetScalePct: 50,
-  unusedDealCashCap: 1,
+  unusedDealCashCap: 0,
   pushRefundsDeal: false,
   anteHandScaling: false
 };

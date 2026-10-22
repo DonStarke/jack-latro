@@ -231,7 +231,7 @@ $$\text{Total Payout} = \text{Blind Reward} + \text{Unused Deals Bonus} + \text{
    - Boss Blind: **$\$6$**
 2. **Unused Deals Bonus**:
    $$\text{Hand Bonus} = \min(\text{unusedDealCashCap}, \text{dealsLeft})$$
-   *(Default starting cap is $\$1$; each saved deal yields $\$1$, tunable up to $\$10$ in the Balance Lab).*
+   *(Default starting cap is $\$0$; each saved deal yields $\$1$ up to the cap, tunable from $\$0$ to $\$10$ in the Balance Lab).*
 3. **Interest**:
    $$\text{Interest} = \min\left(5, \left\lfloor \frac{\text{Current Money}}{5} \right\rfloor\right)$$
    *(Every $\$5$ held generates $\$1$ interest, capped at $\$5$ at $\$25+$ held).*
