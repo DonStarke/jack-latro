@@ -612,6 +612,7 @@ interface LifetimeTelemetryStore {
   packs: Record<string, PackTelemetryData>;
 }
 
+const GAME_VERSION = 'V0.12';
 const CURRENT_TELEMETRY_SCHEMA_VERSION = 1;
 const TELEMETRY_STORAGE_KEY = 'jacklatro_library_telemetry';
 const TELEMETRY_BACKUP_KEY = 'jacklatro_library_telemetry_backup';
@@ -1151,6 +1152,7 @@ if (typeof window !== 'undefined') {
   (window as any).resetBlindOutcomeFlag = resetBlindOutcomeFlag;
   (window as any).migrateTelemetryStore = migrateTelemetryStore;
   (window as any).CURRENT_TELEMETRY_SCHEMA_VERSION = CURRENT_TELEMETRY_SCHEMA_VERSION;
+  (window as any).GAME_VERSION = GAME_VERSION;
 }
 
 /* ---------- Lifecycle ---------- */

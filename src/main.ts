@@ -1860,6 +1860,11 @@ function clearPackAnimationTimers(): void {
 
 function uiSkipPackAnimation(): void {
   clearPackAnimationTimers();
+  if (typeof (window as any).playPackOpenBurstSound === 'function') {
+    (window as any).playPackOpenBurstSound();
+  } else if (typeof playPackOpenBurstSound === 'function') {
+    playPackOpenBurstSound();
+  }
   const animContainer = $('ui-pack-booster-container');
   if (animContainer) animContainer.classList.add('hidden');
   const flash = $('ui-pack-burst-flash');
@@ -2247,7 +2252,7 @@ function renderPackOpeningScreen(triggerAnim: boolean = false): void {
       playPackRipPopSound();
     }
 
-    // Step 2: Pop burst at 2600ms (slowed down to 25% of current shaking speed)
+    // Step 2: Pop burst at 1300ms (50% faster animation)
     packAnimTimer1 = setTimeout(() => {
       boosterWrapper.classList.remove('anim-shake');
       boosterWrapper.classList.add('anim-burst');
@@ -2256,11 +2261,17 @@ function renderPackOpeningScreen(triggerAnim: boolean = false): void {
       stage.classList.remove('pack-cards-hidden');
       stage.classList.add('pack-cards-reveal');
 
-      // Step 3: Complete animation at 360ms after pop
+      if (typeof (window as any).playPackOpenBurstSound === 'function') {
+        (window as any).playPackOpenBurstSound();
+      } else if (typeof playPackOpenBurstSound === 'function') {
+        playPackOpenBurstSound();
+      }
+
+      // Step 3: Complete animation at 200ms after pop
       packAnimTimer2 = setTimeout(() => {
         uiSkipPackAnimation();
-      }, 360);
-    }, 2600);
+      }, 200);
+    }, 1300);
   } else {
     if (boosterContainer) boosterContainer.classList.add('hidden');
     stage.classList.remove('pack-cards-hidden');

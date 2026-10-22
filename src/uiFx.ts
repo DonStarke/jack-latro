@@ -312,19 +312,77 @@ function playCardSlideSound(): void {
   } catch (e) {}
 }
 
+let activePackNoiseSource: AudioBufferSourceNode | null = null;
+let activePackPopTimer: any = null;
+let packPopPlayed: boolean = false;
+
+function stopPackRipSound(): void {
+  if (activePackNoiseSource) {
+    try {
+      activePackNoiseSource.stop();
+      activePackNoiseSource.disconnect();
+    } catch (_) {}
+    activePackNoiseSource = null;
+  }
+  if (activePackPopTimer) {
+    clearTimeout(activePackPopTimer);
+    activePackPopTimer = null;
+  }
+}
+
 /**
- * Synthesizes a crisp booster pack foil rip followed by an energetic pop burst and bright chime.
- * Slowed down by 4x to match the 2.6s anticipation rumble shake.
+ * Plays the instant pop burst and bright sparkle chime.
+ * Plays immediately upon card burst or when the user taps to skip the pack animation.
  */
-function playPackRipPopSound(): void {
+function playPackOpenBurstSound(): void {
+  if (packPopPlayed) return;
+  packPopPlayed = true;
+  stopPackRipSound();
+
   try {
     if (sfxMuted || sfxVolume <= 0.001) return;
     const ctx = getAudioCtx();
     if (!ctx) return;
     const now = ctx.currentTime;
 
-    // 1. Foil tear/rip crinkle: filtered noise with resonant sweeping bandpass during 2.6s shake
-    const ripDuration = 2.1;
+    // Resonant energetic pop body: descending triangle pitch sweep immediately
+    const popOsc = ctx.createOscillator();
+    const popGain = ctx.createGain();
+    popOsc.type = 'triangle';
+    popOsc.frequency.setValueAtTime(440, now);
+    popOsc.frequency.exponentialRampToValueAtTime(130, now + 0.24);
+
+    popGain.gain.setValueAtTime(0.001, now);
+    popGain.gain.linearRampToValueAtTime(0.38, now + 0.03);
+    popGain.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
+
+    popOsc.connect(popGain);
+    popGain.connect(getSfxOutput(ctx));
+    popOsc.start(now);
+    popOsc.stop(now + 0.28);
+
+    // Bright magical sparkle bells right as cards burst out
+    playTone(1174.66, 'sine', now + 0.05, 0.28, 0.18); // D6
+    playTone(1760.0, 'sine', now + 0.12, 0.35, 0.15);  // A6
+  } catch (e) {}
+}
+
+/**
+ * Synthesizes a booster pack foil rip anticipation sound.
+ * 50% faster to match the 1.3s rumble shake.
+ */
+function playPackRipPopSound(): void {
+  stopPackRipSound();
+  packPopPlayed = false;
+
+  try {
+    if (sfxMuted || sfxVolume <= 0.001) return;
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    // 1. Foil tear/rip crinkle: filtered noise with resonant sweeping bandpass during 1.3s shake
+    const ripDuration = 1.1;
     const bufferSize = Math.floor(ctx.sampleRate * ripDuration);
     const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     const data = buffer.getChannelData(0);
@@ -334,6 +392,8 @@ function playPackRipPopSound(): void {
     }
     const noise = ctx.createBufferSource();
     noise.buffer = buffer;
+    activePackNoiseSource = noise;
+
     const filter = ctx.createBiquadFilter();
     filter.type = 'bandpass';
     filter.frequency.setValueAtTime(2400, now);
@@ -350,25 +410,14 @@ function playPackRipPopSound(): void {
     noise.start(now);
     noise.stop(now + ripDuration);
 
-    // 2. Resonant energetic pop body: descending triangle pitch sweep right as pack pops at ~2.55s
-    const popOsc = ctx.createOscillator();
-    const popGain = ctx.createGain();
-    popOsc.type = 'triangle';
-    popOsc.frequency.setValueAtTime(440, now + 2.50);
-    popOsc.frequency.exponentialRampToValueAtTime(130, now + 2.74);
+    noise.onended = () => {
+      if (activePackNoiseSource === noise) activePackNoiseSource = null;
+    };
 
-    popGain.gain.setValueAtTime(0.001, now + 2.50);
-    popGain.gain.linearRampToValueAtTime(0.38, now + 2.53);
-    popGain.gain.exponentialRampToValueAtTime(0.001, now + 2.76);
-
-    popOsc.connect(popGain);
-    popGain.connect(getSfxOutput(ctx));
-    popOsc.start(now + 2.50);
-    popOsc.stop(now + 2.78);
-
-    // 3. Bright magical sparkle bells right as cards burst out
-    playTone(1174.66, 'sine', now + 2.55, 0.28, 0.18); // D6
-    playTone(1760.0, 'sine', now + 2.62, 0.35, 0.15);  // A6
+    // Schedule natural pop burst at 1.25s if not skipped earlier
+    activePackPopTimer = setTimeout(() => {
+      playPackOpenBurstSound();
+    }, 1250);
   } catch (e) {}
 }
 
@@ -1327,6 +1376,8 @@ if (typeof window !== 'undefined') {
 
 if (typeof window !== 'undefined') {
   (window as any).playPackRipPopSound = playPackRipPopSound;
+  (window as any).playPackOpenBurstSound = playPackOpenBurstSound;
+  (window as any).stopPackRipSound = stopPackRipSound;
   (window as any).toggleMusic = toggleMusic;
   (window as any).toggleSfx = toggleSfx;
   (window as any).setMusicVolume = setMusicVolume;

@@ -1737,9 +1737,9 @@
     50% { opacity: 1; }
   }
 
-  /* Shake Keyframe: slowed down to 25% of current speed (2.6s rumble) */
+  /* Shake Keyframe: 1.3s rumble (50% faster) */
   .pack-booster-wrapper.anim-shake {
-    animation: packShakeRumble 2.6s ease-in-out forwards;
+    animation: packShakeRumble 1.3s ease-in-out forwards;
   }
   @keyframes packShakeRumble {
     0% { transform: scale(1) translate(0, 0) rotate(0deg); }
@@ -2999,6 +2999,20 @@
     color: #64748b;
     line-height: 1.4;
     margin-top: 4px;
+  }
+
+  .splash-version {
+    font-size: 12px;
+    font-weight: 800;
+    color: #94a3b8;
+    letter-spacing: 2px;
+    margin-top: 8px;
+    text-transform: uppercase;
+    display: inline-block;
+    padding: 2px 10px;
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 9999px;
   }
 
   /* ==========================================================

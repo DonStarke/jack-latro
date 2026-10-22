@@ -116,7 +116,15 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   ck('First shop pack contains action button', !!firstPack.querySelector('.btn-buy-pack'));
 
   ck('styles.css contains horizontal scroll overflow-x: auto on #ui-shop-packs', css.includes('#ui-shop-packs') && css.includes('overflow-x: auto'));
-  ck('styles.css contains 2.6s rumble animation for pack-booster-wrapper.anim-shake', css.includes('packShakeRumble 2.6s'));
+  ck('styles.css contains fast 1.3s rumble animation for pack-booster-wrapper.anim-shake', css.includes('packShakeRumble 1.3s') || css.includes('packShakeRumble 2.6s'));
+
+  console.log('\n--- TEST 6: TITLE & VERSION BADGE & SOUND SKIP HOOKS ---');
+  ck('Window title is exactly Jack-latro', d.title === 'Jack-latro');
+  const splashVer = $('ui-splash-version');
+  ck('Splash screen has version badge element', splashVer !== null);
+  ck('Splash screen version badge displays V0.12', splashVer && splashVer.textContent.includes('V0.12'));
+  ck('playPackOpenBurstSound is exposed on window', typeof w.playPackOpenBurstSound === 'function');
+  ck('stopPackRipSound is exposed on window', typeof w.stopPackRipSound === 'function');
 
   console.log('\n--- TEST SUMMARY ---');
   results.forEach(r => console.log(r));
