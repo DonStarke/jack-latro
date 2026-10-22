@@ -386,6 +386,14 @@
     color: #d8b4fe;
   }
 
+  .mini-card.tarot.cheat {
+    border-color: #f43f5e;
+  }
+
+  .mini-card.tarot.cheat .mini-card-name {
+    color: #fb7185;
+  }
+
   .mini-card-sub {
     font-size: 10px;
     color: #cbd5e1;
@@ -1535,6 +1543,11 @@
     background: linear-gradient(135deg, rgba(74, 29, 107, 0.5) 0%, #151d28 100%);
     box-shadow: 0 0 10px rgba(168, 85, 247, 0.2);
   }
+  .shop-item.pack-cheat {
+    border-color: #f43f5e;
+    background: linear-gradient(135deg, rgba(136, 19, 55, 0.5) 0%, #151d28 100%);
+    box-shadow: 0 0 10px rgba(244, 63, 94, 0.2);
+  }
   .shop-item.pack-card {
     border-color: #eab308;
     background: linear-gradient(135deg, rgba(92, 69, 18, 0.5) 0%, #151d28 100%);
@@ -1557,6 +1570,7 @@
   }
   .pack-badge-joker { background: rgba(59, 130, 246, 0.25); color: #60a5fa; border: 1px solid #3b82f6; }
   .pack-badge-tarot { background: rgba(168, 85, 247, 0.25); color: #c084fc; border: 1px solid #a855f7; }
+  .pack-badge-cheat { background: rgba(244, 63, 94, 0.25); color: #fb7185; border: 1px solid #f43f5e; }
   .pack-badge-card { background: rgba(234, 179, 8, 0.25); color: #fde047; border: 1px solid #eab308; }
   .pack-badge-variety { background: rgba(16, 185, 129, 0.25); color: #34d399; border: 1px solid #10b981; }
 
@@ -1651,6 +1665,11 @@
     background: linear-gradient(155deg, #581c87 0%, #170b28 50%, #7e22ce 100%);
     border-color: #c084fc;
     box-shadow: 0 12px 35px rgba(0, 0, 0, 0.8), 0 0 35px rgba(168, 85, 247, 0.5);
+  }
+  .pack-booster-wrapper.pack-cheat {
+    background: linear-gradient(155deg, #881337 0%, #1f0812 50%, #be123c 100%);
+    border-color: #fb7185;
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.8), 0 0 35px rgba(244, 63, 94, 0.5);
   }
   .pack-booster-wrapper.pack-card {
     background: linear-gradient(155deg, #78350f 0%, #1c1308 50%, #b45309 100%);
@@ -1964,6 +1983,18 @@
     box-shadow: 0 0 14px rgba(168, 85, 247, 0.35);
   }
 
+  .pack-opt-cheat {
+    border-color: #f43f5e;
+    background: linear-gradient(145deg, #2d121e 0%, #141b26 100%);
+    box-shadow: 0 0 14px rgba(244, 63, 94, 0.35);
+  }
+
+  .cheat-badge {
+    background: rgba(244, 63, 94, 0.22) !important;
+    color: #fb7185 !important;
+    border: 1px solid #f43f5e !important;
+  }
+
   .pack-opt-card {
     border-color: #eab308;
     background: linear-gradient(145deg, #241d11 0%, #141b26 100%);
@@ -2156,6 +2187,208 @@
   .btn-skip-pack {
     padding: 6px 18px;
     font-size: 12px;
+  }
+
+  /* BALATRO-STYLE TAROT PACK DECK HAND TRAY & COMPACT PROPORTIONS */
+  .pack-deck-tray {
+    background: linear-gradient(180deg, rgba(16, 24, 38, 0.92) 0%, rgba(10, 15, 24, 0.96) 100%);
+    border: 1.5px solid rgba(168, 85, 247, 0.45);
+    border-radius: 10px;
+    padding: 5px 8px 7px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.6), 0 0 12px rgba(168, 85, 247, 0.18);
+    flex-shrink: 0;
+    z-index: 20;
+  }
+
+  .pack-deck-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+    padding: 0 2px;
+  }
+
+  .pack-deck-label {
+    font-size: 9.5px;
+    font-weight: 900;
+    letter-spacing: 0.6px;
+    color: #c084fc;
+    text-transform: uppercase;
+  }
+
+  .pack-deck-status {
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--gold);
+    background: rgba(255, 190, 11, 0.14);
+    border: 1px solid rgba(255, 190, 11, 0.4);
+    padding: 1px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+
+  .pack-deck-cards-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 2px 2px;
+    min-height: 80px;
+  }
+
+  .playing-card.pack-deck-card {
+    width: 54px !important;
+    height: 74px !important;
+    min-width: 50px !important;
+    padding: 4px !important;
+    border-radius: 7px !important;
+    cursor: pointer;
+    margin: 0 !important;
+    flex-shrink: 0;
+    transition: transform 0.18s cubic-bezier(0.2, 0.9, 0.3, 1),
+                box-shadow 0.18s ease,
+                border-color 0.18s ease;
+  }
+
+  .playing-card.pack-deck-card .card-corner-top {
+    font-size: 11px !important;
+    line-height: 1 !important;
+  }
+
+  .playing-card.pack-deck-card .card-suit-center {
+    font-size: 22px !important;
+    line-height: 1 !important;
+  }
+
+  .playing-card.pack-deck-card .card-chips-corner {
+    font-size: 9px !important;
+  }
+
+  .playing-card.pack-deck-card .card-enh-tag {
+    font-size: 6.5px !important;
+    padding: 1px 3px !important;
+  }
+
+  .playing-card.pack-deck-card:hover {
+    transform: translateY(-4px) scale(1.04) !important;
+  }
+
+  .playing-card.pack-deck-card.pack-deck-card-selected {
+    transform: translateY(-7px) scale(1.08) !important;
+    border-color: var(--gold) !important;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.8), 0 0 14px rgba(255, 215, 0, 0.85) !important;
+    z-index: 5;
+  }
+
+  /* Compact sizing when both 3D Tarot Carousel and Deck Hand Tray are on screen */
+  .pack-opening-overlay.has-deck-hand {
+    padding: 6px 8px;
+    gap: 4px;
+  }
+
+  .pack-opening-overlay.has-deck-hand .pack-opening-header {
+    padding: 2px 0;
+  }
+
+  .pack-opening-overlay.has-deck-hand .pack-opening-badge {
+    font-size: 9.5px;
+  }
+
+  .pack-opening-overlay.has-deck-hand .pack-opening-title {
+    font-size: 15px;
+    margin: 0;
+  }
+
+  .pack-opening-overlay.has-deck-hand .pack-opening-sub {
+    font-size: 10.5px;
+  }
+
+  .pack-opening-overlay.has-deck-hand .pack-stage-container {
+    min-height: 220px;
+    max-height: 245px;
+  }
+
+  .pack-opening-overlay.has-deck-hand .pack-opening-stage {
+    height: 225px;
+  }
+
+  .pack-opening-overlay.has-deck-hand .pack-option-card {
+    width: 245px;
+    min-width: 225px;
+    height: 215px;
+    max-height: 220px;
+    padding: 8px 10px;
+    border-radius: 11px;
+  }
+
+  .pack-opening-overlay.has-deck-hand .pack-card-art-box {
+    width: 44px;
+    height: 44px;
+    margin: 2px auto 4px;
+    border-radius: 10px;
+  }
+
+  .pack-opening-overlay.has-deck-hand .pack-card-big-icon {
+    font-size: 26px;
+  }
+
+  .pack-opening-overlay.has-deck-hand .pack-card-playing-box {
+    min-height: 105px;
+    margin: 2px auto;
+  }
+
+  .pack-opening-overlay.has-deck-hand .playing-card.pack-showcase-card {
+    width: 82px !important;
+    height: 104px !important;
+    padding: 5px 4px !important;
+  }
+
+  .pack-opening-overlay.has-deck-hand .playing-card.pack-showcase-card .card-corner-top {
+    font-size: 13px !important;
+  }
+
+  .pack-opening-overlay.has-deck-hand .playing-card.pack-showcase-card .card-suit-center {
+    font-size: 30px !important;
+  }
+
+  .pack-opening-overlay.has-deck-hand .playing-card.pack-showcase-card .card-chips-corner {
+    font-size: 10px !important;
+  }
+
+  .pack-opening-overlay.has-deck-hand .pack-opt-inner {
+    gap: 3px;
+  }
+
+  .pack-opening-overlay.has-deck-hand .pack-opt-title {
+    font-size: 13.5px;
+  }
+
+  .pack-opening-overlay.has-deck-hand .pack-opt-desc {
+    font-size: 11px;
+    line-height: 1.25;
+    padding: 4px 7px;
+  }
+
+  .pack-opening-overlay.has-deck-hand .btn-pack-choose {
+    margin-top: 4px;
+    padding: 6px 8px;
+    font-size: 11.5px;
+  }
+
+  .pack-opening-overlay.has-deck-hand .pack-carousel-footer {
+    padding: 2px 0 0;
+    gap: 10px;
+  }
+
+  .pack-opening-overlay.has-deck-hand .pack-nav-hint {
+    display: none;
+  }
+
+  .pack-opening-overlay.has-deck-hand .pack-opening-actions {
+    padding-top: 3px;
   }
 
   /* JOKER INSPECTION & REORDERING 3D CAROUSEL */

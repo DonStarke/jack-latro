@@ -41,11 +41,14 @@ interface JokerInstance extends JokerDef {
   bought?: boolean;
 }
 
+type ConsumableType = 'tarot' | 'cheat';
+
 interface TarotDef {
   id: string;
   name: string;
   cost: number;
   desc: string;
+  consumableType?: ConsumableType;
 }
 
 interface VoucherDef {
@@ -83,7 +86,7 @@ interface ShopCardOffer {
   cardData: { rank: Rank; suit: Suit; enhancement: Enhancement };
   bought: boolean;
 }
-type PackType = 'joker' | 'tarot' | 'card' | 'variety';
+type PackType = 'joker' | 'tarot' | 'cheat' | 'card' | 'variety';
 
 interface PackDef {
   id: string;
@@ -105,12 +108,15 @@ interface ShopPackSlot extends PackDef {
 type PackCardOption =
   | { kind: 'joker'; data: JokerDef }
   | { kind: 'tarot'; data: TarotDef }
+  | { kind: 'cheat'; data: TarotDef }
   | { kind: 'card'; data: { rank: Rank; suit: Suit; enhancement: Enhancement } };
 
 interface ActivePackOpening {
   pack: ShopPackSlot;
   options: PackCardOption[];
   chosen: boolean;
+  deckCards?: Card[];
+  selectedDeckCardUid?: number | null;
 }
 
 type ShopJokerSlot = (JokerInstance & { shopType: 'joker'; bought: boolean }) | ShopTarot;

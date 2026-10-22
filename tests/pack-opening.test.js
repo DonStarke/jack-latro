@@ -134,9 +134,10 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   ck('Pack overlay hidden after skip', isHidden(packOverlay));
   ck('activePackOpening is null after skip', w.getState().activePackOpening === null);
 
-  console.log('\n--- TEST 5: BUYING A TAROT PACK ---');
+  console.log('\n--- TEST 5: BUYING A TAROT PACK (BALATRO-STYLE IMMEDIATE USE ON DECK HAND) ---');
   w.patchState({
     money: 20,
+    consumables: [],
     shopPacks: [{ id: 'pack_tarot', name: 'Tarot Pack', packType: 'tarot', cost: 4, cardsCount: 3, chooseCount: 1, desc: '', shopType: 'pack', bought: false }]
   });
   w.uiBuyPack(0);
@@ -145,11 +146,44 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   const sTarotPack = w.getState();
   ck('Tarot pack opened', !!sTarotPack.activePackOpening);
   ck('All 3 options in Tarot pack are tarots', sTarotPack.activePackOpening.options.every(o => o.kind === 'tarot'));
+  const cheatIds = new Set((w.CHEAT_CATALOG || []).map(c => c.id));
+  ck('No cheat cards appear in Tarot pack', sTarotPack.activePackOpening.options.every(o => !cheatIds.has(o.data.id)));
+  ck('Tarot pack draws 5 deck cards for immediate targeting', Array.isArray(sTarotPack.activePackOpening.deckCards) && sTarotPack.activePackOpening.deckCards.length === 5);
+  ck('Tarot pack pre-selects a deck card target', typeof sTarotPack.activePackOpening.selectedDeckCardUid === 'number');
+  ck('Deck hand tray is visible on Tarot pack screen', !isHidden($('ui-pack-deck-area')));
+  ck('Deck hand tray renders 5 selectable playing cards', $('ui-pack-deck-cards').children.length === 5);
+
+  // Test selecting the second deck card in the tray
+  const secondDeckCard = sTarotPack.activePackOpening.deckCards[1];
+  w.uiSelectPackDeckCard(secondDeckCard.uid);
+  ck('uiSelectPackDeckCard updates selectedDeckCardUid', w.getState().activePackOpening.selectedDeckCardUid === secondDeckCard.uid);
+
   const chosenTarot = sTarotPack.activePackOpening.options[0].data;
+  w.uiChoosePackOption(0);
+  await sleep(50);
+  ck('Immediate-use Tarot is NOT stored in consumables slot', w.getState().consumables.length === 0);
+  ck('Pack overlay closes after applying Tarot to deck card', isHidden(packOverlay));
+  ck('Banner confirms Tarot was applied to deck card', text('ui-banner').includes(chosenTarot.name));
+
+  console.log('\n--- TEST 5B: BUYING A CHEAT PACK (STORED IN CONSUMABLE SLOT) ---');
+  w.patchState({
+    money: 20,
+    consumables: [],
+    shopPacks: [{ id: 'pack_cheat', name: 'Cheat Pack', packType: 'cheat', cost: 4, cardsCount: 3, chooseCount: 1, desc: '', shopType: 'pack', bought: false }]
+  });
+  w.uiBuyPack(0);
+  await sleep(50);
+
+  const sCheatPack = w.getState();
+  ck('Cheat pack opened', !!sCheatPack.activePackOpening);
+  ck('All 3 options in Cheat pack are cheats', sCheatPack.activePackOpening.options.every(o => o.kind === 'cheat'));
+  ck('All options in Cheat pack come from CHEAT_CATALOG', sCheatPack.activePackOpening.options.every(o => cheatIds.has(o.data.id)));
+  ck('Deck hand tray is hidden on Cheat pack screen', isHidden($('ui-pack-deck-area')));
+  const chosenCheat = sCheatPack.activePackOpening.options[0].data;
 
   w.uiChoosePackOption(0);
   await sleep(50);
-  ck('Chosen tarot added to player consumables', w.getState().consumables.some(c => c.id === chosenTarot.id));
+  ck('Chosen cheat added to player consumables slot', w.getState().consumables.some(c => c.id === chosenCheat.id));
 
   console.log('\n--- TEST 6: BUYING A PLAYING CARD PACK ---');
   const deckCountBefore = w.getState().deck.length;

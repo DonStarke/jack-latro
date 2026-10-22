@@ -197,9 +197,20 @@ const PACK_CATALOG: ReadonlyArray<PackDef> = [
     cost: 4,
     cardsCount: 3,
     chooseCount: 1,
-    desc: 'Choose 1 of 3 Tarots to add to your inventory.',
+    desc: 'Choose 1 of 3 Tarots to immediately modify a card from your Deck.',
     badge: 'TAROT',
     color: '#a855f7'
+  },
+  {
+    id: 'pack_cheat',
+    name: 'Cheat Pack',
+    packType: 'cheat',
+    cost: 4,
+    cardsCount: 3,
+    chooseCount: 1,
+    desc: 'Choose 1 of 3 Table Cheats to hold in your inventory for play.',
+    badge: 'CHEAT',
+    color: '#f43f5e'
   },
   {
     id: 'pack_card',
@@ -244,10 +255,16 @@ function generatePackOptions(pack: PackDef, ownedJokerIds?: string[]): PackCardO
       }
     }
   } else if (pack.packType === 'tarot') {
-    const shuffled = shuffle([...TAROT_CATALOG]);
+    const shuffled = shuffle([...DECK_TAROT_CATALOG]);
     const picked = shuffled.slice(0, pack.cardsCount);
     for (const t of picked) {
       options.push({ kind: 'tarot', data: t });
+    }
+  } else if (pack.packType === 'cheat') {
+    const shuffled = shuffle([...CHEAT_CATALOG]);
+    const picked = shuffled.slice(0, pack.cardsCount);
+    for (const c of picked) {
+      options.push({ kind: 'cheat', data: c });
     }
   } else if (pack.packType === 'card') {
     const enhancements: ReadonlyArray<Exclude<Enhancement, null>> = ['foil', 'holo', 'poly', 'gold'];
@@ -267,8 +284,8 @@ function generatePackOptions(pack: PackDef, ownedJokerIds?: string[]): PackCardO
     const j = rollWeightedJoker(ownedIds) || shuffle(JOKER_CATALOG)[0];
     options.push({ kind: 'joker', data: j });
 
-    // 1 Tarot
-    const t = shuffle([...TAROT_CATALOG])[0];
+    // 1 Deck Tarot
+    const t = shuffle([...DECK_TAROT_CATALOG])[0];
     options.push({ kind: 'tarot', data: t });
 
     // 1 Playing card
@@ -285,6 +302,70 @@ function generatePackOptions(pack: PackDef, ownedJokerIds?: string[]): PackCardO
   }
 
   return options;
+}
+
+function drawPackDeckCards(deck: ReadonlyArray<Card>, count: number = 5): Card[] {
+  if (!deck || deck.length === 0) return [];
+  const shuffled = shuffle([...deck]);
+  const picked = shuffled.slice(0, Math.min(count, shuffled.length));
+  // Ensure at least one card eligible for Card Forge (non-Ace, non-King) is included if the deck has any
+  if (picked.every(c => c.rank === 'A' || c.rank === 'K')) {
+    const forgeEligible = shuffled.find(c => c.rank !== 'A' && c.rank !== 'K') || shuffled.find(c => c.rank !== 'A');
+    if (forgeEligible && picked.length > 0) {
+      picked[0] = forgeEligible;
+    }
+  }
+  return picked.map(c => ({ ...c }));
+}
+
+function applyTarotToDeckCard(tarot: TarotDef, targetCard: Card): { ok: boolean; message?: string; warning?: string } {
+  if (!targetCard) return { ok: false, warning: 'No target card selected!' };
+
+  let message = '';
+  if (tarot.id === 'midas_touch') {
+    setCardEnhancement(targetCard, 'gold');
+    recordEffectEnhanced('gold');
+    message = `${tarot.name}: ${targetCard.rank}${targetCard.suit} turned Gold (+$3 when scored)!`;
+  } else if (tarot.id === 'polychrome_dice') {
+    setCardEnhancement(targetCard, 'poly');
+    recordEffectEnhanced('poly');
+    message = `${tarot.name}: ${targetCard.rank}${targetCard.suit} enhanced to Polychrome (×1.5 Mult)!`;
+  } else if (tarot.id === 'wild_suit') {
+    setCardEnhancement(targetCard, 'foil');
+    recordEffectEnhanced('foil');
+    message = `${tarot.name}: ${targetCard.rank}${targetCard.suit} enhanced to Foil (+30 Chips)!`;
+  } else if (tarot.id === 'lucky_charm') {
+    setCardEnhancement(targetCard, 'holo');
+    recordEffectEnhanced('holo');
+    message = `${tarot.name}: ${targetCard.rank}${targetCard.suit} enhanced to Holo (+4 Mult)!`;
+  } else if (tarot.id === 'the_guillotine') {
+    const rankSuit = `${targetCard.rank}${targetCard.suit}`;
+    removeCardFromGame(targetCard.uid);
+    message = `The Guillotine permanently destroyed ${rankSuit} from your deck!`;
+  } else if (tarot.id === 'card_forge') {
+    if (targetCard.rank === 'A' || targetCard.rank === 'K') {
+      return { ok: false, warning: `${targetCard.rank === 'A' ? 'Aces' : 'Kings'} cannot be upgraded!` };
+    }
+    const oldRankSuit = `${targetCard.rank}${targetCard.suit}`;
+    const rankOrder: Rank[] = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+    const curIdx = rankOrder.indexOf(targetCard.rank);
+    const newIdx = Math.min(rankOrder.length - 1, curIdx + 2);
+    setCardRank(targetCard, rankOrder[newIdx]);
+    message = `Card Forge upgraded ${oldRankSuit} to ${targetCard.rank}${targetCard.suit}!`;
+  } else if (tarot.id === 'card_shave') {
+    if (targetCard.rank === 'A' || targetCard.rank === '2') {
+      return { ok: false, warning: 'This card cannot be shaved!' };
+    }
+    const oldRankSuit = `${targetCard.rank}${targetCard.suit}`;
+    const val = FACE_RANKS.includes(targetCard.rank) ? 10 : parseInt(targetCard.rank, 10);
+    const newRank = String(Math.max(2, val - 3)) as Rank;
+    setCardRank(targetCard, newRank);
+    message = `Card Shave reduced ${oldRankSuit} to ${targetCard.rank}${targetCard.suit}!`;
+  } else {
+    return { ok: false, warning: 'This card cannot be applied to deck cards!' };
+  }
+
+  return { ok: true, message };
 }
 
 /** Pure helper to generate packs for a shop visit (shared with simulator). */
@@ -419,7 +500,7 @@ function buyAndOpenPack(idx: number): { ok: boolean; reason?: ShopFailReason; pa
 
   // Record money spent
   if (pack.packType === 'joker') recordMoneySpent('jokers', pack.cost);
-  else if (pack.packType === 'tarot') recordMoneySpent('tarots', pack.cost);
+  else if (pack.packType === 'tarot' || pack.packType === 'cheat') recordMoneySpent('tarots', pack.cost);
   else if (pack.packType === 'card') recordMoneySpent('cards', pack.cost);
   else recordMoneySpent('cards', pack.cost);
 
@@ -429,26 +510,54 @@ function buyAndOpenPack(idx: number): { ok: boolean; reason?: ShopFailReason; pa
   const options = generatePackOptions(pack);
   for (const opt of options) {
     if (opt.kind === 'joker' && opt.data) recordJokerDiscovered(opt.data.id);
-    else if (opt.kind === 'tarot' && opt.data) recordTarotDiscovered(opt.data.id);
+    else if ((opt.kind === 'tarot' || opt.kind === 'cheat') && opt.data) recordTarotDiscovered(opt.data.id);
+  }
+
+  const hasTarotOption = options.some(o => o.kind === 'tarot');
+  const deckCards = hasTarotOption ? drawPackDeckCards(s.deck, 5) : undefined;
+  let selectedDeckCardUid: number | null = null;
+  if (deckCards && deckCards.length > 0) {
+    const firstTarot = options.find(o => o.kind === 'tarot');
+    const defaultEligible = firstTarot
+      ? (deckCards.find(c => isCardEligibleForTarot(firstTarot.data.id, c)) || deckCards[0])
+      : deckCards[0];
+    selectedDeckCardUid = defaultEligible ? defaultEligible.uid : null;
   }
 
   const active: ActivePackOpening = {
     pack,
     options,
-    chosen: false
+    chosen: false,
+    deckCards,
+    selectedDeckCardUid
   };
 
   patchState({ activePackOpening: active });
   return { ok: true, pack, options };
 }
 
-function pickPackOption(optIdx: number): { ok: boolean; reason?: ShopFailReason; picked?: PackCardOption } {
+function selectPackDeckCard(cardUid: number | string): boolean {
+  const s = getState();
+  const active = s.activePackOpening;
+  if (!active || !active.deckCards) return false;
+  const numUid = typeof cardUid === 'number' ? cardUid : Number(cardUid);
+  const found = active.deckCards.find(c => c.uid === numUid);
+  if (!found) return false;
+  active.selectedDeckCardUid = numUid;
+  patchState({ activePackOpening: { ...active } });
+  return true;
+}
+
+function pickPackOption(optIdx: number, targetCardUid?: number | string): { ok: boolean; reason?: ShopFailReason; picked?: PackCardOption; targetCard?: Card; message?: string; warning?: string } {
   const s = getState();
   const active = s.activePackOpening;
   if (!active || active.chosen) return { ok: false, reason: 'invalid' };
 
   const opt = active.options[optIdx];
   if (!opt) return { ok: false, reason: 'invalid' };
+
+  let resultMessage: string | undefined;
+  let modifiedCard: Card | undefined;
 
   if (opt.kind === 'joker') {
     if (s.jokers.length >= s.maxJokers) {
@@ -461,12 +570,49 @@ function pickPackOption(optIdx: number): { ok: boolean; reason?: ShopFailReason;
       recordMoneyEarned('loanShark', 15);
       recordJokerTrigger('loan_shark', opt.data.name);
     }
-  } else if (opt.kind === 'tarot') {
+  } else if (opt.kind === 'cheat') {
     if (s.consumables.length >= s.maxConsumables) {
       return { ok: false, reason: 'tarots_full' };
     }
-    addConsumable({ ...opt.data });
+    addConsumable({ ...opt.data, consumableType: 'cheat' });
     recordTarotAcquired(opt.data.id);
+  } else if (opt.kind === 'tarot') {
+    // Balatro-style Tarot Pack: immediately use the picked Tarot on a selected card from the deck!
+    const t = opt.data;
+    const pool = (active.deckCards && active.deckCards.length > 0) ? active.deckCards : s.deck;
+    const explicitUid = targetCardUid !== undefined
+      ? (typeof targetCardUid === 'number' ? targetCardUid : Number(targetCardUid))
+      : active.selectedDeckCardUid;
+
+    let target = explicitUid !== null && explicitUid !== undefined
+      ? pool.find(c => c.uid === explicitUid) || s.deck.find(c => c.uid === explicitUid)
+      : undefined;
+
+    if (!target || !isCardEligibleForTarot(t.id, target)) {
+      target = pool.find(c => isCardEligibleForTarot(t.id, c)) || s.deck.find(c => isCardEligibleForTarot(t.id, c));
+    }
+
+    if (!target) {
+      return { ok: false, reason: 'invalid', warning: `No eligible card available for ${t.name}!` };
+    }
+
+    const deckRef = s.deck.find(c => c.uid === target!.uid) || target;
+    const applyRes = applyTarotToDeckCard(t, deckRef);
+    if (!applyRes.ok) {
+      return { ok: false, reason: 'invalid', warning: applyRes.warning };
+    }
+
+    // Keep active.deckCards copy in sync
+    target.rank = deckRef.rank;
+    target.suit = deckRef.suit;
+    target.enhancement = deckRef.enhancement;
+
+    recordTarotAcquired(t.id);
+    recordTarotCast(t.id);
+    _state.runStats.tarotsUsed++;
+
+    modifiedCard = deckRef;
+    resultMessage = applyRes.message;
   } else if (opt.kind === 'card') {
     const newCard: Card = { uid: takeNextCardUid(), rank: opt.data.rank, suit: opt.data.suit, enhancement: opt.data.enhancement };
     addCardToDeck(newCard);
@@ -479,7 +625,7 @@ function pickPackOption(optIdx: number): { ok: boolean; reason?: ShopFailReason;
   recordPackCardDrafted(active.pack.id);
   active.chosen = true;
   patchState({ activePackOpening: null });
-  return { ok: true, picked: opt };
+  return { ok: true, picked: opt, targetCard: modifiedCard, message: resultMessage };
 }
 
 function skipPackOpening(): boolean {
@@ -671,4 +817,6 @@ function useConsumable(index: number, targetCardUid?: number | string): Consumab
 
 if (typeof window !== 'undefined') {
   (window as any).useConsumable = useConsumable;
+  (window as any).selectPackDeckCard = selectPackDeckCard;
+  (window as any).applyTarotToDeckCard = applyTarotToDeckCard;
 }

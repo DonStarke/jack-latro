@@ -695,16 +695,19 @@ function inspectConsumable(index: number): void {
   const state = getState();
   const c = state.consumables[index];
   if (!c) return;
+  const isCheat = c.consumableType === 'cheat' || (typeof isCheatConsumable === 'function' && isCheatConsumable(c.id));
+  const titleColor = isCheat ? '#fb7185' : '#d8b4fe';
+  const useLabel = isCheat ? 'Use Cheat Now' : 'Use Tarot Now';
   const box = $('ui-inspect-content');
   box.innerHTML = `
     <div style="display:flex; justify-content:space-between; align-items:center;">
-      <h3 style="color:#d8b4fe;">${c.name}</h3>
+      <h3 style="color:${titleColor};">${c.name}</h3>
       <button class="btn btn-secondary" onclick="closeInspector()">Close</button>
     </div>
     <div style="font-size:13px; color:#e2e8f0;">${c.desc}</div>
     <div style="display:flex; gap:8px;">
       <button class="btn btn-double" style="flex:1; padding:10px;" onclick="uiUseConsumable(${index})" ${!state.inHand || state.isDealing ? 'disabled' : ''}>
-        ${state.inHand ? 'Use Tarot Now' : 'Deal a Hand to Use'}
+        ${state.inHand ? useLabel : 'Deal a Hand to Use'}
       </button>
       <button class="btn btn-redeal" style="padding:10px;" onclick="uiSellConsumable(${index})">Sell $1</button>
     </div>
@@ -1109,6 +1112,7 @@ function renderShop() {
       const badgeClass = `pack-badge-${item.packType}`;
       let packIcon = '🃏';
       if (item.packType === 'tarot') packIcon = '🔮';
+      else if (item.packType === 'cheat') packIcon = '🕶️';
       else if (item.packType === 'card') packIcon = '🎴';
       else if (item.packType === 'variety') packIcon = '🎲';
 
@@ -1259,12 +1263,15 @@ function updateAllUI() {
   if (state.consumables.length === 0) {
     cRow.innerHTML = `<span style="font-size:12px; font-weight:700; color:#94a3b8;">Empty</span>`;
   } else {
-    cRow.innerHTML = state.consumables.map((c, i) => `
-      <div class="mini-card tarot" onclick="inspectConsumable(${i})">
-        <div class="mini-card-name">${c.name}</div>
-        <div class="mini-card-sub">Tap to use</div>
-      </div>
-    `).join('');
+    cRow.innerHTML = state.consumables.map((c, i) => {
+      const isCheat = c.consumableType === 'cheat' || (typeof isCheatConsumable === 'function' && isCheatConsumable(c.id));
+      return `
+        <div class="mini-card tarot ${isCheat ? 'cheat' : ''}" onclick="inspectConsumable(${i})">
+          <div class="mini-card-name">${c.name}</div>
+          <div class="mini-card-sub">Tap to use</div>
+        </div>
+      `;
+    }).join('');
   }
 
   $('ui-dealer-cards').innerHTML = state.dealerHand.map((c, idx) =>
@@ -1633,6 +1640,8 @@ function renderSimResultsToModal(simData: SimData): void {
         <span style="color:#475569;">|</span>
         <span>🔮 Tarots: <strong style="color:#a855f7;">${simData.packStats?.pack_tarot?.bought ?? 0}</strong></span>
         <span style="color:#475569;">|</span>
+        <span>🕶️ Cheats: <strong style="color:#f43f5e;">${simData.packStats?.pack_cheat?.bought ?? 0}</strong></span>
+        <span style="color:#475569;">|</span>
         <span>🎴 Cards: <strong style="color:#eab308;">${simData.packStats?.pack_card?.bought ?? 0}</strong></span>
       </div>
       <div>
@@ -1974,6 +1983,98 @@ function updatePackCardsLayout(): void {
   if (hintEl) {
     hintEl.textContent = `Card ${currentPackCardIndex + 1} of ${total} • Swipe or click arrows to browse`;
   }
+
+  renderPackDeckHand();
+}
+
+function renderPackDeckHand(): void {
+  const state = getState();
+  const active = state.activePackOpening;
+  const deckArea = $('ui-pack-deck-area');
+  const deckCardsEl = $('ui-pack-deck-cards');
+  const statusEl = $('ui-pack-deck-target-status');
+  if (!deckArea || !deckCardsEl) return;
+
+  if (!active || !active.deckCards || active.deckCards.length === 0) {
+    deckArea.classList.add('hidden');
+    deckCardsEl.innerHTML = '';
+    return;
+  }
+
+  deckArea.classList.remove('hidden');
+
+  const activeOpt = active.options[currentPackCardIndex];
+  const activeTarotId = activeOpt && activeOpt.kind === 'tarot'
+    ? activeOpt.data.id
+    : (active.options.find(o => o.kind === 'tarot') as { kind: 'tarot'; data: TarotDef } | undefined)?.data.id;
+
+  // Ensure selectedDeckCardUid points to an eligible card for the active tarot
+  let selectedCard = active.deckCards.find(c => c.uid === active.selectedDeckCardUid);
+  if (activeTarotId && (!selectedCard || !isCardEligibleForTarot(activeTarotId, selectedCard))) {
+    selectedCard = active.deckCards.find(c => isCardEligibleForTarot(activeTarotId, c));
+    active.selectedDeckCardUid = selectedCard ? selectedCard.uid : null;
+  }
+
+  if (statusEl) {
+    if (activeOpt && activeOpt.kind === 'tarot') {
+      if (selectedCard) {
+        statusEl.innerHTML = `Target: <strong>${selectedCard.rank}${selectedCard.suit}</strong> &bull; Tap any card to change`;
+      } else {
+        statusEl.textContent = 'No eligible card in drawn hand';
+      }
+    } else {
+      statusEl.textContent = selectedCard
+        ? `Target for Tarot: ${selectedCard.rank}${selectedCard.suit}`
+        : 'Drawn cards for Tarot option';
+    }
+  }
+
+  deckCardsEl.innerHTML = active.deckCards.map(c => {
+    const eligible = activeTarotId ? isCardEligibleForTarot(activeTarotId, c) : true;
+    const isSelected = eligible && c.uid === active.selectedDeckCardUid;
+    if (eligible) {
+      const classes = `pack-deck-card tarot-selectable${isSelected ? ' pack-deck-card-selected' : ''}`;
+      return renderCardHTML(
+        c,
+        false,
+        classes,
+        `onclick="event.stopPropagation(); uiSelectPackDeckCard(${c.uid})"`
+      );
+    } else {
+      return renderCardHTML(c, false, 'pack-deck-card tarot-ineligible', '');
+    }
+  }).join('');
+
+  // Synchronize Tarot option button labels with currently selected deck card
+  const stage = $('ui-pack-stage');
+  if (stage) {
+    active.options.forEach((opt, idx) => {
+      if (opt.kind === 'tarot') {
+        const btn = stage.querySelector<HTMLButtonElement>(`.pack-option-card[data-opt-idx="${idx}"] .btn-pack-choose`);
+        if (btn) {
+          const cardForThisTarot = (selectedCard && isCardEligibleForTarot(opt.data.id, selectedCard))
+            ? selectedCard
+            : active.deckCards!.find(c => isCardEligibleForTarot(opt.data.id, c));
+          if (cardForThisTarot) {
+            btn.textContent = `USE ON ${cardForThisTarot.rank}${cardForThisTarot.suit}`;
+            btn.disabled = false;
+          } else {
+            btn.textContent = 'NO ELIGIBLE CARD';
+            btn.disabled = true;
+          }
+        }
+      }
+    });
+  }
+}
+
+function uiSelectPackDeckCard(cardUid: number | string): void {
+  if (isPlayfieldLocked) return;
+  if (!selectPackDeckCard(cardUid)) return;
+  if (typeof (window as any).playCardSlideSound === 'function') {
+    (window as any).playCardSlideSound();
+  }
+  renderPackDeckHand();
 }
 
 function uiPackNavNext(): void {
@@ -2107,7 +2208,10 @@ function renderPackOpeningScreen(triggerAnim: boolean = false): void {
   const active = state.activePackOpening;
   const overlay = $('ui-pack-overlay');
   if (!active || !overlay) {
-    if (overlay) overlay.classList.add('hidden');
+    if (overlay) {
+      overlay.classList.add('hidden');
+      overlay.classList.remove('has-deck-hand');
+    }
     clearPackAnimationTimers();
     return;
   }
@@ -2115,12 +2219,23 @@ function renderPackOpeningScreen(triggerAnim: boolean = false): void {
   currentPackCardIndex = 0;
   initPackTouchGestures();
 
+  const hasDeckHand = !!(active.deckCards && active.deckCards.length > 0);
+  overlay.classList.toggle('has-deck-hand', hasDeckHand);
+
   const badgeEl = $('ui-pack-badge');
   const titleEl = $('ui-pack-title');
   const subEl = $('ui-pack-sub');
   if (badgeEl) badgeEl.textContent = (active.pack.badge || active.pack.packType).toUpperCase() + ' PACK';
   if (titleEl) titleEl.textContent = active.pack.name;
-  if (subEl) subEl.textContent = `Choose ${active.pack.chooseCount} of ${active.options.length} options to take`;
+  if (subEl) {
+    if (active.pack.packType === 'tarot') {
+      subEl.textContent = `Select a Deck Card below, then use ${active.pack.chooseCount} of ${active.options.length} Tarots immediately`;
+    } else if (active.pack.packType === 'cheat') {
+      subEl.textContent = `Choose ${active.pack.chooseCount} of ${active.options.length} Table Cheats to keep in your inventory`;
+    } else {
+      subEl.textContent = `Choose ${active.pack.chooseCount} of ${active.options.length} options to take`;
+    }
+  }
 
   const stage = $('ui-pack-stage');
   if (!stage) return;
@@ -2156,18 +2271,36 @@ function renderPackOpeningScreen(triggerAnim: boolean = false): void {
       `;
     } else if (opt.kind === 'tarot') {
       const t = opt.data;
-      cardTypeLabel = 'TAROT CONSUMABLE';
+      cardTypeLabel = 'TAROT SPELL';
       cardTitle = t.name;
       cardSub = t.desc;
       extraCardClass = 'pack-opt-tarot';
-      chooseBtnText = 'TAKE TAROT';
+      chooseBtnText = 'USE TAROT';
       cardContentHtml = `
         <div class="pack-opt-inner">
           <div class="pack-opt-badge-row">
             <span class="pack-opt-type">${cardTypeLabel}</span>
-            <span class="pack-opt-archetype">SPELL</span>
+            <span class="pack-opt-archetype">USE NOW</span>
           </div>
           <div class="pack-card-art-box"><span class="pack-card-big-icon">🔮</span></div>
+          <div class="pack-opt-title">${cardTitle}</div>
+          <div class="pack-opt-desc">${cardSub}</div>
+        </div>
+      `;
+    } else if (opt.kind === 'cheat') {
+      const ch = opt.data;
+      cardTypeLabel = 'TABLE CHEAT';
+      cardTitle = ch.name;
+      cardSub = ch.desc;
+      extraCardClass = 'pack-opt-cheat';
+      chooseBtnText = 'TAKE CHEAT';
+      cardContentHtml = `
+        <div class="pack-opt-inner">
+          <div class="pack-opt-badge-row">
+            <span class="pack-opt-type">${cardTypeLabel}</span>
+            <span class="pack-opt-archetype">IN-PLAY</span>
+          </div>
+          <div class="pack-card-art-box"><span class="pack-card-big-icon">🕶️</span></div>
           <div class="pack-opt-title">${cardTitle}</div>
           <div class="pack-opt-desc">${cardSub}</div>
         </div>
@@ -2203,7 +2336,7 @@ function renderPackOpeningScreen(triggerAnim: boolean = false): void {
     }
 
     return `
-      <div class="pack-option-card ${extraCardClass}" onclick="uiClickPackCard(${optIdx})">
+      <div class="pack-option-card ${extraCardClass}" data-opt-idx="${optIdx}" onclick="uiClickPackCard(${optIdx})">
         ${cardContentHtml}
         <button class="btn btn-deal btn-pack-choose" onclick="event.stopPropagation(); uiChoosePackOption(${optIdx})">
           ${chooseBtnText}
@@ -2227,6 +2360,7 @@ function renderPackOpeningScreen(triggerAnim: boolean = false): void {
     const packType = active.pack.packType;
     let packIcon = '🃏';
     if (packType === 'tarot') packIcon = '🔮';
+    else if (packType === 'cheat') packIcon = '🕶️';
     else if (packType === 'card') packIcon = '🎴';
     else if (packType === 'variety') packIcon = '🎲';
 
@@ -2292,28 +2426,38 @@ function uiBuyPack(idx: number): void {
   renderPackOpeningScreen(true);
 }
 
-function uiChoosePackOption(optIdx: number): void {
+function uiChoosePackOption(optIdx: number, targetCardUid?: number | string): void {
   if (isPlayfieldLocked) return;
-  const res = pickPackOption(optIdx);
+  const res = pickPackOption(optIdx, targetCardUid);
   if (!res.ok) {
     if (res.reason === 'jokers_full') alert('Joker slots full! Tap an active Joker at the top to sell it, or tap Skip Pack.');
-    if (res.reason === 'tarots_full') alert('Tarot slots full! Tap an active Tarot at the top to use/sell it, or tap Skip Pack.');
+    if (res.reason === 'tarots_full') alert('Consumable slots full! Tap an active card at the top to use/sell it, or tap Skip Pack.');
+    if (res.warning) alert(res.warning);
     return;
   }
   uiSkipPackAnimation();
   playCardDealSound();
   const overlay = $('ui-pack-overlay');
-  if (overlay) overlay.classList.add('hidden');
+  if (overlay) {
+    overlay.classList.add('hidden');
+    overlay.classList.remove('has-deck-hand');
+  }
 
-  let pickedName = '';
-  if (res.picked?.kind === 'joker') pickedName = res.picked.data.name;
-  else if (res.picked?.kind === 'tarot') pickedName = res.picked.data.name;
-  else if (res.picked?.kind === 'card') pickedName = `${res.picked.data.rank}${res.picked.data.suit}`;
+  let statusNote = '';
+  if (res.picked?.kind === 'joker') {
+    statusNote = `Added ${res.picked.data.name} to your collection!`;
+  } else if (res.picked?.kind === 'cheat') {
+    statusNote = `Added ${res.picked.data.name} to your collection!`;
+  } else if (res.picked?.kind === 'tarot') {
+    statusNote = res.message || `Used ${res.picked.data.name} on your deck!`;
+  } else if (res.picked?.kind === 'card') {
+    statusNote = `Added ${res.picked.data.rank}${res.picked.data.suit} to your collection!`;
+  }
 
-  setBanner(`Added ${pickedName} to your collection!`, 'Pit Boss Shop');
+  setBanner(statusNote, 'Pit Boss Shop');
   const payoutNote = document.getElementById('ui-shop-payout-note');
-  if (payoutNote && pickedName) {
-    payoutNote.textContent = `Added ${pickedName} to your collection!`;
+  if (payoutNote && statusNote) {
+    payoutNote.textContent = statusNote;
   }
   renderShop();
   updateAllUI();
@@ -2324,7 +2468,10 @@ function uiSkipPack(): void {
   uiSkipPackAnimation();
   skipPackOpening();
   const overlay = $('ui-pack-overlay');
-  if (overlay) overlay.classList.add('hidden');
+  if (overlay) {
+    overlay.classList.add('hidden');
+    overlay.classList.remove('has-deck-hand');
+  }
   setBanner('Skipped pack.', 'Pit Boss Shop');
   const payoutNote = document.getElementById('ui-shop-payout-note');
   if (payoutNote) {
@@ -3438,16 +3585,22 @@ function renderLibraryItems(): void {
     }
 
     if (currentLibraryCategory === 'tarots') {
-      grid.innerHTML = TAROT_CATALOG.map(t => `
-        <div class="lib-item-card lib-tarot-card" onclick="openLibraryDetail('tarots', '${t.id}')">
-          <div class="lib-item-watermark">🔮</div>
+      grid.innerHTML = TAROT_CATALOG.map(t => {
+        const isCheat = t.consumableType === 'cheat';
+        const icon = isCheat ? '🕶️' : '🔮';
+        const badgeText = isCheat ? 'CHEAT' : 'TAROT';
+        const tagText = isCheat ? 'IN-PLAY' : 'DECK SPELL';
+        const nameColor = isCheat ? '#fb7185' : '#d8b4fe';
+        return `
+        <div class="lib-item-card lib-tarot-card ${isCheat ? 'lib-cheat-card' : ''}" onclick="openLibraryDetail('tarots', '${t.id}')">
+          <div class="lib-item-watermark">${icon}</div>
           <div class="lib-item-header">
-            <span class="tarot-badge">TAROT</span>
-            <span class="lib-tag-pill">CONSUMABLE</span>
+            <span class="tarot-badge ${isCheat ? 'cheat-badge' : ''}">${badgeText}</span>
+            <span class="lib-tag-pill">${tagText}</span>
           </div>
           <div class="lib-item-main">
-            <span class="lib-item-icon">🔮</span>
-            <div class="lib-item-name" style="color:#d8b4fe;">${t.name}</div>
+            <span class="lib-item-icon">${icon}</span>
+            <div class="lib-item-name" style="color:${nameColor};">${t.name}</div>
           </div>
           <div class="lib-item-desc">${t.desc}</div>
           <div class="lib-item-footer">
@@ -3455,7 +3608,8 @@ function renderLibraryItems(): void {
             <span class="lib-item-action-hint">🔍 Inspect</span>
           </div>
         </div>
-      `).join('');
+        `;
+      }).join('');
 
     } else if (currentLibraryCategory === 'vouchers') {
       grid.innerHTML = VOUCHER_CATALOG.map(v => `
@@ -4167,6 +4321,8 @@ function renderRunStats(): void {
 (window as any).uiChoosePackOption = uiChoosePackOption;
 (window as any).uiSkipPack = uiSkipPack;
 (window as any).renderPackOpeningScreen = renderPackOpeningScreen;
+(window as any).renderPackDeckHand = renderPackDeckHand;
+(window as any).uiSelectPackDeckCard = uiSelectPackDeckCard;
 (window as any).uiPackNavNext = uiPackNavNext;
 (window as any).uiPackNavPrev = uiPackNavPrev;
 (window as any).uiSetPackActiveCard = uiSetPackActiveCard;

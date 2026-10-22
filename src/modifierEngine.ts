@@ -45,18 +45,32 @@ const JOKER_CATALOG: ReadonlyArray<JokerDef> = [
   { id: 'deja_vu', name: 'Deja Vu', cost: 8, rarity: 'rare', isXMult: true, icon: '🌀', archetype: 'mult', desc: '×1.5 Mult if your final hand total matches your final total from the previous hand.' }
 ];
 
-const TAROT_CATALOG: ReadonlyArray<TarotDef> = [
-  { id: 'x_ray', name: 'X-Ray Specs', cost: 3, desc: 'Reveal Dealer hole card and gain +75 Chips this hand.' },
-  { id: 'loaded_ace', name: 'Loaded Ace', cost: 4, desc: 'Draw a Foil Ace of Spades directly into your hand.' },
-  { id: 'card_shave', name: 'Card Shave', cost: 3, desc: 'Reduce the rank of a selected card by 3 (min 2).' },
-  { id: 'midas_touch', name: 'Midas Touch', cost: 3, desc: 'Enhance a selected card in hand to Gold (+$3 when scored).' },
-  { id: 'double_vision', name: 'Double Vision', cost: 3, desc: 'Apply Double Down (×2 Mult) to your active hand without forcing a Stand.' },
-  { id: 'polychrome_dice', name: 'Polychrome Dice', cost: 4, desc: 'Enhance a selected card in hand to Polychrome (×1.5 Mult).' },
-  { id: 'the_guillotine', name: 'The Guillotine', cost: 4, desc: 'Permanently destroy a selected card in your hand from your deck.' },
-  { id: 'card_forge', name: 'Card Forge', cost: 3, desc: 'Increase the rank of a selected card by 2.' },
-  { id: 'wild_suit', name: 'Prism Dye', cost: 3, desc: 'Enhance a selected card in hand to Foil (+30 Chips permanently).' },
-  { id: 'lucky_charm', name: 'Lucky Charm', cost: 4, desc: 'Enhance a selected card in hand to Holo (+4 Mult permanently).' }
+const DECK_TAROT_CATALOG: ReadonlyArray<TarotDef> = [
+  { id: 'midas_touch', name: 'Midas Touch', cost: 3, consumableType: 'tarot', desc: 'Enhance a selected card to Gold (+$3 when scored).' },
+  { id: 'polychrome_dice', name: 'Polychrome Dice', cost: 4, consumableType: 'tarot', desc: 'Enhance a selected card to Polychrome (×1.5 Mult).' },
+  { id: 'the_guillotine', name: 'The Guillotine', cost: 4, consumableType: 'tarot', desc: 'Permanently destroy a selected card from your deck.' },
+  { id: 'card_forge', name: 'Card Forge', cost: 3, consumableType: 'tarot', desc: 'Increase the rank of a selected card by 2.' },
+  { id: 'wild_suit', name: 'Prism Dye', cost: 3, consumableType: 'tarot', desc: 'Enhance a selected card to Foil (+30 Chips permanently).' },
+  { id: 'lucky_charm', name: 'Lucky Charm', cost: 4, consumableType: 'tarot', desc: 'Enhance a selected card to Holo (+4 Mult permanently).' }
 ];
+
+const CHEAT_CATALOG: ReadonlyArray<TarotDef> = [
+  { id: 'x_ray', name: 'X-Ray Specs', cost: 3, consumableType: 'cheat', desc: 'Reveal Dealer hole card and gain +75 Chips this hand.' },
+  { id: 'loaded_ace', name: 'Loaded Ace', cost: 4, consumableType: 'cheat', desc: 'Draw a Foil Ace of Spades directly into your hand.' },
+  { id: 'card_shave', name: 'Card Shave', cost: 3, consumableType: 'cheat', desc: 'Reduce the rank of a selected card by 3 (min 2).' },
+  { id: 'double_vision', name: 'Double Vision', cost: 3, consumableType: 'cheat', desc: 'Apply Double Down (×2 Mult) to your active hand without forcing a Stand.' }
+];
+
+const TAROT_CATALOG: ReadonlyArray<TarotDef> = [
+  ...CHEAT_CATALOG.slice(0, 3),
+  DECK_TAROT_CATALOG[0],
+  CHEAT_CATALOG[3],
+  ...DECK_TAROT_CATALOG.slice(1)
+];
+
+function isCheatConsumable(id: string): boolean {
+  return CHEAT_CATALOG.some(c => c.id === id);
+}
 
 function isTarotCardTargeted(tarotId: string): boolean {
   return [
@@ -536,8 +550,11 @@ function scoreHand(ctx: ScoreContext): ScoreResult {
 if (typeof window !== 'undefined') {
   (window as any).JOKER_CATALOG = JOKER_CATALOG;
   (window as any).TAROT_CATALOG = TAROT_CATALOG;
+  (window as any).DECK_TAROT_CATALOG = DECK_TAROT_CATALOG;
+  (window as any).CHEAT_CATALOG = CHEAT_CATALOG;
   (window as any).VOUCHER_CATALOG = VOUCHER_CATALOG;
   (window as any).BOSS_BLINDS = BOSS_BLINDS;
   (window as any).isTarotCardTargeted = isTarotCardTargeted;
   (window as any).isCardEligibleForTarot = isCardEligibleForTarot;
+  (window as any).isCheatConsumable = isCheatConsumable;
 }

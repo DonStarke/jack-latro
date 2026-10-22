@@ -313,7 +313,7 @@ function evaluateAndPickPackOption(
         const hasLow = simRun.deck.some(c => ['2', '3', '4', '5'].includes(c.rank));
         score = (botType === 'charlie') ? 2 : (hasLow ? 11 : 0);
       } else if (t.id === 'card_forge') {
-        const hasNonAce = simRun.deck.some(c => c.rank !== 'A');
+        const hasNonAce = simRun.deck.some(c => c.rank !== 'A' && c.rank !== 'K');
         score = hasNonAce ? 10 : 0;
       } else if (t.id === 'polychrome_dice') {
         const hasUnenhanced = simRun.deck.some(c => !c.enhancement);
@@ -324,17 +324,21 @@ function evaluateAndPickPackOption(
       } else if (t.id === 'wild_suit') {
         const hasUnenhanced = simRun.deck.some(c => !c.enhancement);
         score = hasUnenhanced ? 9 : 0;
+      } else if (t.id === 'midas_touch') {
+        const hasUnenhanced = simRun.deck.some(c => !c.enhancement);
+        score = hasUnenhanced ? 8 : 0;
       } else {
-        // Battle consumable
-        if (simRun.consumables.length < simRun.maxConsumables) {
-          if (t.id === 'double_vision') score = 9;
-          else if (t.id === 'loaded_ace') score = 8;
-          else if (t.id === 'x_ray') score = 7;
-          else if (t.id === 'midas_touch') score = 6;
-          else score = 5;
-        } else {
-          score = -1;
-        }
+        score = 6;
+      }
+    } else if (opt.kind === 'cheat') {
+      const c = opt.data;
+      if (simRun.consumables.length < simRun.maxConsumables) {
+        if (c.id === 'double_vision') score = 9;
+        else if (c.id === 'loaded_ace') score = 8;
+        else if (c.id === 'x_ray') score = 7;
+        else score = 6;
+      } else {
+        score = -1;
       }
     } else if (opt.kind === 'card') {
       const card = opt.data;
@@ -383,7 +387,7 @@ function evaluateAndPickPackOption(
       const lowIdx = simRun.deck.findIndex(c => ['2', '3', '4', '5'].includes(c.rank));
       if (lowIdx >= 0) simRun.deck.splice(lowIdx, 1);
     } else if (t.id === 'card_forge') {
-      const nonAce = simRun.deck.find(c => c.rank !== 'A');
+      const nonAce = simRun.deck.find(c => c.rank !== 'A' && c.rank !== 'K');
       if (nonAce) {
         const ranks: Rank[] = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
         const idx = ranks.indexOf(nonAce.rank);
@@ -398,10 +402,14 @@ function evaluateAndPickPackOption(
     } else if (t.id === 'polychrome_dice') {
       const unenhanced = simRun.deck.find(c => !c.enhancement);
       if (unenhanced) unenhanced.enhancement = 'poly';
-    } else {
-      if (simRun.consumables.length < simRun.maxConsumables) {
-        simRun.consumables.push(t.id);
-      }
+    } else if (t.id === 'midas_touch') {
+      const unenhanced = simRun.deck.find(c => !c.enhancement);
+      if (unenhanced) unenhanced.enhancement = 'gold';
+    }
+  } else if (chosen.kind === 'cheat') {
+    const c = chosen.data;
+    if (simRun.consumables.length < simRun.maxConsumables) {
+      simRun.consumables.push(c.id);
     }
   } else if (chosen.kind === 'card') {
     simRun.deck.push({
@@ -438,6 +446,12 @@ function scorePackPriority(pack: PackDef, simRun: SimRun, botType: BotType): num
     if (jokersNeeded >= 3) return 20;
     if (jokersNeeded >= 1) return 40;
     return 65;
+  }
+  if (pack.packType === 'cheat') {
+    if (simRun.consumables.length >= simRun.maxConsumables) return 5;
+    if (jokersNeeded >= 3) return 18;
+    if (jokersNeeded >= 1) return 38;
+    return 58;
   }
   if (pack.packType === 'card') {
     if (jokersNeeded >= 3) return 15;

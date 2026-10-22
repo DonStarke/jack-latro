@@ -87,7 +87,7 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   ck('Category choice for Card Effects exists', !!cardEffects);
   ck('Card Effects category displays "4 SPECIAL EFFECTS"', cardEffects && cardEffects.textContent.includes('4 SPECIAL EFFECTS'));
   ck('Category choice for Packs exists', !!cardPacks);
-  ck('Packs category displays "4 BOOSTER PACKS"', cardPacks && cardPacks.textContent.includes('4 BOOSTER PACKS'));
+  ck('Packs category displays "5 BOOSTER PACKS"', cardPacks && cardPacks.textContent.includes('5 BOOSTER PACKS'));
 
   console.log('\n--- TEST 3: NAVIGATING TO JOKERS CATEGORY & SUBFILTERS ---');
   cardJokers.click();
@@ -217,11 +217,12 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   w.switchLibraryCategory('packs');
   await sleep(50);
   ck('Packs category tab is active', $('lib-tab-packs').classList.contains('active'));
-  ck('Header title indicates BOOSTER PACKS (4)', titleEl.textContent.includes('PACKS'));
+  ck('Header title indicates BOOSTER PACKS (5)', titleEl.textContent.includes('PACKS'));
   const packCards = itemsGrid.querySelectorAll('.lib-pack-card');
-  ck('Items grid renders all 4 Booster Packs', packCards.length === 4);
+  ck('Items grid renders all 5 Booster Packs', packCards.length === 5);
   ck('Grid includes Joker Pack', itemsGrid.textContent.includes('Joker Pack'));
   ck('Grid includes Tarot Pack', itemsGrid.textContent.includes('Tarot Pack'));
+  ck('Grid includes Cheat Pack', itemsGrid.textContent.includes('Cheat Pack'));
   ck('Grid includes Playing Card Pack', itemsGrid.textContent.includes('Playing Card Pack'));
   ck('Grid includes Variety Pack', itemsGrid.textContent.includes('Variety Pack'));
 

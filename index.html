@@ -12,7 +12,7 @@
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="styles.css?v=0.12">
+<link rel="stylesheet" href="styles.css?v=0.13">
 <style>
   /* Critical fallback layout: ensures splash screen and modals are immediately fixed and centered */
   .splash-screen {
@@ -102,7 +102,7 @@
 
     <div class="splash-footer">
       <span>Ante 1–8 Progression • Endless Mode • Balatro-Inspired Roguelike</span>
-      <div class="splash-version" id="ui-splash-version">V0.12</div>
+      <div class="splash-version" id="ui-splash-version">V0.13</div>
     </div>
   </div>
 </div>
@@ -276,6 +276,15 @@
       </div>
 
       <div class="pack-nav-hint" id="ui-pack-nav-hint">Card 1 of 3 &bull; Swipe or click arrows to browse</div>
+
+      <!-- Deck Hand Tray for Tarot Pack immediate card modification -->
+      <div class="pack-deck-tray hidden" id="ui-pack-deck-area">
+        <div class="pack-deck-header">
+          <span class="pack-deck-label">🎴 DECK HAND (SELECT TARGET)</span>
+          <span class="pack-deck-target-status" id="ui-pack-deck-target-status">Tap a card below to target</span>
+        </div>
+        <div class="pack-deck-cards-row" id="ui-pack-deck-cards"></div>
+      </div>
 
       <div class="pack-opening-actions">
         <button class="btn btn-secondary btn-skip-pack" id="btn-skip-pack" onclick="uiSkipPack()">
@@ -821,7 +830,7 @@
       <button class="lib-tab-btn" id="lib-tab-tarots" onclick="switchLibraryCategory('tarots')">🔮 Tarots (10)</button>
       <button class="lib-tab-btn" id="lib-tab-vouchers" onclick="switchLibraryCategory('vouchers')">🎟️ Vouchers (10)</button>
       <button class="lib-tab-btn" id="lib-tab-effects" onclick="switchLibraryCategory('effects')">✨ Card Effects (4)</button>
-      <button class="lib-tab-btn" id="lib-tab-packs" onclick="switchLibraryCategory('packs')">📦 Packs (4)</button>
+      <button class="lib-tab-btn" id="lib-tab-packs" onclick="switchLibraryCategory('packs')">📦 Packs (5)</button>
     </div>
 
     <!-- VIEW 1: CATEGORY SELECTION MENU -->
@@ -889,13 +898,14 @@
         <div class="lib-cat-card cat-packs" id="lib-cat-card-packs" onclick="openLibraryCategory('packs')">
           <div class="lib-cat-header">
             <span class="lib-cat-icon">📦</span>
-            <span class="lib-cat-count-badge">4 BOOSTER PACKS</span>
+            <span class="lib-cat-count-badge">5 BOOSTER PACKS</span>
           </div>
           <div class="lib-cat-name">PACKS</div>
-          <div class="lib-cat-desc">Booster packs offered in the Pit Boss Shop. Open to draft powerful Jokers, Tarots, Enhanced Playing Cards, or mixed Variety.</div>
+          <div class="lib-cat-desc">Booster packs offered in the Pit Boss Shop. Open to draft powerful Jokers, Tarots, Table Cheats, Enhanced Playing Cards, or mixed Variety.</div>
           <div class="lib-cat-tags">
             <span class="lib-pill pill-blue">Joker Pack</span>
             <span class="lib-pill pill-purple">Tarot Pack</span>
+            <span class="lib-pill pill-mult">Cheat Pack</span>
             <span class="lib-pill pill-green">Variety Pack</span>
           </div>
           <div class="lib-cat-cta">BROWSE PACKS →</div>
@@ -963,12 +973,12 @@
 </div>
 
 <!-- Compiled TypeScript (npx.cmd tsc: src/*.ts -> dist/*.js). Plain global scripts; order matters. -->
-<script src="dist/gameState.js?v=0.12"></script>
-<script src="dist/deckEngine.js?v=0.12"></script>
-<script src="dist/modifierEngine.js?v=0.12"></script>
-<script src="dist/shopEngine.js?v=0.12"></script>
-<script src="dist/simulator.js?v=0.12"></script>
-<script src="dist/uiFx.js?v=0.12"></script>
-<script src="dist/main.js?v=0.12"></script>
+<script src="dist/gameState.js?v=0.13"></script>
+<script src="dist/deckEngine.js?v=0.13"></script>
+<script src="dist/modifierEngine.js?v=0.13"></script>
+<script src="dist/shopEngine.js?v=0.13"></script>
+<script src="dist/simulator.js?v=0.13"></script>
+<script src="dist/uiFx.js?v=0.13"></script>
+<script src="dist/main.js?v=0.13"></script>
 </body>
 </html>
