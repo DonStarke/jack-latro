@@ -145,6 +145,7 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   state.consumables = [{ id: 'the_guillotine', name: 'The Guillotine', cost: 4, desc: 'Permanently destroy a selected card' }];
   w.uiUseConsumable(0);
   w.uiSelectCardForTarot(destroyUid);
+  w.uiConfirmTarotTargeting();
 
   ck('Player hand length reduced by 1', state.playerHand.length === handLenBefore - 1);
   ck('Destroyed card removed from player hand', !state.playerHand.some(c => c.uid === destroyUid));

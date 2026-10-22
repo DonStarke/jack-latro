@@ -48,48 +48,80 @@ const JOKER_CATALOG: ReadonlyArray<JokerDef> = [
 const DECK_TAROT_CATALOG: ReadonlyArray<TarotDef> = [
   { id: 'midas_touch', name: 'Midas Touch', cost: 3, consumableType: 'tarot', desc: 'Enhance a selected card to Gold (+$3 when scored).' },
   { id: 'polychrome_dice', name: 'Polychrome Dice', cost: 4, consumableType: 'tarot', desc: 'Enhance a selected card to Polychrome (×1.5 Mult).' },
-  { id: 'the_guillotine', name: 'The Guillotine', cost: 4, consumableType: 'tarot', desc: 'Permanently destroy a selected card from your deck.' },
-  { id: 'card_forge', name: 'Card Forge', cost: 3, consumableType: 'tarot', desc: 'Increase the rank of a selected card by 2.' },
+  { id: 'the_guillotine', name: 'The Guillotine', cost: 4, consumableType: 'tarot', desc: 'Permanently destroy up to 2 selected cards from your deck.' },
+  { id: 'card_forge', name: 'Card Forge', cost: 3, consumableType: 'tarot', desc: 'Increase the rank of up to 2 selected cards by 1.' },
+  { id: 'card_shave', name: 'Card Shave', cost: 3, consumableType: 'tarot', desc: 'Reduce the rank of up to 2 selected cards by 1.' },
   { id: 'wild_suit', name: 'Prism Dye', cost: 3, consumableType: 'tarot', desc: 'Enhance a selected card to Foil (+30 Chips permanently).' },
-  { id: 'lucky_charm', name: 'Lucky Charm', cost: 4, consumableType: 'tarot', desc: 'Enhance a selected card to Holo (+4 Mult permanently).' }
+  { id: 'lucky_charm', name: 'Lucky Charm', cost: 4, consumableType: 'tarot', desc: 'Enhance a selected card to Holo (+4 Mult permanently).' },
+  { id: 'the_lovers', name: 'The Lovers', cost: 3, consumableType: 'tarot', desc: 'Change a selected card\'s suit to a Wild Suit (★) that counts as any suit.' },
+  { id: 'the_sun', name: 'The Sun', cost: 3, consumableType: 'tarot', desc: 'Convert up to 3 selected cards to Hearts (♥).' },
+  { id: 'the_star', name: 'The Star', cost: 3, consumableType: 'tarot', desc: 'Convert up to 3 selected cards to Diamonds (♦).' },
+  { id: 'the_moon', name: 'The Moon', cost: 3, consumableType: 'tarot', desc: 'Convert up to 3 selected cards to Clubs (♣).' },
+  { id: 'the_world', name: 'The World', cost: 3, consumableType: 'tarot', desc: 'Convert up to 3 selected cards to Spades (♠).' },
+  { id: 'judgement', name: 'Judgement', cost: 4, consumableType: 'tarot', desc: 'Create a random Joker (must have room in Joker slots).' },
+  { id: 'nostradamus', name: 'Nostradamus', cost: 4, consumableType: 'tarot', desc: 'Creates the last Tarot used (excluding Nostradamus).' }
 ];
 
 const CHEAT_CATALOG: ReadonlyArray<TarotDef> = [
   { id: 'x_ray', name: 'X-Ray Specs', cost: 3, consumableType: 'cheat', desc: 'Reveal Dealer hole card and gain +75 Chips this hand.' },
   { id: 'loaded_ace', name: 'Loaded Ace', cost: 4, consumableType: 'cheat', desc: 'Draw a Foil Ace of Spades directly into your hand.' },
-  { id: 'card_shave', name: 'Card Shave', cost: 3, consumableType: 'cheat', desc: 'Reduce the rank of a selected card by 3 (min 2).' },
   { id: 'double_vision', name: 'Double Vision', cost: 3, consumableType: 'cheat', desc: 'Apply Double Down (×2 Mult) to your active hand without forcing a Stand.' }
 ];
 
 const TAROT_CATALOG: ReadonlyArray<TarotDef> = [
-  ...CHEAT_CATALOG.slice(0, 3),
-  DECK_TAROT_CATALOG[0],
-  CHEAT_CATALOG[3],
-  ...DECK_TAROT_CATALOG.slice(1)
+  ...CHEAT_CATALOG,
+  ...DECK_TAROT_CATALOG
 ];
 
 function isCheatConsumable(id: string): boolean {
   return CHEAT_CATALOG.some(c => c.id === id);
 }
 
-function isTarotCardTargeted(tarotId: string): boolean {
-  return [
+function getTarotMaxCards(tarotId: string): number {
+  if (['the_sun', 'the_star', 'the_moon', 'the_world'].includes(tarotId)) {
+    return 3;
+  }
+  if (['card_forge', 'card_shave', 'the_guillotine'].includes(tarotId)) {
+    return 2;
+  }
+  if ([
     'midas_touch',
     'polychrome_dice',
+    'the_lovers',
     'wild_suit',
-    'lucky_charm',
-    'the_guillotine',
-    'card_shave',
-    'card_forge'
-  ].includes(tarotId);
+    'prism_dye',
+    'lucky_charm'
+  ].includes(tarotId)) {
+    return 1;
+  }
+  return 0;
+}
+
+function isTarotCardTargeted(tarotId: string): boolean {
+  return getTarotMaxCards(tarotId) > 0;
 }
 
 function isCardEligibleForTarot(tarotId: string, card: Card): boolean {
   if (tarotId === 'card_shave') {
-    return card.rank !== 'A' && card.rank !== '2';
+    return card.rank !== '2';
   }
   if (tarotId === 'card_forge') {
-    return card.rank !== 'A' && card.rank !== 'K';
+    return card.rank !== 'A';
+  }
+  if (tarotId === 'the_lovers') {
+    return card.suit !== '★';
+  }
+  if (tarotId === 'the_sun') {
+    return card.suit !== '♥';
+  }
+  if (tarotId === 'the_star') {
+    return card.suit !== '♦';
+  }
+  if (tarotId === 'the_moon') {
+    return card.suit !== '♣';
+  }
+  if (tarotId === 'the_world') {
+    return card.suit !== '♠';
   }
   return true;
 }
@@ -401,12 +433,12 @@ function scoreHand(ctx: ScoreContext): ScoreResult {
         break;
       }
       case 'red_velvet': {
-        const reds = hand.filter(c => c.suit === '♥' || c.suit === '♦').length;
+        const reds = hand.filter(c => c.suit === '♥' || c.suit === '♦' || c.suit === '★').length;
         if (reds > 0) { chips += reds * 35; logs.push(`Red +${reds * 35}c`); triggered = true; }
         break;
       }
       case 'dark_knight': {
-        const blacks = hand.filter(c => c.suit === '♠' || c.suit === '♣').length;
+        const blacks = hand.filter(c => c.suit === '♠' || c.suit === '♣' || c.suit === '★').length;
         if (blacks > 0) { mult += blacks * 3; chips += blacks * 10; logs.push(`Dark +${blacks * 10}c/+${blacks * 3}m`); triggered = true; }
         break;
       }
@@ -440,32 +472,36 @@ function scoreHand(ctx: ScoreContext): ScoreResult {
         break;
       }
       case 'spade_slicer': {
-        const spades = hand.filter(c => c.suit === '♠').length;
+        const spades = hand.filter(c => c.suit === '♠' || c.suit === '★').length;
         if (spades > 0) { chips += spades * 15; mult += spades * 5; logs.push(`Spades +${spades * 15}c/+${spades * 5}m`); triggered = true; }
         break;
       }
       case 'crimson_heart': {
-        const hearts = hand.filter(c => c.suit === '♥').length;
+        const hearts = hand.filter(c => c.suit === '♥' || c.suit === '★').length;
         if (hearts > 0) { chips += hearts * 40; mult += hearts * 2; logs.push(`Hearts +${hearts * 40}c/+${hearts * 2}m`); triggered = true; }
         break;
       }
       case 'diamond_cutter': {
         if (isWin) {
-          const diamonds = hand.filter(c => c.suit === '♦').length;
+          const diamonds = hand.filter(c => c.suit === '♦' || c.suit === '★').length;
           if (diamonds > 0) { chips += diamonds * 30; money += diamonds; logs.push(`Diamonds +${diamonds * 30}c/+$${diamonds}`); triggered = true; }
         }
         break;
       }
       case 'club_sandwich': {
         if (isWin) {
-          const clubs = hand.filter(c => c.suit === '♣').length;
+          const clubs = hand.filter(c => c.suit === '♣' || c.suit === '★').length;
           if (clubs > 0) { mult += clubs * 6; logs.push(`Clubs +${clubs * 6}m`); triggered = true; }
         }
         break;
       }
       case 'monochrome':
-        if (hand.length >= 3 && hand.every(c => c.suit === hand[0].suit)) {
-          mult = round1(mult * 1.6); logs.push('Monochrome ×1.6m'); triggered = true;
+        if (hand.length >= 3) {
+          const baseSuits: Suit[] = ['♠', '♥', '♣', '♦'];
+          const isMono = baseSuits.some(bs => hand.every(c => c.suit === bs || c.suit === '★'));
+          if (isMono) {
+            mult = round1(mult * 1.6); logs.push('Monochrome ×1.6m'); triggered = true;
+          }
         }
         break;
       case 'odd_ball': {
@@ -555,6 +591,7 @@ if (typeof window !== 'undefined') {
   (window as any).VOUCHER_CATALOG = VOUCHER_CATALOG;
   (window as any).BOSS_BLINDS = BOSS_BLINDS;
   (window as any).isTarotCardTargeted = isTarotCardTargeted;
+  (window as any).getTarotMaxCards = getTarotMaxCards;
   (window as any).isCardEligibleForTarot = isCardEligibleForTarot;
   (window as any).isCheatConsumable = isCheatConsumable;
 }

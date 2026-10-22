@@ -7,7 +7,7 @@
 ========================================================== */
 
 /* ---------- Shared types ---------- */
-type Suit = '♠' | '♥' | '♣' | '♦';
+type Suit = '♠' | '♥' | '♣' | '♦' | '★';
 type Rank = '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'J' | 'Q' | 'K' | 'A';
 type Enhancement = 'foil' | 'holo' | 'poly' | 'gold' | null;
 
@@ -117,6 +117,7 @@ interface ActivePackOpening {
   chosen: boolean;
   deckCards?: Card[];
   selectedDeckCardUid?: number | null;
+  selectedDeckCardUids?: number[];
 }
 
 type ShopJokerSlot = (JokerInstance & { shopType: 'joker'; bought: boolean }) | ShopTarot;
@@ -183,6 +184,10 @@ interface GameState {
   voucherAnte: number;
   /** The single voucher offered for this ante (persists across blinds until bought or next ante). */
   currentAnteVoucher: ShopVoucher | null;
+
+  /** Track the last tarot used for Nostradamus */
+  lastTarotUsedId?: string | null;
+  lastTarotUsedName?: string | null;
 
   /** Comprehensive run telemetry and statistics. */
   runStats: RunStats;
@@ -340,6 +345,8 @@ let _state: GameState = {
 
   voucherAnte: 0,
   currentAnteVoucher: null,
+  lastTarotUsedId: null,
+  lastTarotUsedName: null,
   runStats: createInitialRunStats()
 };
 
@@ -1182,6 +1189,8 @@ function resetRunState(freshDeck: Card[]): void {
   _state.currentAnteVoucher = null;
   _state.shopPacks = [];
   _state.activePackOpening = null;
+  _state.lastTarotUsedId = null;
+  _state.lastTarotUsedName = null;
   _state.roundCashEarned = 0;
   _state.runStats = createInitialRunStats();
   clearTarotsInHand();

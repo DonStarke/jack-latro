@@ -318,54 +318,89 @@ function drawPackDeckCards(deck: ReadonlyArray<Card>, count: number = 5): Card[]
   return picked.map(c => ({ ...c }));
 }
 
-function applyTarotToDeckCard(tarot: TarotDef, targetCard: Card): { ok: boolean; message?: string; warning?: string } {
-  if (!targetCard) return { ok: false, warning: 'No target card selected!' };
+function applyTarotToDeckCards(tarot: TarotDef, targetCards: Card[]): { ok: boolean; message?: string; warning?: string } {
+  if (!targetCards || targetCards.length === 0) return { ok: false, warning: 'No target card selected!' };
 
   let message = '';
   if (tarot.id === 'midas_touch') {
+    const targetCard = targetCards[0];
     setCardEnhancement(targetCard, 'gold');
     recordEffectEnhanced('gold');
     message = `${tarot.name}: ${targetCard.rank}${targetCard.suit} turned Gold (+$3 when scored)!`;
   } else if (tarot.id === 'polychrome_dice') {
+    const targetCard = targetCards[0];
     setCardEnhancement(targetCard, 'poly');
     recordEffectEnhanced('poly');
     message = `${tarot.name}: ${targetCard.rank}${targetCard.suit} enhanced to Polychrome (×1.5 Mult)!`;
-  } else if (tarot.id === 'wild_suit') {
+  } else if (tarot.id === 'wild_suit' || tarot.id === 'prism_dye') {
+    const targetCard = targetCards[0];
     setCardEnhancement(targetCard, 'foil');
     recordEffectEnhanced('foil');
     message = `${tarot.name}: ${targetCard.rank}${targetCard.suit} enhanced to Foil (+30 Chips)!`;
   } else if (tarot.id === 'lucky_charm') {
+    const targetCard = targetCards[0];
     setCardEnhancement(targetCard, 'holo');
     recordEffectEnhanced('holo');
     message = `${tarot.name}: ${targetCard.rank}${targetCard.suit} enhanced to Holo (+4 Mult)!`;
+  } else if (tarot.id === 'the_lovers') {
+    const targetCard = targetCards[0];
+    setCardSuit(targetCard, '★');
+    message = `${tarot.name}: ${targetCard.rank}★ turned Wild (counts as any suit)!`;
+  } else if (tarot.id === 'the_sun') {
+    targetCards.forEach(c => setCardSuit(c, '♥'));
+    message = `The Sun converted ${targetCards.length} card(s) to Hearts!`;
+  } else if (tarot.id === 'the_star') {
+    targetCards.forEach(c => setCardSuit(c, '♦'));
+    message = `The Star converted ${targetCards.length} card(s) to Diamonds!`;
+  } else if (tarot.id === 'the_moon') {
+    targetCards.forEach(c => setCardSuit(c, '♣'));
+    message = `The Moon converted ${targetCards.length} card(s) to Clubs!`;
+  } else if (tarot.id === 'the_world') {
+    targetCards.forEach(c => setCardSuit(c, '♠'));
+    message = `The World converted ${targetCards.length} card(s) to Spades!`;
   } else if (tarot.id === 'the_guillotine') {
-    const rankSuit = `${targetCard.rank}${targetCard.suit}`;
-    removeCardFromGame(targetCard.uid);
-    message = `The Guillotine permanently destroyed ${rankSuit} from your deck!`;
+    const names = targetCards.map(c => `${c.rank}${c.suit}`).join(', ');
+    targetCards.forEach(c => removeCardFromGame(c.uid));
+    message = `The Guillotine permanently destroyed ${names} from your deck!`;
   } else if (tarot.id === 'card_forge') {
-    if (targetCard.rank === 'A' || targetCard.rank === 'K') {
-      return { ok: false, warning: `${targetCard.rank === 'A' ? 'Aces' : 'Kings'} cannot be upgraded!` };
+    const rankOrder: Rank[] = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+    const upgradedNames: string[] = [];
+    for (const targetCard of targetCards) {
+      if (targetCard.rank === 'A') continue;
+      const curIdx = rankOrder.indexOf(targetCard.rank);
+      if (curIdx < rankOrder.length - 1) {
+        setCardRank(targetCard, rankOrder[curIdx + 1]);
+        upgradedNames.push(`${targetCard.rank}${targetCard.suit}`);
+      }
     }
-    const oldRankSuit = `${targetCard.rank}${targetCard.suit}`;
-    const rankOrder: Rank[] = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-    const curIdx = rankOrder.indexOf(targetCard.rank);
-    const newIdx = Math.min(rankOrder.length - 1, curIdx + 2);
-    setCardRank(targetCard, rankOrder[newIdx]);
-    message = `Card Forge upgraded ${oldRankSuit} to ${targetCard.rank}${targetCard.suit}!`;
+    if (upgradedNames.length === 0) {
+      return { ok: false, warning: 'Aces cannot be upgraded!' };
+    }
+    message = `Card Forge upgraded ${upgradedNames.join(', ')}!`;
   } else if (tarot.id === 'card_shave') {
-    if (targetCard.rank === 'A' || targetCard.rank === '2') {
-      return { ok: false, warning: 'This card cannot be shaved!' };
+    const rankOrder: Rank[] = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+    const shavedNames: string[] = [];
+    for (const targetCard of targetCards) {
+      if (targetCard.rank === '2') continue;
+      const curIdx = rankOrder.indexOf(targetCard.rank);
+      if (curIdx > 0) {
+        setCardRank(targetCard, rankOrder[curIdx - 1]);
+        shavedNames.push(`${targetCard.rank}${targetCard.suit}`);
+      }
     }
-    const oldRankSuit = `${targetCard.rank}${targetCard.suit}`;
-    const val = FACE_RANKS.includes(targetCard.rank) ? 10 : parseInt(targetCard.rank, 10);
-    const newRank = String(Math.max(2, val - 3)) as Rank;
-    setCardRank(targetCard, newRank);
-    message = `Card Shave reduced ${oldRankSuit} to ${targetCard.rank}${targetCard.suit}!`;
+    if (shavedNames.length === 0) {
+      return { ok: false, warning: 'This card cannot be shaved (already 2)!' };
+    }
+    message = `Card Shave reduced ${shavedNames.join(', ')}!`;
   } else {
     return { ok: false, warning: 'This card cannot be applied to deck cards!' };
   }
 
   return { ok: true, message };
+}
+
+function applyTarotToDeckCard(tarot: TarotDef, targetCard: Card): { ok: boolean; message?: string; warning?: string } {
+  return applyTarotToDeckCards(tarot, targetCard ? [targetCard] : []);
 }
 
 /** Pure helper to generate packs for a shop visit (shared with simulator). */
@@ -523,42 +558,58 @@ function buyAndOpenPack(idx: number): { ok: boolean; reason?: ShopFailReason; pa
       : deckCards[0];
     selectedDeckCardUid = defaultEligible ? defaultEligible.uid : null;
   }
+  const selectedDeckCardUids: number[] = selectedDeckCardUid !== null ? [selectedDeckCardUid] : [];
 
   const active: ActivePackOpening = {
     pack,
     options,
     chosen: false,
     deckCards,
-    selectedDeckCardUid
+    selectedDeckCardUid,
+    selectedDeckCardUids
   };
 
   patchState({ activePackOpening: active });
   return { ok: true, pack, options };
 }
 
-function selectPackDeckCard(cardUid: number | string | null): boolean {
+function selectPackDeckCard(cardUid: number | string | null, maxAllowed?: number): boolean {
   const s = getState();
   const active = s.activePackOpening;
   if (!active || !active.deckCards) return false;
+  if (!active.selectedDeckCardUids) {
+    active.selectedDeckCardUids = active.selectedDeckCardUid !== null && active.selectedDeckCardUid !== undefined
+      ? [active.selectedDeckCardUid]
+      : [];
+  }
   if (cardUid === null) {
     active.selectedDeckCardUid = null;
+    active.selectedDeckCardUids = [];
     patchState({ activePackOpening: { ...active } });
     return true;
   }
   const numUid = typeof cardUid === 'number' ? cardUid : Number(cardUid);
   const found = active.deckCards.find(c => c.uid === numUid);
   if (!found) return false;
-  if (active.selectedDeckCardUid === numUid) {
-    // Tapping the currently selected card deselects and lowers it
-    active.selectedDeckCardUid = null;
+
+  const max = maxAllowed !== undefined ? maxAllowed : 1;
+  const idx = active.selectedDeckCardUids.indexOf(numUid);
+  if (idx >= 0) {
+    // Tapping the currently selected card deselects it
+    active.selectedDeckCardUids.splice(idx, 1);
   } else {
-    active.selectedDeckCardUid = numUid;
+    if (max <= 1) {
+      active.selectedDeckCardUids = [numUid];
+    } else if (active.selectedDeckCardUids.length < max) {
+      active.selectedDeckCardUids.push(numUid);
+    }
   }
+  active.selectedDeckCardUid = active.selectedDeckCardUids.length > 0 ? active.selectedDeckCardUids[0] : null;
   patchState({ activePackOpening: { ...active } });
   return true;
 }
 
-function pickPackOption(optIdx: number, targetCardUid?: number | string): { ok: boolean; reason?: ShopFailReason; picked?: PackCardOption; targetCard?: Card; message?: string; warning?: string } {
+function pickPackOption(optIdx: number, targetCardUid?: number | string | (number | string)[]): { ok: boolean; reason?: ShopFailReason; picked?: PackCardOption; targetCard?: Card; message?: string; warning?: string } {
   const s = getState();
   const active = s.activePackOpening;
   if (!active || active.chosen) return { ok: false, reason: 'invalid' };
@@ -587,52 +638,90 @@ function pickPackOption(optIdx: number, targetCardUid?: number | string): { ok: 
     addConsumable({ ...opt.data, consumableType: 'cheat' });
     recordTarotAcquired(opt.data.id);
   } else if (opt.kind === 'tarot') {
-    // Balatro-style Tarot Pack: immediately use the picked Tarot on a selected card from the deck!
     const t = opt.data;
-    const pool = (active.deckCards && active.deckCards.length > 0) ? active.deckCards : s.deck;
-    const explicitUid = targetCardUid !== undefined
-      ? (typeof targetCardUid === 'number' ? targetCardUid : Number(targetCardUid))
-      : active.selectedDeckCardUid;
+    if (t.id === 'judgement') {
+      if (s.jokers.length >= s.maxJokers) {
+        return { ok: false, reason: 'jokers_full', warning: 'No room for another Joker (slots full)!' };
+      }
+      const ownedIds = s.jokers.map(j => j.id);
+      const unowned = JOKER_CATALOG.filter(j => !ownedIds.includes(j.id));
+      const chosen = unowned.length > 0 ? shuffle(unowned)[0] : shuffle(JOKER_CATALOG)[0];
+      addJoker({ ...chosen, bonusMult: 0, bonusChips: 0 });
+      recordJokerAcquired(chosen.id);
+      recordTarotAcquired(t.id);
+      recordTarotCast(t.id);
+      _state.runStats.tarotsUsed++;
+      patchState({ lastTarotUsedId: t.id, lastTarotUsedName: t.name });
+      resultMessage = `Judgement created ${chosen.name}!`;
+    } else if (t.id === 'nostradamus') {
+      if (!s.lastTarotUsedId || s.lastTarotUsedId === 'nostradamus') {
+        return { ok: false, reason: 'invalid', warning: 'Cannot be used: last tarot used was Nostradamus or none!' };
+      }
+      const prevDef = TAROT_CATALOG.find(x => x.id === s.lastTarotUsedId) || DECK_TAROT_CATALOG.find(x => x.id === s.lastTarotUsedId);
+      if (!prevDef) {
+        return { ok: false, reason: 'invalid', warning: 'Previous Tarot not found!' };
+      }
+      if (s.consumables.length >= s.maxConsumables) {
+        return { ok: false, reason: 'tarots_full', warning: 'No room in consumable inventory!' };
+      }
+      addConsumable({ ...prevDef });
+      recordTarotAcquired(prevDef.id);
+      recordTarotAcquired(t.id);
+      recordTarotCast(t.id);
+      _state.runStats.tarotsUsed++;
+      patchState({ lastTarotUsedId: t.id, lastTarotUsedName: t.name });
+      resultMessage = `Nostradamus created ${prevDef.name}!`;
+    } else {
+      // Card-targeted tarots
+      let uids: number[] = [];
+      if (Array.isArray(targetCardUid)) {
+        uids = targetCardUid.map(x => Number(x));
+      } else if (targetCardUid !== undefined && targetCardUid !== null) {
+        uids = [Number(targetCardUid)];
+      } else if (active.selectedDeckCardUids && active.selectedDeckCardUids.length > 0) {
+        uids = [...active.selectedDeckCardUids];
+      } else if (active.selectedDeckCardUid !== null && active.selectedDeckCardUid !== undefined) {
+        uids = [active.selectedDeckCardUid];
+      }
 
-    let target: Card | undefined;
-    if (active.deckCards && active.deckCards.length > 0) {
-      if (explicitUid === null || explicitUid === undefined) {
+      const pool = (active.deckCards && active.deckCards.length > 0) ? active.deckCards : s.deck;
+      let targets: Card[] = uids.map(uid => pool.find(c => c.uid === uid) || s.deck.find(c => c.uid === uid)).filter((c): c is Card => !!c);
+
+      // Filter to eligible
+      targets = targets.filter(c => isCardEligibleForTarot(t.id, c));
+
+      // Fallback if no cards in deck hand (e.g. mock test)
+      if (targets.length === 0 && (!active.deckCards || active.deckCards.length === 0)) {
+        const fallback = pool.find(c => isCardEligibleForTarot(t.id, c)) || s.deck.find(c => isCardEligibleForTarot(t.id, c));
+        if (fallback) targets = [fallback];
+      }
+
+      if (targets.length === 0) {
         return { ok: false, reason: 'invalid', warning: 'Please select a playing card from your deck hand below first!' };
       }
-      target = pool.find(c => c.uid === explicitUid) || s.deck.find(c => c.uid === explicitUid);
-      if (!target || !isCardEligibleForTarot(t.id, target)) {
-        return { ok: false, reason: 'invalid', warning: `The selected card is not eligible for ${t.name}!` };
+
+      const deckRefs = targets.map(tgt => s.deck.find(c => c.uid === tgt.uid) || tgt);
+      const applyRes = applyTarotToDeckCards(t, deckRefs);
+      if (!applyRes.ok) {
+        return { ok: false, reason: 'invalid', warning: applyRes.warning };
       }
-    } else {
-      target = explicitUid !== null && explicitUid !== undefined
-        ? pool.find(c => c.uid === explicitUid) || s.deck.find(c => c.uid === explicitUid)
-        : undefined;
-      if (!target || !isCardEligibleForTarot(t.id, target)) {
-        target = pool.find(c => isCardEligibleForTarot(t.id, c)) || s.deck.find(c => isCardEligibleForTarot(t.id, c));
-      }
+
+      // Sync active.deckCards copies with deck
+      targets.forEach((tgt, idx) => {
+        const ref = deckRefs[idx];
+        tgt.rank = ref.rank;
+        tgt.suit = ref.suit;
+        tgt.enhancement = ref.enhancement;
+      });
+
+      recordTarotAcquired(t.id);
+      recordTarotCast(t.id);
+      _state.runStats.tarotsUsed++;
+      patchState({ lastTarotUsedId: t.id, lastTarotUsedName: t.name });
+
+      modifiedCard = deckRefs[0];
+      resultMessage = applyRes.message;
     }
-
-    if (!target) {
-      return { ok: false, reason: 'invalid', warning: `No eligible card available for ${t.name}!` };
-    }
-
-    const deckRef = s.deck.find(c => c.uid === target!.uid) || target;
-    const applyRes = applyTarotToDeckCard(t, deckRef);
-    if (!applyRes.ok) {
-      return { ok: false, reason: 'invalid', warning: applyRes.warning };
-    }
-
-    // Keep active.deckCards copy in sync
-    target.rank = deckRef.rank;
-    target.suit = deckRef.suit;
-    target.enhancement = deckRef.enhancement;
-
-    recordTarotAcquired(t.id);
-    recordTarotCast(t.id);
-    _state.runStats.tarotsUsed++;
-
-    modifiedCard = deckRef;
-    resultMessage = applyRes.message;
   } else if (opt.kind === 'card') {
     const newCard: Card = { uid: takeNextCardUid(), rank: opt.data.rank, suit: opt.data.suit, enhancement: opt.data.enhancement };
     addCardToDeck(newCard);
@@ -738,17 +827,11 @@ interface ConsumableResult {
   warning?: string;
 }
 
-function useConsumable(index: number, targetCardUid?: number | string): ConsumableResult {
+function useConsumable(index: number, targetCardUid?: number | string | (number | string)[]): ConsumableResult {
   const s = getState();
   if (!s.inHand || s.isDealing) return { ok: false };
   const c = s.consumables[index];
   if (!c) return { ok: false };
-
-  const numUid = targetCardUid !== undefined ? (typeof targetCardUid === 'number' ? targetCardUid : Number(targetCardUid)) : undefined;
-  let targetCard = numUid !== undefined ? s.playerHand.find(card => card.uid === numUid) : undefined;
-  if (targetCardUid !== undefined && !targetCard) {
-    return { ok: false, warning: 'Selected card is not in your active hand!' };
-  }
 
   let message = '';
   if (c.id === 'x_ray') {
@@ -760,77 +843,142 @@ function useConsumable(index: number, targetCardUid?: number | string): Consumab
     addCardToPlayerHand(ace);
     recordEffectEnhanced('foil');
     message = 'Loaded Ace drawn into hand!';
-  } else if (c.id === 'card_shave') {
-    if (!targetCard) {
-      targetCard = s.playerHand.find(card => card.rank !== 'A' && card.rank !== '2') || s.playerHand.find(card => card.rank !== 'A');
-    }
-    if (!targetCard) return { ok: false, warning: 'No eligible high card available to shave!' };
-    if (targetCard.rank === 'A') return { ok: false, warning: 'Aces cannot be shaved!' };
-    const val = FACE_RANKS.includes(targetCard.rank) ? 10 : parseInt(targetCard.rank, 10);
-    const newRank = String(Math.max(2, val - 3)) as Rank;
-    setCardRank(targetCard, newRank);
-    message = `Card Shave reduced rank to ${targetCard.rank}!`;
-  } else if (c.id === 'midas_touch') {
-    if (!targetCard) {
-      targetCard = s.playerHand[s.playerHand.length - 1];
-    }
-    if (!targetCard) return { ok: false, warning: 'No card in hand to enhance!' };
-    setCardEnhancement(targetCard, 'gold');
-    recordEffectEnhanced('gold');
-    message = `${targetCard.rank}${targetCard.suit} turned Gold!`;
   } else if (c.id === 'double_vision') {
     patchState({ doubledDown: true });
     const dblMult = s.jokers.some(j => j.id === 'double_or_nothing') ? 3 : 2;
     message = `Double Vision: Hand Doubled Down (×${dblMult} Mult)!`;
-  } else if (c.id === 'polychrome_dice') {
-    if (!targetCard) {
-      targetCard = s.playerHand[0];
+  } else if (c.id === 'judgement') {
+    if (s.jokers.length >= s.maxJokers) {
+      return { ok: false, warning: 'No room for another Joker (slots full)!' };
     }
-    if (!targetCard) return { ok: false, warning: 'No card in hand to enhance!' };
-    setCardEnhancement(targetCard, 'poly');
-    recordEffectEnhanced('poly');
-    message = `${targetCard.rank}${targetCard.suit} enhanced to Polychrome (×1.5 Mult)!`;
-  } else if (c.id === 'the_guillotine') {
-    if (s.playerHand.length === 0) return { ok: false, warning: 'No card in hand to destroy!' };
-    if (!targetCard) {
-      targetCard = s.playerHand[0];
+    const ownedIds = s.jokers.map(j => j.id);
+    const unowned = JOKER_CATALOG.filter(j => !ownedIds.includes(j.id));
+    const chosen = unowned.length > 0 ? shuffle(unowned)[0] : shuffle(JOKER_CATALOG)[0];
+    addJoker({ ...chosen, bonusMult: 0, bonusChips: 0 });
+    recordJokerAcquired(chosen.id);
+    message = `Judgement summoned ${chosen.name}!`;
+  } else if (c.id === 'nostradamus') {
+    if (!s.lastTarotUsedId || s.lastTarotUsedId === 'nostradamus') {
+      return { ok: false, warning: 'Cannot be used: last tarot used was Nostradamus or none!' };
     }
-    removeCardFromGame(targetCard.uid);
-    message = `The Guillotine permanently destroyed ${targetCard.rank}${targetCard.suit}!`;
-  } else if (c.id === 'card_forge') {
-    if (!targetCard) {
-      const nonAces = s.playerHand.filter(card => card.rank !== 'A');
-      if (nonAces.length === 0) return { ok: false, warning: 'No non-Ace card in hand!' };
-      const rankOrder: Rank[] = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-      nonAces.sort((a, b) => rankOrder.indexOf(b.rank) - rankOrder.indexOf(a.rank));
-      targetCard = nonAces[0];
+    const prevDef = TAROT_CATALOG.find(x => x.id === s.lastTarotUsedId) || DECK_TAROT_CATALOG.find(x => x.id === s.lastTarotUsedId);
+    if (!prevDef) {
+      return { ok: false, warning: 'Previous Tarot not found!' };
     }
-    if (targetCard.rank === 'A') return { ok: false, warning: 'Aces cannot be upgraded!' };
-    const rankOrder: Rank[] = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-    const curIdx = rankOrder.indexOf(targetCard.rank);
-    const newIdx = Math.min(rankOrder.length - 1, curIdx + 2);
-    setCardRank(targetCard, rankOrder[newIdx]);
-    message = `Card Forge upgraded card to ${targetCard.rank}!`;
-  } else if (c.id === 'wild_suit') {
-    if (!targetCard) {
-      targetCard = s.playerHand[0];
+    removeConsumableAt(index);
+    addConsumable({ ...prevDef });
+    recordTarotAcquired(prevDef.id);
+    recordTarotCastInHand(c.id);
+    _state.runStats.tarotsUsed++;
+    patchState({ lastTarotUsedId: c.id, lastTarotUsedName: c.name });
+    return { ok: true, message: `Nostradamus created ${prevDef.name}!` };
+  } else {
+    // Card-targeted tarots
+    let uids: number[] = [];
+    if (Array.isArray(targetCardUid)) {
+      uids = targetCardUid.map(Number);
+    } else if (targetCardUid !== undefined && targetCardUid !== null) {
+      uids = [Number(targetCardUid)];
     }
-    if (!targetCard) return { ok: false, warning: 'No card in hand to enhance!' };
-    setCardEnhancement(targetCard, 'foil');
-    recordEffectEnhanced('foil');
-    message = `${targetCard.rank}${targetCard.suit} enhanced to Foil (+30 Chips)!`;
-  } else if (c.id === 'lucky_charm') {
-    if (!targetCard) {
-      targetCard = s.playerHand[s.playerHand.length - 1];
+
+    let targetCards: Card[] = [];
+    if (uids.length > 0) {
+      for (const u of uids) {
+        const found = s.playerHand.find(card => card.uid === u);
+        if (!found) {
+          return { ok: false, warning: 'Selected card is not in your active hand!' };
+        }
+        targetCards.push(found);
+      }
+    } else {
+      const max = getTarotMaxCards(c.id) || 1;
+      const eligible = s.playerHand.filter(card => isCardEligibleForTarot(c.id, card));
+      if (eligible.length === 0) {
+        return { ok: false, warning: `No eligible card in hand for ${c.name}!` };
+      }
+      targetCards = eligible.slice(0, max);
     }
-    if (!targetCard) return { ok: false, warning: 'No card in hand to enhance!' };
-    setCardEnhancement(targetCard, 'holo');
-    recordEffectEnhanced('holo');
-    message = `${targetCard.rank}${targetCard.suit} enhanced to Holo (+4 Mult)!`;
+
+    if (targetCards.length === 0) {
+      return { ok: false, warning: 'No eligible card selected!' };
+    }
+
+    for (const card of targetCards) {
+      if (!isCardEligibleForTarot(c.id, card)) {
+        return { ok: false, warning: `Card ${card.rank}${card.suit} is not eligible for ${c.name}!` };
+      }
+    }
+
+    if (c.id === 'midas_touch') {
+      const tc = targetCards[0];
+      setCardEnhancement(tc, 'gold');
+      recordEffectEnhanced('gold');
+      message = `${tc.rank}${tc.suit} turned Gold!`;
+    } else if (c.id === 'polychrome_dice') {
+      const tc = targetCards[0];
+      setCardEnhancement(tc, 'poly');
+      recordEffectEnhanced('poly');
+      message = `${tc.rank}${tc.suit} enhanced to Polychrome (×1.5 Mult)!`;
+    } else if (c.id === 'wild_suit' || c.id === 'prism_dye') {
+      const tc = targetCards[0];
+      setCardEnhancement(tc, 'foil');
+      recordEffectEnhanced('foil');
+      message = `${tc.rank}${tc.suit} enhanced to Foil (+30 Chips)!`;
+    } else if (c.id === 'lucky_charm') {
+      const tc = targetCards[0];
+      setCardEnhancement(tc, 'holo');
+      recordEffectEnhanced('holo');
+      message = `${tc.rank}${tc.suit} enhanced to Holo (+4 Mult)!`;
+    } else if (c.id === 'the_lovers') {
+      const tc = targetCards[0];
+      setCardSuit(tc, '★');
+      message = `${tc.rank}★ turned Wild!`;
+    } else if (c.id === 'the_sun') {
+      targetCards.forEach(tc => setCardSuit(tc, '♥'));
+      message = `The Sun converted ${targetCards.length} card(s) to Hearts!`;
+    } else if (c.id === 'the_star') {
+      targetCards.forEach(tc => setCardSuit(tc, '♦'));
+      message = `The Star converted ${targetCards.length} card(s) to Diamonds!`;
+    } else if (c.id === 'the_moon') {
+      targetCards.forEach(tc => setCardSuit(tc, '♣'));
+      message = `The Moon converted ${targetCards.length} card(s) to Clubs!`;
+    } else if (c.id === 'the_world') {
+      targetCards.forEach(tc => setCardSuit(tc, '♠'));
+      message = `The World converted ${targetCards.length} card(s) to Spades!`;
+    } else if (c.id === 'the_guillotine') {
+      const names = targetCards.map(tc => `${tc.rank}${tc.suit}`).join(', ');
+      targetCards.forEach(tc => removeCardFromGame(tc.uid));
+      message = `The Guillotine permanently destroyed ${names}!`;
+    } else if (c.id === 'card_forge') {
+      const rankOrder: Rank[] = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+      const upgraded: string[] = [];
+      for (const tc of targetCards) {
+        if (tc.rank === 'A') continue;
+        const curIdx = rankOrder.indexOf(tc.rank);
+        if (curIdx < rankOrder.length - 1) {
+          setCardRank(tc, rankOrder[curIdx + 1]);
+          upgraded.push(`${tc.rank}${tc.suit}`);
+        }
+      }
+      message = `Card Forge upgraded ${upgraded.join(', ')}!`;
+    } else if (c.id === 'card_shave') {
+      const rankOrder: Rank[] = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+      const shaved: string[] = [];
+      for (const tc of targetCards) {
+        if (tc.rank === '2') continue;
+        const curIdx = rankOrder.indexOf(tc.rank);
+        if (curIdx > 0) {
+          setCardRank(tc, rankOrder[curIdx - 1]);
+          shaved.push(`${tc.rank}${tc.suit}`);
+        }
+      }
+      message = `Card Shave reduced ${shaved.join(', ')}!`;
+    }
   }
 
   recordTarotCastInHand(c.id);
   _state.runStats.tarotsUsed++;
+  patchState({ lastTarotUsedId: c.id, lastTarotUsedName: c.name });
   removeConsumableAt(index);
   return { ok: true, message };
 }
@@ -838,5 +986,6 @@ function useConsumable(index: number, targetCardUid?: number | string): Consumab
 if (typeof window !== 'undefined') {
   (window as any).useConsumable = useConsumable;
   (window as any).selectPackDeckCard = selectPackDeckCard;
+  (window as any).applyTarotToDeckCards = applyTarotToDeckCards;
   (window as any).applyTarotToDeckCard = applyTarotToDeckCard;
 }

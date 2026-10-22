@@ -313,15 +313,27 @@ function evaluateAndPickPackOption(
         const hasLow = simRun.deck.some(c => ['2', '3', '4', '5'].includes(c.rank));
         score = (botType === 'charlie') ? 2 : (hasLow ? 11 : 0);
       } else if (t.id === 'card_forge') {
-        const hasNonAce = simRun.deck.some(c => c.rank !== 'A' && c.rank !== 'K');
+        const hasNonAce = simRun.deck.some(c => c.rank !== 'A');
         score = hasNonAce ? 10 : 0;
+      } else if (t.id === 'card_shave') {
+        const hasHigh = simRun.deck.some(c => c.rank !== '2');
+        score = (botType === 'charlie') ? 10 : (hasHigh ? 8 : 0);
+      } else if (t.id === 'the_lovers') {
+        const hasNonWild = simRun.deck.some(c => c.suit !== '★');
+        score = hasNonWild ? 12 : 0;
+      } else if (['the_sun', 'the_star', 'the_moon', 'the_world'].includes(t.id)) {
+        score = 9;
+      } else if (t.id === 'judgement') {
+        score = simRun.jokers.length < simRun.maxJokers ? 11 : 0;
+      } else if (t.id === 'nostradamus') {
+        score = 8;
       } else if (t.id === 'polychrome_dice') {
         const hasUnenhanced = simRun.deck.some(c => !c.enhancement);
         score = hasUnenhanced ? 12 : 0;
       } else if (t.id === 'lucky_charm') {
         const hasUnenhanced = simRun.deck.some(c => !c.enhancement);
         score = hasUnenhanced ? 10 : 0;
-      } else if (t.id === 'wild_suit') {
+      } else if (t.id === 'wild_suit' || t.id === 'prism_dye') {
         const hasUnenhanced = simRun.deck.some(c => !c.enhancement);
         score = hasUnenhanced ? 9 : 0;
       } else if (t.id === 'midas_touch') {
@@ -384,16 +396,43 @@ function evaluateAndPickPackOption(
   } else if (chosen.kind === 'tarot') {
     const t = chosen.data;
     if (t.id === 'the_guillotine') {
-      const lowIdx = simRun.deck.findIndex(c => ['2', '3', '4', '5'].includes(c.rank));
-      if (lowIdx >= 0) simRun.deck.splice(lowIdx, 1);
-    } else if (t.id === 'card_forge') {
-      const nonAce = simRun.deck.find(c => c.rank !== 'A' && c.rank !== 'K');
-      if (nonAce) {
-        const ranks: Rank[] = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-        const idx = ranks.indexOf(nonAce.rank);
-        if (idx >= 0) nonAce.rank = ranks[Math.min(ranks.length - 1, idx + 2)];
+      for (let i = 0; i < 2; i++) {
+        const lowIdx = simRun.deck.findIndex(c => ['2', '3', '4', '5'].includes(c.rank));
+        if (lowIdx >= 0) simRun.deck.splice(lowIdx, 1);
       }
-    } else if (t.id === 'wild_suit') {
+    } else if (t.id === 'card_forge') {
+      const ranks: Rank[] = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+      const nonAces = simRun.deck.filter(c => c.rank !== 'A').slice(0, 2);
+      for (const nonAce of nonAces) {
+        const idx = ranks.indexOf(nonAce.rank);
+        if (idx >= 0 && idx < ranks.length - 1) nonAce.rank = ranks[idx + 1];
+      }
+    } else if (t.id === 'card_shave') {
+      const ranks: Rank[] = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+      const nonTwos = simRun.deck.filter(c => c.rank !== '2').slice(0, 2);
+      for (const nonTwo of nonTwos) {
+        const idx = ranks.indexOf(nonTwo.rank);
+        if (idx > 0) nonTwo.rank = ranks[idx - 1];
+      }
+    } else if (t.id === 'the_lovers') {
+      const nonWild = simRun.deck.find(c => c.suit !== '★');
+      if (nonWild) nonWild.suit = '★';
+    } else if (t.id === 'the_sun') {
+      simRun.deck.filter(c => c.suit !== '♥').slice(0, 3).forEach(c => { c.suit = '♥'; });
+    } else if (t.id === 'the_star') {
+      simRun.deck.filter(c => c.suit !== '♦').slice(0, 3).forEach(c => { c.suit = '♦'; });
+    } else if (t.id === 'the_moon') {
+      simRun.deck.filter(c => c.suit !== '♣').slice(0, 3).forEach(c => { c.suit = '♣'; });
+    } else if (t.id === 'the_world') {
+      simRun.deck.filter(c => c.suit !== '♠').slice(0, 3).forEach(c => { c.suit = '♠'; });
+    } else if (t.id === 'judgement') {
+      if (simRun.jokers.length < simRun.maxJokers) {
+        const owned = simRun.jokers.map(j => j.id);
+        const pool = JOKER_CATALOG.filter(j => !owned.includes(j.id));
+        const rolled = pool.length > 0 ? shuffle(pool)[0] : shuffle(JOKER_CATALOG)[0];
+        simRun.jokers.push({ ...rolled, bonusMult: 0, bonusChips: 0 });
+      }
+    } else if (t.id === 'wild_suit' || t.id === 'prism_dye') {
       const unenhanced = simRun.deck.find(c => !c.enhancement);
       if (unenhanced) unenhanced.enhancement = 'foil';
     } else if (t.id === 'lucky_charm') {

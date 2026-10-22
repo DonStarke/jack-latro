@@ -122,7 +122,7 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   ck('Window title is exactly Jack-latro', d.title === 'Jack-latro');
   const splashVer = $('ui-splash-version');
   ck('Splash screen has version badge element', splashVer !== null);
-  ck('Splash screen version badge displays V0.13.1', splashVer && splashVer.textContent.includes('V0.13.1'));
+  ck('Splash screen version badge displays V0.14', splashVer && splashVer.textContent.includes('V0.14'));
   ck('playPackOpenBurstSound is exposed on window', typeof w.playPackOpenBurstSound === 'function');
   ck('stopPackRipSound is exposed on window', typeof w.stopPackRipSound === 'function');
 

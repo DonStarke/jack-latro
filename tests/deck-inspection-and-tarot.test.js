@@ -108,9 +108,10 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   w.uiUseConsumable(0);
   ck('Card Shave activated card targeting mode', w.isTarotTargetingActive());
   w.uiSelectCardForTarot(tenCardUid);
+  w.uiConfirmTarotTargeting();
   const shavedDeckCard = state.deck.find(c => c.uid === tenCardUid);
-  ck('Card Shave reduced rank on hand card', tenCard.rank === '7');
-  ck('Card Shave synchronized reduced rank to deck card', shavedDeckCard && shavedDeckCard.rank === '7');
+  ck('Card Shave reduced rank on hand card', tenCard.rank === '9');
+  ck('Card Shave synchronized reduced rank to deck card', shavedDeckCard && shavedDeckCard.rank === '9');
 
   // Test Tarot use: Midas Touch targeting specific card
   const midasCard = { uid: w.takeNextCardUid(), rank: '9', suit: '♦', enhancement: null };
