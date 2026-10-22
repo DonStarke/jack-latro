@@ -878,6 +878,11 @@
     filter: grayscale(65%);
     border-style: dashed;
   }
+  .deck-show-all .playing-card.deck-mini.dealt-out {
+    opacity: 1 !important;
+    filter: none !important;
+    border-style: solid !important;
+  }
 
   .deck-suit-row {
     display: flex;

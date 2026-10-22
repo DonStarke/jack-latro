@@ -384,6 +384,77 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   const nostradamusFail = w.useConsumable(0);
   ck('Nostradamus cannot be used if last tarot was Nostradamus', !nostradamusFail.ok && nostradamusFail.warning.includes('Nostradamus'));
 
+  console.log('\n--- TEST 10: TAROT MAX CARDS & 2-CARD ENHANCEMENTS (POLY, FOIL, HOLO VS 1-CARD GOLD) ---');
+  ck('Polychrome Dice max cards is 2', w.getTarotMaxCards('polychrome_dice') === 2);
+  ck('Prism Dye (wild_suit) max cards is 2', w.getTarotMaxCards('wild_suit') === 2);
+  ck('Lucky Charm max cards is 2', w.getTarotMaxCards('lucky_charm') === 2);
+  ck('Midas Touch max cards remains 1', w.getTarotMaxCards('midas_touch') === 1);
+  ck('The Lovers max cards remains 1', w.getTarotMaxCards('the_lovers') === 1);
+
+  const testHandCards = [
+    { uid: 601, rank: '9', suit: '♠', enhancement: null },
+    { uid: 602, rank: '8', suit: '♥', enhancement: null }
+  ];
+  w.patchState({
+    inHand: true,
+    isDealing: false,
+    playerHand: testHandCards.map(c => ({ ...c })),
+    deck: testHandCards.map(c => ({ ...c })),
+    consumables: [{ id: 'polychrome_dice', name: 'Polychrome Dice', cost: 4, desc: 'Enhance up to 2 cards to Poly' }]
+  });
+  w.uiUseConsumable(0);
+  w.uiSelectCardForTarot(601);
+  w.uiSelectCardForTarot(602);
+  w.uiConfirmTarotTargeting();
+  ck('Card 601 enhanced to poly', w.getState().playerHand.find(c => c.uid === 601).enhancement === 'poly');
+  ck('Card 602 enhanced to poly', w.getState().playerHand.find(c => c.uid === 602).enhancement === 'poly');
+
+  console.log('\n--- TEST 11: JUDGEMENT & NOSTRADAMUS PERMIT SELECTED CARDS IN PACK TRAY & SAME-SUIT ALLOWED ---');
+  // In tarot pack with cards selected, Judgement still works
+  const packDeck = [
+    { uid: 701, rank: '4', suit: '♥', enhancement: null },
+    { uid: 702, rank: '5', suit: '♦', enhancement: null }
+  ];
+  w.patchState({
+    maxJokers: 5,
+    jokers: [],
+    deck: packDeck.map(c => ({ ...c })),
+    activePackOpening: {
+      pack: { id: 'pack_tarot_test', name: 'Arcana Pack', packType: 'tarot', cost: 4, count: 2, desc: '' },
+      options: [
+        { kind: 'tarot', data: { id: 'judgement', name: 'Judgement', cost: 4, desc: 'Random Joker' } },
+        { kind: 'tarot', data: { id: 'the_sun', name: 'The Sun', cost: 3, desc: 'Convert up to 3 cards to Hearts' } }
+      ],
+      deckCards: packDeck.map(c => ({ ...c })),
+      selectedDeckCardUids: [701, 702],
+      selectedDeckCardUid: 702,
+      chosen: false
+    }
+  });
+
+  const judgePackRes = w.pickPackOption(0);
+  ck('Judgement succeeds in pack even when deck cards are selected in tray', judgePackRes.ok === true);
+  ck('Judgement added a joker to collection', w.getState().jokers.length === 1);
+
+  // The Sun targeting card that already has Hearts (701 is already ♥)
+  w.patchState({
+    deck: packDeck.map(c => ({ ...c })),
+    activePackOpening: {
+      pack: { id: 'pack_tarot_test2', name: 'Arcana Pack', packType: 'tarot', cost: 4, count: 1, desc: '' },
+      options: [
+        { kind: 'tarot', data: { id: 'the_sun', name: 'The Sun', cost: 3, desc: 'Convert up to 3 cards to Hearts' } }
+      ],
+      deckCards: packDeck.map(c => ({ ...c })),
+      selectedDeckCardUids: [701, 702],
+      selectedDeckCardUid: 702,
+      chosen: false
+    }
+  });
+
+  const sunSameSuitRes = w.pickPackOption(0);
+  ck('The Sun succeeds on a card that already has Hearts', sunSameSuitRes.ok === true);
+  ck('Both cards now Hearts', w.getState().deck.every(c => c.suit === '♥'));
+
   console.log('\n--- ALL NEW TAROT TESTS COMPLETED ---');
   results.forEach(r => console.log(r));
 

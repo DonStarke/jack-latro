@@ -328,20 +328,26 @@ function applyTarotToDeckCards(tarot: TarotDef, targetCards: Card[]): { ok: bool
     recordEffectEnhanced('gold');
     message = `${tarot.name}: ${targetCard.rank}${targetCard.suit} turned Gold (+$3 when scored)!`;
   } else if (tarot.id === 'polychrome_dice') {
-    const targetCard = targetCards[0];
-    setCardEnhancement(targetCard, 'poly');
-    recordEffectEnhanced('poly');
-    message = `${tarot.name}: ${targetCard.rank}${targetCard.suit} enhanced to Polychrome (×1.5 Mult)!`;
+    targetCards.forEach(c => {
+      setCardEnhancement(c, 'poly');
+      recordEffectEnhanced('poly');
+    });
+    const names = targetCards.map(c => `${c.rank}${c.suit}`).join(', ');
+    message = `Polychrome Dice enhanced ${names} to Polychrome (×1.5 Mult)!`;
   } else if (tarot.id === 'wild_suit' || tarot.id === 'prism_dye') {
-    const targetCard = targetCards[0];
-    setCardEnhancement(targetCard, 'foil');
-    recordEffectEnhanced('foil');
-    message = `${tarot.name}: ${targetCard.rank}${targetCard.suit} enhanced to Foil (+30 Chips)!`;
+    targetCards.forEach(c => {
+      setCardEnhancement(c, 'foil');
+      recordEffectEnhanced('foil');
+    });
+    const names = targetCards.map(c => `${c.rank}${c.suit}`).join(', ');
+    message = `Prism Dye enhanced ${names} to Foil (+30 Chips)!`;
   } else if (tarot.id === 'lucky_charm') {
-    const targetCard = targetCards[0];
-    setCardEnhancement(targetCard, 'holo');
-    recordEffectEnhanced('holo');
-    message = `${tarot.name}: ${targetCard.rank}${targetCard.suit} enhanced to Holo (+4 Mult)!`;
+    targetCards.forEach(c => {
+      setCardEnhancement(c, 'holo');
+      recordEffectEnhanced('holo');
+    });
+    const names = targetCards.map(c => `${c.rank}${c.suit}`).join(', ');
+    message = `Lucky Charm enhanced ${names} to Holo (+4 Mult)!`;
   } else if (tarot.id === 'the_lovers') {
     const targetCard = targetCards[0];
     setCardSuit(targetCard, '★');
@@ -596,7 +602,7 @@ function selectPackDeckCard(cardUid: number | string | null): boolean {
   return true;
 }
 
-function pickPackOption(optIdx: number, targetCardUid?: number | string | (number | string)[]): { ok: boolean; reason?: ShopFailReason; picked?: PackCardOption; targetCard?: Card; message?: string; warning?: string } {
+function pickPackOption(optIdx: number, targetCardUid?: number | string | (number | string)[]): { ok: boolean; reason?: ShopFailReason; picked?: PackCardOption; targetCard?: Card; targetCards?: Card[]; message?: string; warning?: string } {
   const s = getState();
   const active = s.activePackOpening;
   if (!active || active.chosen) return { ok: false, reason: 'invalid' };
@@ -606,6 +612,7 @@ function pickPackOption(optIdx: number, targetCardUid?: number | string | (numbe
 
   let resultMessage: string | undefined;
   let modifiedCard: Card | undefined;
+  let targetCardsResult: Card[] = [];
 
   if (opt.kind === 'joker') {
     if (s.jokers.length >= s.maxJokers) {
@@ -639,9 +646,6 @@ function pickPackOption(optIdx: number, targetCardUid?: number | string | (numbe
     }
 
     if (max === 0) {
-      if (uids.length > 0) {
-        return { ok: false, reason: 'invalid', warning: `${t.name} does not target playing cards. Deselect cards first!` };
-      }
       if (t.id === 'judgement') {
         if (s.jokers.length >= s.maxJokers) {
           return { ok: false, reason: 'jokers_full', warning: 'No room for another Joker (slots full)!' };
@@ -724,6 +728,7 @@ function pickPackOption(optIdx: number, targetCardUid?: number | string | (numbe
       patchState({ lastTarotUsedId: t.id, lastTarotUsedName: t.name });
 
       modifiedCard = deckRefs[0];
+      targetCardsResult = deckRefs;
       resultMessage = applyRes.message;
     }
   } else if (opt.kind === 'card') {
@@ -738,7 +743,7 @@ function pickPackOption(optIdx: number, targetCardUid?: number | string | (numbe
   recordPackCardDrafted(active.pack.id);
   active.chosen = true;
   patchState({ activePackOpening: null });
-  return { ok: true, picked: opt, targetCard: modifiedCard, message: resultMessage };
+  return { ok: true, picked: opt, targetCard: modifiedCard, targetCards: targetCardsResult, message: resultMessage };
 }
 
 function skipPackOpening(): boolean {
@@ -923,20 +928,26 @@ function useConsumable(index: number, targetCardUid?: number | string | (number 
       recordEffectEnhanced('gold');
       message = `${tc.rank}${tc.suit} turned Gold!`;
     } else if (c.id === 'polychrome_dice') {
-      const tc = targetCards[0];
-      setCardEnhancement(tc, 'poly');
-      recordEffectEnhanced('poly');
-      message = `${tc.rank}${tc.suit} enhanced to Polychrome (×1.5 Mult)!`;
+      targetCards.forEach(tc => {
+        setCardEnhancement(tc, 'poly');
+        recordEffectEnhanced('poly');
+      });
+      const names = targetCards.map(tc => `${tc.rank}${tc.suit}`).join(', ');
+      message = `Polychrome Dice enhanced ${names} to Polychrome (×1.5 Mult)!`;
     } else if (c.id === 'wild_suit' || c.id === 'prism_dye') {
-      const tc = targetCards[0];
-      setCardEnhancement(tc, 'foil');
-      recordEffectEnhanced('foil');
-      message = `${tc.rank}${tc.suit} enhanced to Foil (+30 Chips)!`;
+      targetCards.forEach(tc => {
+        setCardEnhancement(tc, 'foil');
+        recordEffectEnhanced('foil');
+      });
+      const names = targetCards.map(tc => `${tc.rank}${tc.suit}`).join(', ');
+      message = `Prism Dye enhanced ${names} to Foil (+30 Chips)!`;
     } else if (c.id === 'lucky_charm') {
-      const tc = targetCards[0];
-      setCardEnhancement(tc, 'holo');
-      recordEffectEnhanced('holo');
-      message = `${tc.rank}${tc.suit} enhanced to Holo (+4 Mult)!`;
+      targetCards.forEach(tc => {
+        setCardEnhancement(tc, 'holo');
+        recordEffectEnhanced('holo');
+      });
+      const names = targetCards.map(tc => `${tc.rank}${tc.suit}`).join(', ');
+      message = `Lucky Charm enhanced ${names} to Holo (+4 Mult)!`;
     } else if (c.id === 'the_lovers') {
       const tc = targetCards[0];
       setCardSuit(tc, '★');

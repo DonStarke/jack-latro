@@ -47,12 +47,12 @@ const JOKER_CATALOG: ReadonlyArray<JokerDef> = [
 
 const DECK_TAROT_CATALOG: ReadonlyArray<TarotDef> = [
   { id: 'midas_touch', name: 'Midas Touch', cost: 3, consumableType: 'tarot', desc: 'Enhance a selected card to Gold (+$3 when scored).' },
-  { id: 'polychrome_dice', name: 'Polychrome Dice', cost: 4, consumableType: 'tarot', desc: 'Enhance a selected card to Polychrome (×1.5 Mult).' },
+  { id: 'polychrome_dice', name: 'Polychrome Dice', cost: 4, consumableType: 'tarot', desc: 'Enhance up to 2 selected cards to Polychrome (×1.5 Mult).' },
   { id: 'the_guillotine', name: 'The Guillotine', cost: 4, consumableType: 'tarot', desc: 'Permanently destroy up to 2 selected cards from your deck.' },
   { id: 'card_forge', name: 'Card Forge', cost: 3, consumableType: 'tarot', desc: 'Increase the rank of up to 2 selected cards by 1.' },
   { id: 'card_shave', name: 'Card Shave', cost: 3, consumableType: 'tarot', desc: 'Reduce the rank of up to 2 selected cards by 1.' },
-  { id: 'wild_suit', name: 'Prism Dye', cost: 3, consumableType: 'tarot', desc: 'Enhance a selected card to Foil (+30 Chips permanently).' },
-  { id: 'lucky_charm', name: 'Lucky Charm', cost: 4, consumableType: 'tarot', desc: 'Enhance a selected card to Holo (+4 Mult permanently).' },
+  { id: 'wild_suit', name: 'Prism Dye', cost: 3, consumableType: 'tarot', desc: 'Enhance up to 2 selected cards to Foil (+30 Chips permanently).' },
+  { id: 'lucky_charm', name: 'Lucky Charm', cost: 4, consumableType: 'tarot', desc: 'Enhance up to 2 selected cards to Holo (+4 Mult permanently).' },
   { id: 'the_lovers', name: 'The Lovers', cost: 3, consumableType: 'tarot', desc: 'Change a selected card\'s suit to a Wild Suit (★) that counts as any suit.' },
   { id: 'the_sun', name: 'The Sun', cost: 3, consumableType: 'tarot', desc: 'Convert up to 3 selected cards to Hearts (♥).' },
   { id: 'the_star', name: 'The Star', cost: 3, consumableType: 'tarot', desc: 'Convert up to 3 selected cards to Diamonds (♦).' },
@@ -81,17 +81,18 @@ function getTarotMaxCards(tarotId: string): number {
   if (['the_sun', 'the_star', 'the_moon', 'the_world'].includes(tarotId)) {
     return 3;
   }
-  if (['card_forge', 'card_shave', 'the_guillotine'].includes(tarotId)) {
-    return 2;
-  }
   if ([
-    'midas_touch',
+    'card_forge',
+    'card_shave',
+    'the_guillotine',
     'polychrome_dice',
-    'the_lovers',
     'wild_suit',
     'prism_dye',
     'lucky_charm'
   ].includes(tarotId)) {
+    return 2;
+  }
+  if (['midas_touch', 'the_lovers'].includes(tarotId)) {
     return 1;
   }
   return 0;
@@ -107,21 +108,6 @@ function isCardEligibleForTarot(tarotId: string, card: Card): boolean {
   }
   if (tarotId === 'card_forge') {
     return card.rank !== 'A';
-  }
-  if (tarotId === 'the_lovers') {
-    return card.suit !== '★';
-  }
-  if (tarotId === 'the_sun') {
-    return card.suit !== '♥';
-  }
-  if (tarotId === 'the_star') {
-    return card.suit !== '♦';
-  }
-  if (tarotId === 'the_moon') {
-    return card.suit !== '♣';
-  }
-  if (tarotId === 'the_world') {
-    return card.suit !== '♠';
   }
   return true;
 }

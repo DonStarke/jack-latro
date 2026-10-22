@@ -1409,11 +1409,32 @@ function toggleSimModal(show: boolean): void {
   $('ui-sim-modal').classList.toggle('hidden', !show);
 }
 
+let deckModalShowAll = false;
+
+function toggleDeckShowAll(): void {
+  deckModalShowAll = !deckModalShowAll;
+  updateDeckModalShowAllUI();
+}
+
+function updateDeckModalShowAllUI(): void {
+  const modal = $('ui-deck-modal');
+  const btn = $('btn-deck-show-all');
+  if (modal) {
+    modal.classList.toggle('deck-show-all', deckModalShowAll);
+  }
+  if (btn) {
+    btn.textContent = deckModalShowAll ? 'Show Unseen' : 'Show All';
+    btn.classList.toggle('btn-primary', deckModalShowAll);
+    btn.classList.toggle('btn-secondary', !deckModalShowAll);
+  }
+}
+
 function toggleDeckModal(show: boolean): void {
   if (isPlayfieldLocked && show) return;
   const state = getState();
   const modal = $('ui-deck-modal');
   if (show) {
+    updateDeckModalShowAllUI();
     const hiddenHoleCard = (!state.dealerHoleRevealed && state.dealerHand.length >= 2)
       ? state.dealerHand[1]
       : null;
@@ -1449,6 +1470,8 @@ function toggleDeckModal(show: boolean): void {
       return `<div class="deck-suit-row">${cardsHtml}</div>`;
     }).join('');
   } else {
+    deckModalShowAll = false;
+    updateDeckModalShowAllUI();
     closeDeckCardModal();
   }
   modal.classList.toggle('hidden', !show);
@@ -2461,8 +2484,13 @@ function uiBuyPack(idx: number): void {
   renderPackOpeningScreen(true);
 }
 
-function uiChoosePackOption(optIdx: number, targetCardUid?: number | string | (number | string)[]): void {
+async function uiChoosePackOption(optIdx: number, targetCardUid?: number | string | (number | string)[]): Promise<void> {
   if (isPlayfieldLocked) return;
+
+  const stateBefore = getState();
+  const activeBefore = stateBefore.activePackOpening;
+  const deckCardsBefore = activeBefore?.deckCards ? [...activeBefore.deckCards] : [];
+
   const res = pickPackOption(optIdx, targetCardUid);
   if (!res.ok) {
     if (typeof (window as any).playNegativeFeedbackSound === 'function') {
@@ -2477,6 +2505,55 @@ function uiChoosePackOption(optIdx: number, targetCardUid?: number | string | (n
     }
     return;
   }
+
+  // Update pack subtitle with result message if available
+  const subEl = $('ui-pack-sub');
+  if (subEl && res.message) {
+    subEl.textContent = res.message;
+    subEl.style.color = 'var(--gold)';
+  }
+
+  // Disable button on the pack card during feedback delay
+  const stage = $('ui-pack-stage');
+  if (stage) {
+    const chooseBtn = stage.querySelector<HTMLButtonElement>(`.pack-option-card[data-opt-idx="${optIdx}"] .btn-pack-choose`);
+    if (chooseBtn) {
+      chooseBtn.textContent = 'APPLIED ✨';
+      chooseBtn.disabled = true;
+    }
+  }
+
+  // If this was a tarot targeting cards, update deck tray cards visually and trigger float feedback
+  if (res.picked?.kind === 'tarot') {
+    const tarotId = res.picked.data.id;
+    const targetUids = (res.targetCards || (res.targetCard ? [res.targetCard] : [])).map(c => c.uid);
+
+    const deckCardsEl = $('ui-pack-deck-cards');
+    if (deckCardsEl && deckCardsBefore.length > 0) {
+      const stateNow = getState();
+      deckCardsEl.innerHTML = deckCardsBefore.map(c => {
+        const isTarget = targetUids.includes(c.uid);
+        if (tarotId === 'the_guillotine' && isTarget) {
+          return renderCardHTML(c, false, 'pack-deck-card dealt-out');
+        }
+        const updated = stateNow.deck.find(d => d.uid === c.uid) || c;
+        const classes = `pack-deck-card${isTarget ? ' pack-deck-card-selected' : ''}`;
+        return renderCardHTML(updated, false, classes);
+      }).join('');
+    }
+
+    targetUids.forEach(uid => {
+      triggerCardTarotFeedback(uid, tarotId);
+    });
+  }
+
+  const isHeadlessTest = typeof navigator !== 'undefined' && (/jsdom/i.test(navigator.userAgent) || !!(window as any).__TEST__);
+  if (!isHeadlessTest) {
+    isPlayfieldLocked = true;
+    await sleep(800);
+    isPlayfieldLocked = false;
+  }
+
   uiSkipPackAnimation();
   playCardDealSound();
   const overlay = $('ui-pack-overlay');
@@ -2727,6 +2804,7 @@ function triggerCardTarotFeedback(cardUid: number | string, tarotId: string): vo
   else if (tarotId === 'the_world') popText = '♠ SPADES';
   else if (tarotId === 'card_shave') popText = '-1 RANK';
   else if (tarotId === 'card_forge') popText = '+1 RANK';
+  else if (tarotId === 'the_guillotine') popText = '✂ CUT';
 
   const pop = document.createElement('div');
   pop.className = 'card-float-pop';
@@ -4430,6 +4508,8 @@ function renderRunStats(): void {
 (window as any).toggleCogModal = toggleCogModal;
 (window as any).toggleBlindModal = toggleBlindModal;
 (window as any).toggleDeckModal = toggleDeckModal;
+(window as any).toggleDeckShowAll = toggleDeckShowAll;
+(window as any).isDeckModalShowAll = () => deckModalShowAll;
 (window as any).inspectDeckCard = inspectDeckCard;
 (window as any).closeDeckCardModal = closeDeckCardModal;
 (window as any).toggleSimModal = toggleSimModal;

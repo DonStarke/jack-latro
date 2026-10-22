@@ -173,6 +173,20 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   ck('Zoom modal is hidden after closeDeckCardModal', isHidden(zoomModal));
   ck('Deck modal remains open after closing zoom modal', !isHidden(deckModal));
 
+  // Test Show All button toggle in Deck modal
+  const showAllBtn = $('btn-deck-show-all');
+  ck('Show All button exists in Deck modal', !!showAllBtn);
+  ck('Show All button initially displays "Show All"', showAllBtn.textContent.trim() === 'Show All');
+  ck('Deck modal does not have deck-show-all class initially', !deckModal.classList.contains('deck-show-all'));
+
+  w.toggleDeckShowAll();
+  ck('After clicking Show All, modal has deck-show-all class', deckModal.classList.contains('deck-show-all'));
+  ck('Show All button updates text to "Show Unseen"', showAllBtn.textContent.trim() === 'Show Unseen');
+
+  w.toggleDeckShowAll();
+  ck('After clicking again, modal removes deck-show-all class', !deckModal.classList.contains('deck-show-all'));
+  ck('Show All button reverts text to "Show All"', showAllBtn.textContent.trim() === 'Show All');
+
   // Close deck modal
   w.toggleDeckModal(false);
   ck('Deck modal is hidden after toggleDeckModal(false)', isHidden(deckModal));
@@ -181,6 +195,7 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
 
   const css = fs.readFileSync(path.join(root, 'styles.css'), 'utf8');
   ck('dealt-out opacity is 0.48 (less dark than 0.22)', css.includes('opacity: 0.48'));
+  ck('deck-show-all overrides dealt-out in CSS', css.includes('.deck-show-all .playing-card.deck-mini.dealt-out'));
   ck('deck-mini has cursor pointer', css.includes('.playing-card.deck-mini') && css.includes('cursor: pointer'));
   ck('stats-box has flex-shrink 0 for children', css.includes('.stats-box > *') && css.includes('flex-shrink: 0'));
   ck('stats-actions has flex-shrink 0 and width 100%', css.includes('.stats-actions') && css.includes('flex-shrink: 0'));

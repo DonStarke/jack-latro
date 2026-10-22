@@ -550,7 +550,10 @@
         <h3 style="color:var(--gold); font-size:16px;" id="ui-deck-modal-title">FULL DECK VIEW</h3>
         <div style="font-size:12px; color:#94a3b8;">Ordered by Suit & Rank (Dimmed = Revealed face-up cards • Tap any card to inspect)</div>
       </div>
-      <button class="btn btn-secondary" onclick="toggleDeckModal(false)">Close</button>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button class="btn btn-secondary" id="btn-deck-show-all" onclick="toggleDeckShowAll()">Show All</button>
+        <button class="btn btn-secondary" onclick="toggleDeckModal(false)">Close</button>
+      </div>
     </div>
     <div id="ui-deck-list" style="display:flex; flex-direction:column; gap:6px;"></div>
   </div>
