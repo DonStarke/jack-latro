@@ -1201,8 +1201,16 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    z-index: 40;
+    z-index: 100;
     overflow-y: auto;
+  }
+
+  /* Completely suppress center stage and cash breakdowns during shop mode */
+  .table-felt.in-shop .center-stage,
+  .table-felt.in-shop .round-cash-breakdown,
+  .table-felt.in-shop .outcome-headline,
+  .table-felt.in-shop .center-banner-wrap {
+    display: none !important;
   }
 
   .hidden { display: none !important; }
@@ -1411,7 +1419,7 @@
 
   /* PACK OPENING SCREEN OVERLAY */
   .pack-opening-overlay {
-    z-index: 50;
+    z-index: 110;
     background: radial-gradient(circle at 50% 20%, rgba(20, 36, 30, 0.98) 0%, rgba(10, 18, 15, 0.99) 70%, rgba(5, 10, 8, 1) 100%);
     border: 2px solid var(--gold);
     display: flex;
@@ -1454,7 +1462,7 @@
   .pack-booster-container {
     position: absolute;
     inset: 0;
-    z-index: 60;
+    z-index: 120;
     display: flex;
     flex-direction: column;
     justify-content: center;

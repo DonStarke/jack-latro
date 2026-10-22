@@ -164,6 +164,50 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   ck('Breakdown DOES display Unused Deals when cap is > $0', rcbEl.textContent.includes('Unused Deals'));
   ck('Breakdown displays +$2 when handBonus is 2', rcbEl.textContent.includes('+$2'));
 
+  console.log('\n--- TEST 5: SHOP OVERLAY HIDES CENTER SCORE BANNER & CASH BREAKDOWN ---');
+
+  ck('.overlay-panel has z-index 100 (> center-stage 60, outcome-headline 65)', css.includes('.overlay-panel') && css.includes('z-index: 100'));
+  ck('.pack-opening-overlay has z-index 110', css.includes('.pack-opening-overlay') && css.includes('z-index: 110'));
+  ck('.pack-booster-container has z-index 120', css.includes('.pack-booster-container') && css.includes('z-index: 120'));
+  ck('CSS completely hides center-stage in shop mode', css.includes('.table-felt.in-shop .center-stage') && css.includes('display: none !important'));
+
+  // Set up round cleared state with pending payout and cap 0
+  w.patchBalanceConfig({ unusedDealCashCap: 0 });
+  w.patchState({
+    blindClearedReady: true,
+    isDealing: false,
+    handsLeft: 4,
+    pendingPayout: { blindReward: 4, handBonus: 0, interest: 1, totalEarned: 5 }
+  });
+
+  // Render cash breakdown and banner as would be shown right at end of round
+  w.renderRoundCashBreakdown({ blindReward: 4, handBonus: 0, interest: 1, totalEarned: 5 });
+  $('ui-banner').innerHTML = 'Royal Flush: 100 x 8 = 800';
+  ck('Before cash out, rcb element is not hidden', !$('ui-round-cash-breakdown').classList.contains('hidden'));
+
+  // Trigger Cash Out into Shop
+  $('btn-deal').dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+
+  const shopOverlay = $('ui-shop-overlay');
+  const centerStage = w.document.querySelector('.center-stage');
+  const tableFelt = $('ui-table-felt');
+  const shopPayoutNote = $('ui-shop-payout-note');
+
+  ck('Shop overlay is visible after cashing out', !shopOverlay.classList.contains('hidden'));
+  ck('Round cash breakdown is HIDDEN after cashing out', $('ui-round-cash-breakdown').classList.contains('hidden'));
+  ck('Center stage is HIDDEN when entering shop', centerStage.classList.contains('hidden'));
+  ck('Table felt has in-shop class when entering shop', tableFelt.classList.contains('in-shop'));
+  ck('Shop payout note omits $0 Deals when cap is 0', !shopPayoutNote.textContent.includes('Deals'));
+  ck('Shop payout note displays exact breakdown note', shopPayoutNote.textContent.includes('Earned +$5 ($4 Blind + $1 Interest).'));
+
+  // Transition from Shop into next Blind
+  w.startNextBlindFromShop();
+
+  ck('Shop overlay is hidden after starting next blind', shopOverlay.classList.contains('hidden'));
+  ck('Table felt removes in-shop class after leaving shop', !tableFelt.classList.contains('in-shop'));
+  ck('Center stage is restored (hidden class removed)', !centerStage.classList.contains('hidden'));
+  ck('Banner is cleanly reset to prompt dealing next blind', $('ui-banner').textContent.includes('Tap DEAL to begin'));
+
   console.log('\n--- ALL SCORE SYNC & LAYERING CHECKS COMPLETED ---');
   results.forEach(r => console.log(r));
 

@@ -1192,6 +1192,10 @@ function updateAllUI() {
   const roundScoreWrap = $('ui-round-score-wrap');
   const scoreBarBg = $('ui-score-bar-bg');
 
+  const centerStage = document.querySelector('.center-stage');
+  const tableFelt = document.querySelector('.table-felt');
+  if (tableFelt) tableFelt.classList.toggle('in-shop', state.inShop);
+
   if (state.inShop) {
     tagEl.textContent = 'UP NEXT';
     tagEl.style.background = 'var(--green)';
@@ -1199,6 +1203,9 @@ function updateAllUI() {
     eqBox.classList.add('hidden');
     roundScoreWrap.textContent = 'Upcoming Blind Target';
     scoreBarBg.classList.add('hidden');
+    hideRoundCashBreakdown();
+    hideOutcomeHeadline();
+    if (centerStage) centerStage.classList.add('hidden');
   } else {
     tagEl.textContent = 'BLIND';
     tagEl.style.background = 'var(--gold)';
@@ -1206,6 +1213,7 @@ function updateAllUI() {
     eqBox.classList.remove('hidden');
     roundScoreWrap.innerHTML = `Score: <span id="ui-round-score">${state.roundScore.toLocaleString()}</span>`;
     scoreBarBg.classList.remove('hidden');
+    if (centerStage) centerStage.classList.remove('hidden');
     if (!state.isDealing && lastHandChips !== null && lastHandMult !== null) {
       const cEl = $('ui-chips');
       const mEl = $('ui-mult');
@@ -1765,10 +1773,21 @@ function uiCashOut(): void {
 
   stopConfetti();
   hideOutcomeHeadline();
+  hideRoundCashBreakdown();
+  setBanner('', '');
+  const centerStage = document.querySelector('.center-stage');
+  if (centerStage) centerStage.classList.add('hidden');
+
+  const dealCap = getBalanceConfig().unusedDealCashCap;
   const hasLoanShark = getState().jokers.some(j => j.id === 'loan_shark');
   const loanSharkNote = hasLoanShark ? ' - $1 Loan Shark' : '';
+  const breakdownParts = [`$${payout.blindReward} Blind`];
+  if (dealCap > 0 && payout.handBonus > 0) {
+    breakdownParts.push(`$${payout.handBonus} Deals`);
+  }
+  breakdownParts.push(`$${payout.interest} Interest`);
   $('ui-shop-payout-note').textContent =
-    `Earned +$${payout.totalEarned} ($${payout.blindReward} Blind + $${payout.handBonus} Deals + $${payout.interest} Interest${loanSharkNote}).`;
+    `Earned +$${payout.totalEarned} (${breakdownParts.join(' + ')}${loanSharkNote}).`;
   renderShop();
   $('ui-shop-overlay').classList.remove('hidden');
   updateAllUI();
@@ -2263,6 +2282,10 @@ function uiChoosePackOption(optIdx: number): void {
   else if (res.picked?.kind === 'card') pickedName = `${res.picked.data.rank}${res.picked.data.suit}`;
 
   setBanner(`Added ${pickedName} to your collection!`, 'Pit Boss Shop');
+  const payoutNote = document.getElementById('ui-shop-payout-note');
+  if (payoutNote && pickedName) {
+    payoutNote.textContent = `Added ${pickedName} to your collection!`;
+  }
   renderShop();
   updateAllUI();
 }
@@ -2274,6 +2297,10 @@ function uiSkipPack(): void {
   const overlay = $('ui-pack-overlay');
   if (overlay) overlay.classList.add('hidden');
   setBanner('Skipped pack.', 'Pit Boss Shop');
+  const payoutNote = document.getElementById('ui-shop-payout-note');
+  if (payoutNote) {
+    payoutNote.textContent = 'Skipped pack.';
+  }
   renderShop();
   updateAllUI();
 }
