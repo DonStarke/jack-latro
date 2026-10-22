@@ -1992,7 +1992,6 @@ function renderPackDeckHand(): void {
   const active = state.activePackOpening;
   const deckArea = $('ui-pack-deck-area');
   const deckCardsEl = $('ui-pack-deck-cards');
-  const statusEl = $('ui-pack-deck-target-status');
   if (!deckArea || !deckCardsEl) return;
 
   if (!active || !active.deckCards || active.deckCards.length === 0) {
@@ -2008,32 +2007,15 @@ function renderPackDeckHand(): void {
     ? activeOpt.data.id
     : (active.options.find(o => o.kind === 'tarot') as { kind: 'tarot'; data: TarotDef } | undefined)?.data.id;
 
-  // Ensure selectedDeckCardUid points to an eligible card for the active tarot
-  let selectedCard = active.deckCards.find(c => c.uid === active.selectedDeckCardUid);
-  if (activeTarotId && (!selectedCard || !isCardEligibleForTarot(activeTarotId, selectedCard))) {
-    selectedCard = active.deckCards.find(c => isCardEligibleForTarot(activeTarotId, c));
-    active.selectedDeckCardUid = selectedCard ? selectedCard.uid : null;
-  }
-
-  if (statusEl) {
-    if (activeOpt && activeOpt.kind === 'tarot') {
-      if (selectedCard) {
-        statusEl.innerHTML = `Target: <strong>${selectedCard.rank}${selectedCard.suit}</strong> &bull; Tap any card to change`;
-      } else {
-        statusEl.textContent = 'No eligible card in drawn hand';
-      }
-    } else {
-      statusEl.textContent = selectedCard
-        ? `Target for Tarot: ${selectedCard.rank}${selectedCard.suit}`
-        : 'Drawn cards for Tarot option';
-    }
-  }
+  // Selected card for Tarot application (only when user has an active selection)
+  const hasSelectedUid = active.selectedDeckCardUid !== null && active.selectedDeckCardUid !== undefined;
+  const selectedCard = hasSelectedUid ? active.deckCards.find(c => c.uid === active.selectedDeckCardUid) : undefined;
 
   deckCardsEl.innerHTML = active.deckCards.map(c => {
     const eligible = activeTarotId ? isCardEligibleForTarot(activeTarotId, c) : true;
     const isSelected = eligible && c.uid === active.selectedDeckCardUid;
     if (eligible) {
-      const classes = `pack-deck-card tarot-selectable${isSelected ? ' pack-deck-card-selected' : ''}`;
+      const classes = `pack-deck-card${isSelected ? ' pack-deck-card-selected' : ''}`;
       return renderCardHTML(
         c,
         false,
@@ -2052,14 +2034,14 @@ function renderPackDeckHand(): void {
       if (opt.kind === 'tarot') {
         const btn = stage.querySelector<HTMLButtonElement>(`.pack-option-card[data-opt-idx="${idx}"] .btn-pack-choose`);
         if (btn) {
-          const cardForThisTarot = (selectedCard && isCardEligibleForTarot(opt.data.id, selectedCard))
-            ? selectedCard
-            : active.deckCards!.find(c => isCardEligibleForTarot(opt.data.id, c));
-          if (cardForThisTarot) {
-            btn.textContent = `USE ON ${cardForThisTarot.rank}${cardForThisTarot.suit}`;
+          if (selectedCard && isCardEligibleForTarot(opt.data.id, selectedCard)) {
+            btn.textContent = `USE ON ${selectedCard.rank}${selectedCard.suit}`;
             btn.disabled = false;
+          } else if (selectedCard) {
+            btn.textContent = 'INELIGIBLE CARD';
+            btn.disabled = true;
           } else {
-            btn.textContent = 'NO ELIGIBLE CARD';
+            btn.textContent = 'SELECT A CARD';
             btn.disabled = true;
           }
         }

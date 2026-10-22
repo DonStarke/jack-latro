@@ -152,11 +152,31 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   ck('Tarot pack pre-selects a deck card target', typeof sTarotPack.activePackOpening.selectedDeckCardUid === 'number');
   ck('Deck hand tray is visible on Tarot pack screen', !isHidden($('ui-pack-deck-area')));
   ck('Deck hand tray renders 5 selectable playing cards', $('ui-pack-deck-cards').children.length === 5);
+  ck('Deck hand tray does NOT render deck hand header text', $('ui-pack-deck-target-status') === null && $('ui-pack-deck-area').querySelector('.pack-deck-header') === null);
+  ck('Deck cards do NOT have tarot-selectable class', $('ui-pack-deck-cards').querySelectorAll('.tarot-selectable').length === 0);
+  ck('Deck cards do NOT render TARGET tag badges', $('ui-pack-deck-cards').querySelectorAll('.tarot-target-tag').length === 0);
 
   // Test selecting the second deck card in the tray
   const secondDeckCard = sTarotPack.activePackOpening.deckCards[1];
   w.uiSelectPackDeckCard(secondDeckCard.uid);
   ck('uiSelectPackDeckCard updates selectedDeckCardUid', w.getState().activePackOpening.selectedDeckCardUid === secondDeckCard.uid);
+  const cardEls = $('ui-pack-deck-cards').children;
+  ck('Selected card has pack-deck-card-selected class (raised)', cardEls[1].classList.contains('pack-deck-card-selected'));
+  ck('Other cards do not have pack-deck-card-selected class', !cardEls[0].classList.contains('pack-deck-card-selected'));
+
+  // Test clicking the selected card again: toggles off and lowers it
+  w.uiSelectPackDeckCard(secondDeckCard.uid);
+  ck('Clicking selected card again deselects it (sets null)', w.getState().activePackOpening.selectedDeckCardUid === null);
+  ck('When deselected, card removes pack-deck-card-selected (lowered)', !cardEls[1].classList.contains('pack-deck-card-selected'));
+  const tarotBtn0 = $('ui-pack-stage').querySelector('.pack-option-card[data-opt-idx="0"] .btn-pack-choose');
+  ck('Tarot button shows SELECT A CARD when no card is selected', tarotBtn0 && tarotBtn0.textContent.includes('SELECT A CARD'));
+  ck('Tarot button is disabled when no card is selected', tarotBtn0 && tarotBtn0.disabled === true);
+
+  // Click card again to re-select
+  w.uiSelectPackDeckCard(secondDeckCard.uid);
+  ck('Clicking card again re-selects it', w.getState().activePackOpening.selectedDeckCardUid === secondDeckCard.uid);
+  ck('Re-selected card raises again', cardEls[1].classList.contains('pack-deck-card-selected'));
+  ck('Tarot button enables with USE ON', tarotBtn0 && tarotBtn0.textContent.includes(`USE ON ${secondDeckCard.rank}${secondDeckCard.suit}`) && !tarotBtn0.disabled);
 
   const chosenTarot = sTarotPack.activePackOpening.options[0].data;
   w.uiChoosePackOption(0);

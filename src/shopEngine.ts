@@ -536,14 +536,24 @@ function buyAndOpenPack(idx: number): { ok: boolean; reason?: ShopFailReason; pa
   return { ok: true, pack, options };
 }
 
-function selectPackDeckCard(cardUid: number | string): boolean {
+function selectPackDeckCard(cardUid: number | string | null): boolean {
   const s = getState();
   const active = s.activePackOpening;
   if (!active || !active.deckCards) return false;
+  if (cardUid === null) {
+    active.selectedDeckCardUid = null;
+    patchState({ activePackOpening: { ...active } });
+    return true;
+  }
   const numUid = typeof cardUid === 'number' ? cardUid : Number(cardUid);
   const found = active.deckCards.find(c => c.uid === numUid);
   if (!found) return false;
-  active.selectedDeckCardUid = numUid;
+  if (active.selectedDeckCardUid === numUid) {
+    // Tapping the currently selected card deselects and lowers it
+    active.selectedDeckCardUid = null;
+  } else {
+    active.selectedDeckCardUid = numUid;
+  }
   patchState({ activePackOpening: { ...active } });
   return true;
 }
@@ -584,12 +594,22 @@ function pickPackOption(optIdx: number, targetCardUid?: number | string): { ok: 
       ? (typeof targetCardUid === 'number' ? targetCardUid : Number(targetCardUid))
       : active.selectedDeckCardUid;
 
-    let target = explicitUid !== null && explicitUid !== undefined
-      ? pool.find(c => c.uid === explicitUid) || s.deck.find(c => c.uid === explicitUid)
-      : undefined;
-
-    if (!target || !isCardEligibleForTarot(t.id, target)) {
-      target = pool.find(c => isCardEligibleForTarot(t.id, c)) || s.deck.find(c => isCardEligibleForTarot(t.id, c));
+    let target: Card | undefined;
+    if (active.deckCards && active.deckCards.length > 0) {
+      if (explicitUid === null || explicitUid === undefined) {
+        return { ok: false, reason: 'invalid', warning: 'Please select a playing card from your deck hand below first!' };
+      }
+      target = pool.find(c => c.uid === explicitUid) || s.deck.find(c => c.uid === explicitUid);
+      if (!target || !isCardEligibleForTarot(t.id, target)) {
+        return { ok: false, reason: 'invalid', warning: `The selected card is not eligible for ${t.name}!` };
+      }
+    } else {
+      target = explicitUid !== null && explicitUid !== undefined
+        ? pool.find(c => c.uid === explicitUid) || s.deck.find(c => c.uid === explicitUid)
+        : undefined;
+      if (!target || !isCardEligibleForTarot(t.id, target)) {
+        target = pool.find(c => isCardEligibleForTarot(t.id, c)) || s.deck.find(c => isCardEligibleForTarot(t.id, c));
+      }
     }
 
     if (!target) {
