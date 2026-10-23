@@ -1188,7 +1188,7 @@ function renderShop() {
           <div class="shop-item-title">${titleHtml}</div>
           <div class="shop-item-desc">${isJoker ? getJokerFullDesc(item) : item.desc}</div>
         </div>
-        <button class="btn btn-deal" style="padding:6px; font-size:12px;"
+        <button class="btn btn-deal" style="padding:7px 10px; font-size:13px; font-weight:900;"
           onclick="uiBuyShopItem('shopJokers', ${idx})"
           ${item.bought || state.money < item.cost ? 'disabled' : ''}>
           ${item.bought ? 'SOLD' : 'BUY $' + item.cost}
@@ -1200,13 +1200,17 @@ function renderShop() {
 
   if (eGrid) {
     eGrid.innerHTML = state.shopExtras.map((item, idx) => `
-      <div class="shop-item type-${item.shopType}">
+      <div class="shop-item type-${item.shopType} ${item.bought ? 'item-bought' : ''}">
+        <div class="shop-item-watermark">🎟️</div>
         <div>
-          <div class="shop-item-sub">${item.shopType === 'card' ? 'Shoe Card' : 'Voucher'}</div>
-          <div class="shop-item-title">${item.name}</div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+            <div class="shop-item-sub">${item.shopType === 'card' ? 'Shoe Card' : 'Table Voucher'}</div>
+            <span class="rarity-badge" style="background:rgba(16, 185, 129, 0.2); color:#34d399; border:1px solid #10b981;">PERK</span>
+          </div>
+          <div class="shop-item-title"><span class="joker-icon-mini">🎟️</span> ${item.name}</div>
           <div class="shop-item-desc">${item.desc}</div>
         </div>
-        <button class="btn btn-hit" style="padding:6px; font-size:12px;"
+        <button class="btn btn-hit" style="padding:7px 10px; font-size:13px; font-weight:900;"
           onclick="uiBuyShopItem('shopExtras', ${idx})"
           ${item.bought || state.money < item.cost ? 'disabled' : ''}>
           ${item.bought ? 'SOLD' : 'BUY $' + item.cost}

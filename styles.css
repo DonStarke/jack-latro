@@ -1400,20 +1400,28 @@
   .shop-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 6px;
+    gap: 8px;
   }
 
   .shop-item {
     background: #1a212d;
     border: 1.5px solid #334155;
-    border-radius: 8px;
-    padding: 7px;
+    border-radius: 10px;
+    padding: 10px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    gap: 5px;
+    gap: 8px;
     position: relative;
     overflow: hidden;
+    min-height: 205px;
+    box-sizing: border-box;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .shop-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.55);
   }
 
   .shop-item > * {
@@ -1509,20 +1517,23 @@
   /* BOOSTER PACKS IN SHOP */
   #ui-shop-packs {
     display: flex;
-    gap: 12px;
+    gap: 8px;
     overflow-x: auto;
     overflow-y: hidden;
-    padding: 6px 4px 14px 4px;
+    padding: 6px 2px 14px 2px;
     scrollbar-width: thin;
     -webkit-overflow-scrolling: touch;
     flex-shrink: 0;
+    width: 100%;
+    box-sizing: border-box;
   }
   .shop-pack-wrapper.pack-booster-wrapper {
     position: relative;
-    width: 155px;
-    min-width: 155px;
-    max-width: 165px;
-    height: 235px;
+    flex: 1 0 calc(50% - 4px);
+    width: calc(50% - 4px);
+    min-width: 170px;
+    max-width: 240px;
+    height: 250px;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
@@ -1533,6 +1544,7 @@
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
     cursor: default;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-sizing: border-box;
   }
   .shop-pack-wrapper.pack-booster-wrapper:hover {
     transform: translateY(-3px) scale(1.02);
