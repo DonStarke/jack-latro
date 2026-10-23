@@ -2152,18 +2152,30 @@ function renderPackDeckHand(): void {
         const btn = stage.querySelector<HTMLButtonElement>(`.pack-option-card[data-opt-idx="${idx}"] .btn-pack-choose`);
         if (btn) {
           const max = getTarotMaxCards(opt.data.id);
-          btn.disabled = false;
           if (max === 0) {
             if (opt.data.id === 'judgement') {
-              btn.textContent = 'SUMMON JOKER';
+              const isJokersFull = state.jokers.length >= state.maxJokers;
+              btn.textContent = isJokersFull ? 'JOKER SLOTS FULL' : 'SUMMON JOKER';
+              btn.disabled = isJokersFull;
             } else if (opt.data.id === 'nostradamus') {
-              btn.textContent = `COPY ${state.lastTarotUsedName || 'TAROT'}`;
+              const isNostradamusBlocked = !state.lastTarotUsedId || state.lastTarotUsedId === 'nostradamus';
+              if (isNostradamusBlocked) {
+                btn.textContent = state.lastTarotUsedId === 'nostradamus' ? 'CANNOT COPY NOSTRADAMUS' : 'NO TAROT TO COPY';
+                btn.disabled = true;
+              } else {
+                btn.textContent = `COPY ${state.lastTarotUsedName || 'TAROT'}`;
+                btn.disabled = false;
+              }
             } else {
               btn.textContent = 'USE TAROT';
+              btn.disabled = false;
             }
           } else {
             if (selectedUids.length === 0) {
               btn.textContent = max > 1 ? `SELECT A CARD (UP TO ${max})` : 'SELECT A CARD';
+              btn.disabled = true;
+            } else if (selectedUids.length > max) {
+              btn.textContent = `TOO MANY CARDS (MAX ${max})`;
               btn.disabled = true;
             } else if (selectedUids.length === 1) {
               const card = active.deckCards!.find(c => c.uid === selectedUids[0]);
@@ -2366,6 +2378,7 @@ function renderPackOpeningScreen(triggerAnim: boolean = false): void {
     let cardSub = '';
     let extraCardClass = '';
     let chooseBtnText = 'CHOOSE';
+    let chooseBtnDisabled = false;
 
     if (opt.kind === 'joker') {
       const j = opt.data;
@@ -2390,18 +2403,54 @@ function renderPackOpeningScreen(triggerAnim: boolean = false): void {
       `;
     } else if (opt.kind === 'tarot') {
       const t = opt.data;
+      const max = getTarotMaxCards(t.id);
+      const selectedUids = active.selectedDeckCardUids || (active.selectedDeckCardUid !== null && active.selectedDeckCardUid !== undefined ? [active.selectedDeckCardUid] : []);
       cardTypeLabel = 'TAROT SPELL';
       cardTitle = t.name;
       cardSub = t.desc;
+
       if (t.id === 'nostradamus') {
-        const lastUsed = state.lastTarotUsedName;
-        cardTitle = lastUsed ? `Nostradamus (${lastUsed})` : 'Nostradamus';
-        cardSub = lastUsed
-          ? `Creates the last Tarot used (${lastUsed}).`
-          : 'Creates the last Tarot used. (Cannot be used: no previous Tarot found)';
+        const isNostradamusBlocked = !state.lastTarotUsedId || state.lastTarotUsedId === 'nostradamus';
+        if (isNostradamusBlocked) {
+          cardTitle = state.lastTarotUsedId === 'nostradamus' ? 'Nostradamus (Last Used)' : 'Nostradamus';
+          cardSub = state.lastTarotUsedId === 'nostradamus'
+            ? 'Creates the last Tarot used. (Cannot be used: last Tarot used was Nostradamus)'
+            : 'Creates the last Tarot used. (Cannot be used: no previous Tarot found)';
+          chooseBtnText = state.lastTarotUsedId === 'nostradamus' ? 'CANNOT COPY NOSTRADAMUS' : 'NO TAROT TO COPY';
+          chooseBtnDisabled = true;
+        } else {
+          const lastUsed = state.lastTarotUsedName;
+          cardTitle = lastUsed ? `Nostradamus (${lastUsed})` : 'Nostradamus';
+          cardSub = `Creates the last Tarot used (${lastUsed || 'Tarot'}).`;
+          chooseBtnText = `COPY ${lastUsed || 'TAROT'}`;
+          chooseBtnDisabled = false;
+        }
+      } else if (max === 0) {
+        if (t.id === 'judgement') {
+          const isJokersFull = state.jokers.length >= state.maxJokers;
+          chooseBtnText = isJokersFull ? 'JOKER SLOTS FULL' : 'SUMMON JOKER';
+          chooseBtnDisabled = isJokersFull;
+        } else {
+          chooseBtnText = 'USE TAROT';
+          chooseBtnDisabled = false;
+        }
+      } else {
+        if (selectedUids.length === 0) {
+          chooseBtnText = max > 1 ? `SELECT A CARD (UP TO ${max})` : 'SELECT A CARD';
+          chooseBtnDisabled = true;
+        } else if (selectedUids.length > max) {
+          chooseBtnText = `TOO MANY CARDS (MAX ${max})`;
+          chooseBtnDisabled = true;
+        } else if (selectedUids.length === 1) {
+          const card = active.deckCards?.find(c => c.uid === selectedUids[0]);
+          chooseBtnText = card ? `USE ON ${card.rank}${card.suit}` : 'USE ON 1 CARD';
+          chooseBtnDisabled = false;
+        } else {
+          chooseBtnText = `USE ON ${selectedUids.length} CARDS`;
+          chooseBtnDisabled = false;
+        }
       }
       extraCardClass = 'pack-opt-tarot';
-      chooseBtnText = 'USE TAROT';
       cardContentHtml = `
         <div class="pack-opt-inner">
           <div class="pack-opt-badge-row">
@@ -2464,7 +2513,7 @@ function renderPackOpeningScreen(triggerAnim: boolean = false): void {
     return `
       <div class="pack-option-card ${extraCardClass}" data-opt-idx="${optIdx}" onclick="uiClickPackCard(${optIdx})">
         ${cardContentHtml}
-        <button class="btn btn-deal btn-pack-choose" onclick="event.stopPropagation(); uiChoosePackOption(${optIdx})">
+        <button class="btn btn-deal btn-pack-choose" ${chooseBtnDisabled ? 'disabled' : ''} onclick="event.stopPropagation(); uiChoosePackOption(${optIdx})">
           ${chooseBtnText}
         </button>
       </div>
@@ -2557,6 +2606,41 @@ async function uiChoosePackOption(optIdx: number, targetCardUid?: number | strin
 
   const stateBefore = getState();
   const activeBefore = stateBefore.activePackOpening;
+  if (!activeBefore || activeBefore.chosen) return;
+
+  // Guard against unselectable/disabled tarot options
+  const opt = activeBefore.options[optIdx];
+  if (opt && opt.kind === 'tarot') {
+    const t = opt.data;
+    const max = getTarotMaxCards(t.id);
+    let uids: number[] = [];
+    if (Array.isArray(targetCardUid)) {
+      uids = targetCardUid.map(x => Number(x));
+    } else if (targetCardUid !== undefined && targetCardUid !== null) {
+      uids = [Number(targetCardUid)];
+    } else if (activeBefore.selectedDeckCardUids && activeBefore.selectedDeckCardUids.length > 0) {
+      uids = [...activeBefore.selectedDeckCardUids];
+    } else if (activeBefore.selectedDeckCardUid !== null && activeBefore.selectedDeckCardUid !== undefined) {
+      uids = [activeBefore.selectedDeckCardUid];
+    }
+
+    if (max > 0) {
+      if (uids.length === 0 || uids.length > max) {
+        if (typeof (window as any).playNegativeFeedbackSound === 'function') {
+          (window as any).playNegativeFeedbackSound();
+        }
+        return;
+      }
+    } else if (t.id === 'nostradamus') {
+      if (!stateBefore.lastTarotUsedId || stateBefore.lastTarotUsedId === 'nostradamus') {
+        if (typeof (window as any).playNegativeFeedbackSound === 'function') {
+          (window as any).playNegativeFeedbackSound();
+        }
+        return;
+      }
+    }
+  }
+
   const deckCardsBefore = activeBefore?.deckCards ? [...activeBefore.deckCards] : [];
 
   const res = pickPackOption(optIdx, targetCardUid);
@@ -2586,7 +2670,8 @@ async function uiChoosePackOption(optIdx: number, targetCardUid?: number | strin
   if (stage) {
     const chooseBtn = stage.querySelector<HTMLButtonElement>(`.pack-option-card[data-opt-idx="${optIdx}"] .btn-pack-choose`);
     if (chooseBtn) {
-      chooseBtn.textContent = 'APPLIED ✨';
+      const isJoker = res.picked?.kind === 'joker' || activeBefore?.options[optIdx]?.kind === 'joker';
+      chooseBtn.textContent = isJoker ? 'Bought' : 'APPLIED ✨';
       chooseBtn.disabled = true;
     }
   }

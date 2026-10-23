@@ -714,6 +714,7 @@ function pickPackOption(optIdx: number, targetCardUid?: number | string | (numbe
       recordMoneyEarned('loanShark', 15);
       recordJokerTrigger('loan_shark', opt.data.name);
     }
+    resultMessage = `Added ${opt.data.name} to your Jokers!`;
   } else if (opt.kind === 'cheat') {
     if (s.consumables.length >= s.maxConsumables) {
       return { ok: false, reason: 'tarots_full' };
