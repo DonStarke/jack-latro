@@ -1181,4 +1181,7 @@ if (typeof window !== 'undefined') {
   (window as any).applyTarotToDeckCards = applyTarotToDeckCards;
   (window as any).applyTarotToDeckCard = applyTarotToDeckCard;
   (window as any).generateShopSingleCards = generateShopSingleCards;
+  (window as any).generateShopPacks = generateShopPacks;
+  (window as any).generatePackOptions = generatePackOptions;
+  (window as any).PACK_CATALOG = PACK_CATALOG;
 }

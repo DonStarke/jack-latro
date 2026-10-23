@@ -92,9 +92,19 @@
     * Slowed down the initial pack anticipation shake rumble to 25% speed (2.6s duration) with synchronized foil rip and pop burst audio.
   * **Automated Verification**: Added `tests/settings-sound-packs.test.js` validating all 36 checks across speed, icons, borders, tabs, audio sliders/mutes, and shop pack wrappers. All 11 test suites passing 100%.
 * **Starting Rules & Monte Carlo Balance Lab Calibration**:
-  * **Starting Target Score Scaling**: Set default starting `targetScalePct` to `50` (50% target scaling). Ante 1 Small Blind starts at 150 (down from 300) and Big Blind starts at 218.
-  * **Starting Unused Deal Cash Cap**: Set default starting `unusedDealCashCap` to `1` ($1 per blind clear for unused deals).
-  * **Monte Carlo Balance Lab Slider Range Expansion**: Modified `#sim-dealcap` range input from `min="2"` to `min="1"` so players can configure and test a $1 deal cash cap directly in the Balance Lab. Initialized both `#sim-dealcap` and `#sim-scale` default values to $1 and 50% respectively.
+  * **Modern Simulation Architecture Overhaul & Clean Rebuild**:
+  * **Legacy Monolith Archival**: Safely archived legacy `Jack-latro6Sim.html` into `archive/Jack-latro6Sim.html`, eliminating redundant code divergence.
+  * **Zero-Drift Modular Simulator**: Rebuilt `src/simulator.ts` to seamlessly integrate with all modern systems:
+    * **Full Shop Shelf Coverage**: Bots now evaluate and buy both single Jokers and single Tarots from the shelf, ending the prior blind spot where shelf Tarots were ignored.
+    * **Comprehensive Tarot & Cheat Support**: Properly models in-hand Cheats (`x_ray`, `loaded_ace`, `double_vision`) and permanent deck Tarots (`the_guillotine`, `card_forge`, `card_shave`, `polychrome_dice`, `lucky_charm`, `wild_suit`, `midas_touch`, `the_lovers`, `the_sun`, `the_star`, `the_moon`, `the_world`, `judgement`, `nostradamus`).
+    * **Archetype-Driven Bot AI**:
+      * `vanilla`: Mathematical basic strategy benchmark (no meta purchases).
+      * `basic`: Standard basic strategy with opportunistic Joker/Tarot purchases.
+      * `charlie`: Aggressive 5-card Charlie specialist, hits <= 15, prioritizes low-rank Jokers and Card Shave / Guillotine.
+      * `highroller`: High-Roller 21 specialist, aggressive doubling, prioritizes face cards and Card Forge.
+      * `synergy`: Adaptive combo builder, leans into owned Joker synergies (Bust Cushion, Daredevil, Chip Stacker, Sweet 16, Snake Eyes, Deja Vu).
+      * `expert`: Optimal tournament AI with tempo-first early game bankroll, deck sculpting, XMult positioning, and Clearance Rack rerolls.
+  * **Automated Verification**: All 17 test suites (500+ unit and integration checks) passing 100%.
 * **Item Lifetime Telemetry & Compendium Stats Tracking**:
   * **Full Lifetime Persistence & Schema Versioning**: Implemented versioned `LifetimeTelemetryStore` (`CURRENT_TELEMETRY_SCHEMA_VERSION = 1`) in `src/gameState.ts` with local persistence (`jacklatro_library_telemetry` in `localStorage`), tracking historical metrics across all runs with resilient auto-migration and fail-safes.
   * **Non-Destructive Auto-Migration**: Updates deep-merge catalogs and historical data safely. Adding new jokers, tarots, vouchers, or metrics never wipes existing player numbers. Malformed/corrupt numeric entries are sanitized without resetting records.
