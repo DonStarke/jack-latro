@@ -1,0 +1,31 @@
+{
+  "name": "JACK-LATRO",
+  "short_name": "Jack-latro",
+  "description": "Blackjack Roguelike Deckbuilder with Jokers and Tarots",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#09130f",
+  "theme_color": "#09130f",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "apple-touch-icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "apple-touch-icon"
+    }
+  ]
+}

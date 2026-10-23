@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Jack-latro</title>
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Jack-latro">
+<meta name="theme-color" content="#09130f">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="styles.css?v=0.15">
+<style>
+  /* Critical fallback layout: ensures splash screen and modals are immediately fixed and centered */
+  .splash-screen {
+    position: fixed; inset: 0; z-index: 800;
+    background: radial-gradient(circle at 50% 28%, #143527 0%, #091a13 52%, #050d09 100%);
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px 16px; overflow-y: auto; text-align: center;
+  }
+  .splash-screen.hidden { display: none !important; }
+  .modal-backdrop {
+    position: fixed; inset: 0; z-index: 950;
+    background: rgba(0,0,0,0.86);
+    display: flex; align-items: center; justify-content: center;
+    padding: 10px;
+  }
+  .modal-backdrop.hidden { display: none !important; }
+  .tarot-target-backdrop.hidden { display: none !important; }
+  .view-table-bar.hidden, .inspect-touch-shield.hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<canvas id="confetti-canvas"></canvas>
+
+<!-- SPLASH SCREEN / MAIN MENU -->
+<div id="ui-splash-screen" class="splash-screen">
+  <div class="splash-backdrop-fx">
+    <div class="floating-suit suit-spade">♠</div>
+    <div class="floating-suit suit-heart">♥</div>
+    <div class="floating-suit suit-club">♣</div>
+    <div class="floating-suit suit-diamond">♦</div>
+    <div class="floating-suit suit-spade2">♠</div>
+    <div class="floating-suit suit-heart2">♥</div>
+  </div>
+
+  <div class="splash-content">
+    <!-- HERO LOGO & GRAPHICS -->
+    <div class="splash-hero">
+      <div class="splash-card-fan">
+        <div class="fan-card fan-jack">
+          <div class="fan-corner top-left"><span>J</span><span>♠</span></div>
+          <div class="fan-jack-art">👑<br>J</div>
+          <div class="fan-corner bottom-right"><span>J</span><span>♠</span></div>
+          <div class="fan-foil-shine"></div>
+        </div>
+        <div class="fan-card fan-ace">
+          <div class="fan-corner top-left"><span>A</span><span>♠</span></div>
+          <div class="fan-ace-art">♠</div>
+          <div class="fan-corner bottom-right"><span>A</span><span>♠</span></div>
+          <div class="fan-holo-shine"></div>
+        </div>
+        <div class="fan-chip-badge">21</div>
+      </div>
+
+      <div class="splash-brand">
+        <div class="splash-subtitle-top">THE ROGUELIKE BLACKJACK DECKBUILDER</div>
+        <h1 class="splash-title">JACK-LATRO</h1>
+        <div class="splash-tags">
+          <span class="splash-badge badge-chips">CHIPS</span>
+          <span class="splash-mult-x">×</span>
+          <span class="splash-badge badge-mult">MULT</span>
+          <span class="splash-bullet">•</span>
+          <span class="splash-badge badge-jokers">19 JOKERS</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN MENU ACTIONS -->
+    <div class="splash-actions">
+      <button class="btn btn-splash-play" id="btn-splash-new-game" onclick="uiStartGameFromMenu()">
+        <span class="play-icon">▶</span>
+        <span class="play-text">NEW GAME</span>
+      </button>
+      <button class="btn btn-splash-library" id="btn-splash-library" onclick="openLibraryModal()">
+        <span class="lib-icon">📖</span>
+        <span class="lib-text">VIEW LIBRARY</span>
+      </button>
+      <div class="splash-secondary-row">
+        <button class="btn btn-splash-secondary" onclick="toggleCogModal(true)">
+          <span>⚙️ SETTINGS</span>
+        </button>
+        <button class="btn btn-splash-secondary" id="btn-splash-music" onclick="toggleMusic()">
+          <span id="splash-music-icon">🎵</span> MUSIC: ON
+        </button>
+      </div>
+    </div>
+
+    <div class="splash-footer">
+      <span>Ante 1–8 Progression • Endless Mode • Balatro-Inspired Roguelike</span>
+      <div class="splash-version" id="ui-splash-version">V0.15</div>
+    </div>
+  </div>
+</div>
+
+<div id="app">
+  <!-- 1. COMPACT TOP HUD -->
+  <header class="top-hud">
+    <div class="hud-row-top">
+      <div class="blind-info" onclick="toggleBlindModal(true)" title="Tap for full Blind details">
+        <div class="blind-tag-row">
+          <span class="blind-badge" id="ui-blind-tag">BLIND</span>
+          <span class="blind-name" id="ui-blind-name">Small Blind</span>
+          <span class="blind-tap-hint">ⓘ TAP</span>
+        </div>
+        <div class="blind-desc" id="ui-blind-desc">Standard Blackjack table rules.</div>
+      </div>
+
+      <div class="meta-right">
+        <div class="stat-pill stat-cash" id="ui-money">$6</div>
+        <div class="stat-pill stat-ante" id="ui-ante">Ante 1/8</div>
+        <button class="cog-btn music-btn" id="btn-music-toggle" onclick="toggleMusic()" title="Toggle Background Music">🎵</button>
+        <button class="cog-btn" onclick="toggleCogModal(true)" title="Menu, Rules & Simulator">⚙️</button>
+      </div>
+    </div>
+
+    <div class="hud-row-bottom" id="ui-hud-bottom">
+      <div class="score-col">
+        <div class="score-numbers">
+          <span class="score-cur" id="ui-round-score-wrap">Score: <span id="ui-round-score">0</span></span>
+          <span class="score-tgt" id="ui-target-score-wrap">Target: <span id="ui-target-score">300</span></span>
+        </div>
+        <div class="progress-bar-bg" id="ui-score-bar-bg">
+          <div class="progress-bar-fill" id="ui-score-bar"></div>
+        </div>
+      </div>
+
+      <div class="eq-inline" id="ui-eq-box">
+        <div class="chips-pill" id="ui-chips">0</div>
+        <div class="eq-x">×</div>
+        <div class="mult-pill" id="ui-mult">0</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 2. COMPACT JOKERS & TAROTS STRIP -->
+  <section class="shelf-strip">
+    <div class="strip-box">
+      <div class="strip-label" id="ui-joker-slots">JOKERS 0/5</div>
+      <div class="slot-row" id="ui-joker-row"></div>
+    </div>
+    <div class="strip-box" style="min-width: 110px;">
+      <div class="strip-label" id="ui-consumable-slots">CAST 0/2</div>
+      <div class="slot-row" id="ui-consumable-row"></div>
+    </div>
+  </section>
+
+  <!-- 3. FELT TABLE -->
+  <main class="table-felt" id="ui-table-felt">
+    <!-- DEALER ZONE + VISUAL DECK -->
+    <div class="dealer-area">
+      <div class="shoe-widget" id="ui-shoe-widget" onclick="toggleDeckModal(true)" title="Tap to view Deck">
+        <span class="shoe-count" id="ui-shoe-count">52/52</span>
+        <div class="deck-counter-hud hidden" id="ui-deck-counter-hud"></div>
+      </div>
+
+      <div class="hand-zone">
+        <div class="zone-header">
+          <span>DEALER</span>
+          <span class="total-badge" id="ui-dealer-total">?</span>
+        </div>
+        <div class="cards-row" id="ui-dealer-cards"></div>
+      </div>
+    </div>
+
+    <!-- CENTER STAGE: SHARED HEADLINE SPOT FOR "YOU WON!" AND "BUSTED OUT!" + STATUS BANNER -->
+    <div class="center-stage">
+      <div class="outcome-headline hidden" id="ui-outcome-headline">YOU WON!</div>
+      <div class="tier-plaque hidden" id="ui-tier-plaque">
+        <div class="tier-plaque-title" id="ui-tier-plaque-title">EXACT 21 WIN!</div>
+        <div class="tier-plaque-sub" id="ui-tier-plaque-sub">
+          <span class="plaque-chips" id="ui-tier-plaque-chips">+85c</span>
+          <span class="plaque-x">×</span>
+          <span class="plaque-mult" id="ui-tier-plaque-mult">+3m</span>
+        </div>
+      </div>
+      <div class="center-banner-wrap">
+        <div class="center-banner" id="ui-banner">Tap DEAL to start the round!</div>
+        <div class="scoring-breakdown" id="ui-breakdown">7 Deals per Blind — play out every hand!</div>
+      </div>
+      <div class="round-cash-breakdown hidden" id="ui-round-cash-breakdown"></div>
+    </div>
+
+    <!-- PLAYER ZONE -->
+    <div class="hand-zone">
+      <div class="cards-row" id="ui-player-cards"></div>
+      <div class="zone-header">
+        <span>PLAYER</span>
+        <span class="total-badge" id="ui-player-total">0</span>
+      </div>
+    </div>
+
+    <!-- 4. ACTION BUTTONS -->
+    <div class="controls-bar" id="ui-controls-bar">
+      <button class="btn btn-deal" id="btn-deal" onclick="handlePrimaryDealBtn()">DEAL (7)</button>
+      <button class="btn btn-hit" id="btn-hit" onclick="playerHit()" disabled>HIT</button>
+      <button class="btn btn-stand" id="btn-stand" onclick="playerStand()" disabled>STAND</button>
+      <button class="btn btn-double" id="btn-double" onclick="playerDouble()" disabled>DOUBLE ×2</button>
+    </div>
+
+    <!-- TAROT CARD TARGETING BACKDROP -->
+    <div id="ui-tarot-target-backdrop" class="tarot-target-backdrop hidden" onclick="cancelTarotTargeting()">
+      <div class="tarot-target-banner" onclick="event.stopPropagation()">
+        <div class="tarot-target-title" id="ui-tarot-target-title">🔮 SELECT A CARD</div>
+        <div class="tarot-target-hint" id="ui-tarot-target-hint">Tap an outlined card to apply • Tap anywhere else to cancel</div>
+      </div>
+    </div>
+
+    <!-- SHOP OVERLAY -->
+    <div class="overlay-panel hidden" id="ui-shop-overlay">
+      <div class="shop-header">
+        <div>
+          <div class="shop-title">PIT BOSS SHOP</div>
+          <div style="font-size:12px; color:#94a3b8;" id="ui-shop-payout-note">Prep for the upcoming Blind shown above!</div>
+        </div>
+        <div style="display:flex; gap:6px;">
+          <button class="btn btn-redeal" style="padding:7px 10px;" id="btn-reroll" onclick="uiRerollShop()">Reroll ($2)</button>
+          <button class="btn btn-deal" style="padding:7px 12px;" onclick="startNextBlindFromShop()">Play Blind ➔</button>
+        </div>
+      </div>
+
+      <div class="shop-scroll-area">
+        <div style="font-size:12px; color:#94a3b8; text-transform:uppercase; font-weight:bold; display:flex; justify-content:space-between; align-items:center;">
+          <span>Cards (Jokers &amp; Tarots)</span>
+          <span style="font-size:10px; color:#64748b; font-weight:normal; text-transform:none;">Rerollable</span>
+        </div>
+        <div class="shop-grid" id="ui-shop-jokers"></div>
+
+        <div class="shop-divider"></div>
+
+        <div style="font-size:12px; color:#94a3b8; text-transform:uppercase; font-weight:bold; display:flex; justify-content:space-between; align-items:center;">
+          <span>Booster Packs</span>
+          <span style="font-size:10px; color:#64748b; font-weight:normal; text-transform:none;">Fixed offer</span>
+        </div>
+        <div class="shop-grid" id="ui-shop-packs"></div>
+
+        <div class="shop-divider"></div>
+
+        <div style="font-size:12px; color:#94a3b8; text-transform:uppercase; font-weight:bold;">Vouchers</div>
+        <div class="shop-grid" id="ui-shop-extras"></div>
+      </div>
+    </div>
+
+    <!-- PACK OPENING OVERLAY -->
+    <div class="overlay-panel hidden pack-opening-overlay" id="ui-pack-overlay">
+      <!-- Animated Booster Pack Reveal (Shakes and pops open) -->
+      <div class="pack-booster-container hidden" id="ui-pack-booster-container" onclick="uiSkipPackAnimation()">
+        <div class="pack-booster-wrapper" id="ui-pack-booster-wrapper">
+          <div class="pack-booster-crimp top"></div>
+          <div class="pack-booster-foil-sheen"></div>
+          <div class="pack-booster-badge" id="ui-pack-booster-badge">JOKER PACK</div>
+          <div class="pack-booster-icon" id="ui-pack-booster-icon">🃏</div>
+          <div class="pack-booster-name" id="ui-pack-booster-name">JOKER BOOSTER</div>
+          <div class="pack-booster-tagline" id="ui-pack-booster-tag">CONTAINS 3 JOKERS</div>
+          <div class="pack-booster-crimp bottom"></div>
+        </div>
+        <div class="pack-burst-flash" id="ui-pack-burst-flash"></div>
+        <div class="pack-anim-hint">Tap to skip</div>
+      </div>
+
+      <div class="pack-opening-header">
+        <div class="pack-opening-badge" id="ui-pack-badge">JOKER PACK</div>
+        <h2 class="pack-opening-title" id="ui-pack-title">Open Booster Pack</h2>
+        <div class="pack-opening-sub" id="ui-pack-sub">Choose 1 option to take</div>
+      </div>
+
+      <!-- Carousel Stage Container with Navigation Chevrons -->
+      <div class="pack-stage-container">
+        <button class="pack-stage-arrow pack-arrow-left" id="btn-pack-prev" onclick="uiPackNavPrev()" aria-label="Previous card">&#9664;</button>
+
+        <div class="pack-opening-stage" id="ui-pack-stage" onclick="handlePackStageClick(event)">
+          <!-- Rendered revealed cards -->
+        </div>
+
+        <button class="pack-stage-arrow pack-arrow-right" id="btn-pack-next" onclick="uiPackNavNext()" aria-label="Next card">&#9654;</button>
+      </div>
+
+      <div class="pack-nav-hint" id="ui-pack-nav-hint">Card 1 of 3 &bull; Swipe or click arrows to browse</div>
+
+      <!-- Deck Hand Tray for Tarot Pack immediate card modification -->
+      <div class="pack-deck-tray hidden" id="ui-pack-deck-area">
+        <div class="pack-deck-cards-row" id="ui-pack-deck-cards"></div>
+      </div>
+
+      <div class="pack-opening-actions">
+        <button class="btn btn-secondary btn-skip-pack" id="btn-skip-pack" onclick="uiSkipPack()">
+          Skip Pack ➔
+        </button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- BLIND INFO MODAL -->
+<div class="modal-backdrop hidden" id="ui-blind-modal" onclick="toggleBlindModal(false)">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <span class="blind-badge" id="ui-modal-blind-tag">CURRENT BLIND</span>
+      <button class="btn btn-secondary" onclick="toggleBlindModal(false)">Close</button>
+    </div>
+    <h2 style="color:var(--gold); font-size:20px;" id="ui-modal-blind-name">Small Blind</h2>
+    <div style="font-size:14px; color:#f8fafc; background:#0b0e14; padding:12px; border-radius:8px; border:1px solid #334155; line-height:1.45;" id="ui-modal-blind-desc"></div>
+    <div style="display:flex; justify-content:space-between; font-size:13px; color:#cbd5e1; padding-top:4px;">
+      <span>Target Score: <strong style="color:var(--mult)" id="ui-modal-blind-target">300</strong></span>
+      <span>Base Reward: <strong style="color:var(--gold)" id="ui-modal-blind-reward">$4</strong></span>
+    </div>
+  </div>
+</div>
+
+<!-- COG SETTINGS, RULES & SIMULATOR LAUNCHER MODAL -->
+<div class="modal-backdrop hidden" id="ui-cog-modal" onclick="toggleCogModal(false)">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h3 style="color:var(--gold);">SETTINGS & HAND TIERS</h3>
+      <button class="btn btn-secondary" onclick="toggleCogModal(false)">Close</button>
+    </div>
+
+    <div id="ui-cog-modal-actions" style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:6px;">
+      <button class="btn btn-redeal" id="btn-modal-new-run" style="padding:10px 4px; font-size:12px;" onclick="toggleCogModal(false); startNewRun();">↻ New Run</button>
+      <button class="btn btn-secondary" id="btn-modal-main-menu" style="padding:10px 4px; font-size:12px;" onclick="toggleCogModal(false); showMainMenu();">🏠 Main Menu</button>
+      <button class="btn btn-double" id="btn-modal-sim" style="padding:10px 4px; font-size:12px;" onclick="toggleCogModal(false); toggleSimModal(true);">📊 Sim Lab</button>
+    </div>
+
+    <button class="btn btn-secondary" id="btn-modal-library" style="width:100%; padding:9px 12px; font-size:12px; font-weight:700; margin:2px 0 4px;" onclick="toggleCogModal(false); openLibraryModal();">
+      📖 VIEW COMPENDIUM / LIBRARY
+    </button>
+
+    <!-- AUDIO & SOUND SETTINGS PANEL -->
+    <div style="background:#111622; padding:9px 12px; border-radius:8px; border:1px solid #222938; margin: 6px 0; display:flex; flex-direction:column; gap:9px;">
+      <!-- SOUND EFFECTS -->
+      <div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:16px;" id="ui-icon-sfx">🔊</span>
+            <div>
+              <div style="font-size:12px; font-weight:700; color:#e2e8f0;">Sound Effects</div>
+              <div style="font-size:10px; color:#94a3b8;">Scoring cascade, chips, cards & pops</div>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span id="ui-lbl-sfx-volume" style="font-size:11px; color:#38bdf8; font-weight:bold; min-width:32px; text-align:right;">80%</span>
+            <button class="btn btn-deal" id="btn-modal-sfx-toggle" onclick="toggleSfx()" style="padding:4px 8px; font-size:11px;">SFX: ON</button>
+          </div>
+        </div>
+        <div style="margin-top:4px;">
+          <input type="range" id="setting-sfx-volume" min="0" max="100" value="80"
+            style="width:100%; accent-color:#38bdf8; cursor:pointer;"
+            oninput="setSfxVolume(parseFloat(this.value)/100)">
+        </div>
+      </div>
+
+      <!-- BACKGROUND MUSIC -->
+      <div style="border-top:1px solid #1e293b; padding-top:8px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:16px;" id="ui-icon-music">🎵</span>
+            <div>
+              <div style="font-size:12px; font-weight:700; color:#e2e8f0;">Background Music</div>
+              <div style="font-size:10px; color:#94a3b8;">Synthesized Lo-Fi Groove</div>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span id="ui-lbl-music-volume" style="font-size:11px; color:#38bdf8; font-weight:bold; min-width:32px; text-align:right;">80%</span>
+            <button class="btn btn-deal" id="btn-modal-music-toggle" onclick="toggleMusic()" style="padding:4px 8px; font-size:11px;">MUSIC: ON</button>
+          </div>
+        </div>
+        <div style="margin-top:4px;">
+          <input type="range" id="setting-music-volume" min="0" max="100" value="80"
+            style="width:100%; accent-color:#38bdf8; cursor:pointer;"
+            oninput="setMusicVolume(parseFloat(this.value)/100)">
+        </div>
+      </div>
+    </div>
+
+    <p style="font-size:13px; color:#cbd5e1; line-height:1.4;">
+      You get <strong id="ui-rules-deals-count">7</strong> Deals per Blind. Every card in your final hand adds its Blackjack value to your <strong>Chips</strong> (2–10 = face value, J/Q/K = 10, Ace = 11), plus Enhancements and Jokers. Tap any Joker to reorder it!
+    </p>
+
+    <table class="rules-table">
+      <thead>
+        <tr>
+          <th>Hand Outcome</th>
+          <th>Base Chips × Mult</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>5-Card Charlie</strong> (5+ cards unbusted)</td><td><span style="color:var(--chips)">160c</span> × <span style="color:var(--mult)">5m</span></td></tr>
+        <tr><td><strong>Natural Blackjack</strong> (2-card 21)</td><td><span style="color:var(--chips)">120c</span> × <span style="color:var(--mult)">4m</span></td></tr>
+        <tr><td><strong>Exact 21</strong> (3+ cards)</td><td><span style="color:var(--chips)">85c</span> × <span style="color:var(--mult)">3m</span></td></tr>
+        <tr><td><strong>Beat Dealer / Dealer Bust</strong></td><td><span style="color:var(--chips)">50c</span> × <span style="color:var(--mult)">2m</span></td></tr>
+        <tr><td><strong>Push (Tie)</strong></td><td><span style="color:var(--chips)">30c</span> × <span style="color:var(--mult)">1m</span></td></tr>
+        <tr><td><strong>Loss / Bust</strong></td><td>0 (unless <em>Safety Net</em>)</td></tr>
+      </tbody>
+    </table>
+    <div style="font-size:12px; color:#94a3b8; line-height:1.4;">
+      • <strong>Double Down:</strong> Initial 2 cards only. Draw 1 card, Stand, and multiply final score by <strong>×2</strong>.<br>
+      • <strong>Push Deal Refund:</strong> Pushing against the Dealer refunds your deal counter.<br>
+      • <strong>Economy:</strong> Clear a Blind to earn Base Cash + $1 per unused Deal + $1 interest per $5 held (max $5, or $8 with High Roller Credit).
+    </div>
+
+    <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid #334155;">
+      <label style="font-size: 12px; color: var(--gold); font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
+        <span>Scoring Animation Pace</span>
+        <span id="ui-lbl-anim-speed" style="font-size:12px; color:#38bdf8;">1.00× (Brisk / Original)</span>
+      </label>
+      <select id="setting-anim-speed" style="width:100%; margin-top:4px; padding:6px; background:#0b0e14; color:#fff; border:1px solid #334155; border-radius:4px; font-size:12px;" onchange="updateScoringSpeed(parseFloat(this.value))">
+        <option value="0.10">0.10× (Slow / Educational - 10% Speed)</option>
+        <option value="0.25">0.25× (Relaxed - 25% Speed)</option>
+        <option value="0.50">0.50× (Medium - 50% Speed)</option>
+        <option value="1.00" selected>1.00× (Brisk / Original)</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<!-- MONTE CARLO BALANCE SIMULATOR LAB MODAL -->
+<div class="modal-backdrop hidden" id="ui-sim-modal" onclick="toggleSimModal(false)">
+  <div class="modal-box wide-deck" onclick="event.stopPropagation()">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div>
+        <h3 style="color:var(--gold); font-size:16px;">📊 MONTE CARLO BALANCE LAB (v1.8)</h3>
+        <div style="font-size:12px; color:#94a3b8;">Simulate 1,000 to 20,000 runs, explore deep Endless survival, and analyze Joker, Tarot, Cheat &amp; Voucher telemetry.</div>
+      </div>
+      <button class="btn btn-secondary" onclick="toggleSimModal(false)">Close</button>
+    </div>
+
+    <div class="sim-controls-grid">
+      <div class="sim-field">
+        <label><span>Runs to Simulate</span><span id="sim-lbl-runs">3000</span></label>
+        <select id="sim-runs" onchange="document.getElementById('sim-lbl-runs').textContent=this.value">
+          <option value="1000">1,000 Runs (Fast Endless)</option>
+          <option value="3000" selected>3,000 Runs</option>
+          <option value="5000">5,000 Runs</option>
+          <option value="20000">20,000 Runs (Deep Precision)</option>
+        </select>
+      </div>
+
+      <div class="sim-field">
+        <label><span>Bot Playstyle Strategy</span></label>
+        <select id="sim-bot">
+          <option value="expert" selected>Expert Strategy AI (Rerolls, Interest &amp; Target Aware)</option>
+          <option value="synergy">Smart Synergy AI (Adapts to Jokers)</option>
+          <option value="highroller">High-Roller 21 AI (Faces/Aces/Doubles)</option>
+          <option value="charlie">Low-Card Charlie AI (Hits Low Cards)</option>
+          <option value="basic">Strict Casino Basic Strategy AI (With Jokers)</option>
+          <option value="vanilla">No-Jokers Baseline (Vanilla Basic Strategy)</option>
+        </select>
+      </div>
+
+      <div class="sim-field">
+        <label><span>Endless Mode Max Depth</span><span id="sim-lbl-endless">Ante 16 (Endless)</span></label>
+        <input type="range" id="sim-endless" min="8" max="24" step="1" value="16"
+          oninput="document.getElementById('sim-lbl-endless').textContent=this.value === '8' ? 'Ante 8 (Campaign Only)' : 'Ante ' + this.value + ' (Endless)'">
+      </div>
+
+      <div class="sim-field">
+        <label><span>Starting Deals / Blind</span><span id="sim-lbl-deals">7</span></label>
+        <input type="range" id="sim-deals" min="4" max="10" step="1" value="7"
+          oninput="document.getElementById('sim-lbl-deals').textContent=this.value">
+      </div>
+
+      <div class="sim-field">
+        <label><span>Target Score Scaling (Normal 50%)</span><span id="sim-lbl-scale">50%</span></label>
+        <input type="range" id="sim-scale" min="50" max="130" step="5" value="50"
+          oninput="document.getElementById('sim-lbl-scale').textContent=this.value+'%'">
+      </div>
+
+      <div class="sim-field">
+        <label><span>Starting Cash</span><span id="sim-lbl-cash">$6</span></label>
+        <input type="range" id="sim-start-cash" min="4" max="20" step="1" value="6"
+          oninput="document.getElementById('sim-lbl-cash').textContent='$'+this.value">
+      </div>
+
+      <div class="sim-field">
+        <label><span>Max Joker Slots</span><span id="sim-lbl-jokers">5 Slots</span></label>
+        <input type="range" id="sim-joker-slots" min="3" max="7" step="1" value="5"
+          oninput="document.getElementById('sim-lbl-jokers').textContent=this.value+' Slots'">
+      </div>
+
+      <div class="sim-field">
+        <label><span>Unused Deal Cash Cap</span><span id="sim-lbl-dealcap">$0</span></label>
+        <input type="range" id="sim-dealcap" min="0" max="10" step="1" value="0"
+          oninput="document.getElementById('sim-lbl-dealcap').textContent='$'+this.value">
+      </div>
+
+      <div class="sim-field">
+        <label><span>Experimental Rules</span></label>
+        <div style="display:flex; flex-direction:column; gap:3px; margin-top:2px;">
+          <label style="color:#e2e8f0; font-weight:normal; justify-content:flex-start; gap:6px; cursor:pointer;">
+            <input type="checkbox" id="sim-push-refund" checked> Pushes Refund Deal (+1 Deal back)
+          </label>
+          <label style="color:#e2e8f0; font-weight:normal; justify-content:flex-start; gap:6px; cursor:pointer;">
+            <input type="checkbox" id="sim-ante-leveling" checked> Hand Tiers Scale +15%/Ante
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="sim-btn-row">
+      <button class="btn btn-deal" style="flex:1; min-width:130px; padding:10px;" id="btn-run-sim" onclick="runMonteCarloSimulation()">▶ Run Simulation</button>
+      <button class="btn btn-hit" style="flex:1; min-width:140px; padding:10px;" id="btn-export-txt" onclick="downloadLastSimReport()" disabled>💾 Export Last Sim (.TXT)</button>
+      <button class="btn btn-stand" style="flex:1; min-width:160px; padding:10px;" id="btn-suite-txt" onclick="runAllBotsSuiteAndExport()">🚀 Run All 6 Bots & Export (.TXT)</button>
+      <button class="btn btn-secondary" style="padding:10px;" id="btn-copy-txt" onclick="copyLastSimReport()" disabled>📋 Copy</button>
+      <button class="btn btn-double" style="padding:10px;" onclick="applySimConfigToLiveGame()">✓ Apply to Game</button>
+    </div>
+
+    <!-- SIMULATION RESULTS CONTAINER -->
+    <div id="sim-results-area" style="display:flex; flex-direction:column; gap:10px;">
+      <div style="text-align:center; color:#64748b; font-size:12px; padding:16px;">
+        Click <strong>▶ Run Simulation</strong> (or <strong>🚀 Run All 6 Bots & Export (.TXT)</strong>) to generate telemetry.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- JOKER INSPECTION & REORDERING 3D CAROUSEL MODAL -->
+<div class="modal-backdrop hidden joker-carousel-backdrop" id="ui-joker-carousel-modal" onclick="closeJokerCarousel()">
+  <div class="joker-carousel-modal-panel" onclick="event.stopPropagation()">
+    <!-- Header -->
+    <div class="joker-carousel-header">
+      <div class="joker-header-left">
+        <span class="pack-badge pack-badge-joker" id="ui-joker-carousel-badge">ACTIVE JOKERS</span>
+        <span class="joker-carousel-order-tip">⚡ Triggers Left ➔ Right</span>
+      </div>
+      <button class="btn btn-secondary joker-close-btn" onclick="closeJokerCarousel()" aria-label="Close">✕</button>
+    </div>
+
+    <!-- Subtitle Tip -->
+    <div class="joker-carousel-sub">Arrange jokers for optimal scoring (e.g. +Chips & +Mult before ×Mult)</div>
+
+    <!-- 3D Carousel Stage with Chevrons -->
+    <div class="pack-stage-container joker-stage-container">
+      <button class="pack-stage-arrow pack-arrow-left" id="btn-joker-prev" onclick="uiJokerCarouselNavPrev()" aria-label="Previous joker">&#9664;</button>
+
+      <div class="pack-opening-stage joker-opening-stage" id="ui-joker-carousel-stage" onclick="handleJokerStageClick(event)">
+        <!-- Stacked 3D active joker cards rendered dynamically -->
+      </div>
+
+      <button class="pack-stage-arrow pack-arrow-right" id="btn-joker-next" onclick="uiJokerCarouselNavNext()" aria-label="Next joker">&#9654;</button>
+    </div>
+
+    <!-- Carousel Footer (Reorder Controls & Pagination Dots) -->
+    <div class="pack-carousel-footer joker-carousel-footer">
+      <button class="btn btn-secondary btn-joker-reorder" id="btn-joker-reorder-left" onclick="uiMoveJokerInCarousel(-1)">&#9664; Reorder joker left</button>
+      <div class="pack-dots-row" id="ui-joker-dots"></div>
+      <button class="btn btn-secondary btn-joker-reorder" id="btn-joker-reorder-right" onclick="uiMoveJokerInCarousel(1)">Reorder joker right &#9654;</button>
+    </div>
+    <div class="pack-nav-hint" id="ui-joker-nav-hint">Joker 1 of 3 &bull; Tap side arrows to browse &bull; Reorder buttons arrange scoring</div>
+
+    <!-- Action Bar -->
+    <div class="joker-carousel-actions">
+      <button class="btn btn-deal btn-joker-done" onclick="closeJokerCarousel()">
+        Return to Table ➔
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ITEM INSPECTOR MODAL -->
+<div class="modal-backdrop hidden" id="ui-inspect-modal" onclick="closeInspector()">
+  <div class="modal-box" id="ui-inspect-content" onclick="event.stopPropagation()"></div>
+</div>
+
+<!-- FULL DECK VIEWER MODAL -->
+<div class="modal-backdrop hidden" id="ui-deck-modal" onclick="toggleDeckModal(false)">
+  <div class="modal-box wide-deck" onclick="event.stopPropagation()">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div>
+        <h3 style="color:var(--gold); font-size:16px;" id="ui-deck-modal-title">FULL DECK VIEW</h3>
+        <div style="font-size:12px; color:#94a3b8;">Ordered by Suit & Rank (Dimmed = Revealed face-up cards • Tap any card to inspect)</div>
+      </div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button class="btn btn-secondary" id="btn-deck-show-all" onclick="toggleDeckShowAll()">Show All</button>
+        <button class="btn btn-secondary" onclick="toggleDeckModal(false)">Close</button>
+      </div>
+    </div>
+    <div id="ui-deck-list" style="display:flex; flex-direction:column; gap:6px;"></div>
+  </div>
+</div>
+
+<!-- DECK CARD INSPECTION / ZOOM MODAL -->
+<div class="modal-backdrop hidden" id="ui-deck-card-modal" onclick="closeDeckCardModal()">
+  <div class="modal-box deck-card-zoom-box" onclick="event.stopPropagation()">
+    <div class="deck-card-zoom-header">
+      <div class="deck-card-zoom-title" id="ui-deck-zoom-card-name">Card Details</div>
+      <button class="btn btn-secondary btn-deck-zoom-close" onclick="closeDeckCardModal()">✕</button>
+    </div>
+    <div class="deck-card-zoom-stage">
+      <div id="ui-deck-zoom-card-render">
+        <!-- Rendered full size card -->
+      </div>
+    </div>
+    <div class="deck-card-zoom-details">
+      <div class="deck-card-status-badge" id="ui-deck-zoom-card-status">In Deck</div>
+      <div class="deck-card-blurb" id="ui-deck-zoom-card-blurb"></div>
+    </div>
+    <button class="btn btn-secondary" style="width:100%; margin-top:2px;" onclick="closeDeckCardModal()">Close</button>
+  </div>
+</div>
+
+<!-- DEFEAT / RUN OVER MODAL -->
+<div class="modal-backdrop hidden" id="ui-defeat-modal">
+  <div class="modal-box defeat-box" onclick="event.stopPropagation()">
+    <div class="defeat-header">
+      <div class="defeat-badge">RUN OVER</div>
+      <h2 class="defeat-title">BUSTED OUT!</h2>
+      <div class="defeat-sub" id="ui-defeat-sub">You ran out of Deals before reaching the Target Score.</div>
+    </div>
+
+    <div class="run-stats-grid">
+      <div class="stat-box">
+        <div class="stat-box-lbl">Ante Reached</div>
+        <div class="stat-box-val" id="ui-defeat-stat-ante">Ante 1</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-lbl">Target Score</div>
+        <div class="stat-box-val" id="ui-defeat-stat-target">300</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-lbl">Final Score</div>
+        <div class="stat-box-val" id="ui-defeat-stat-score">0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-lbl">Cash Held</div>
+        <div class="stat-box-val" id="ui-defeat-stat-money">$6</div>
+      </div>
+    </div>
+
+    <div class="defeat-jokers-area">
+      <div class="defeat-jokers-label">JOKERS HELD</div>
+      <div class="defeat-jokers-row" id="ui-defeat-jokers">None</div>
+    </div>
+
+    <div class="defeat-actions">
+      <button class="btn btn-deal btn-defeat-play" onclick="uiRestartFromDefeat()">↻ NEW GAME</button>
+      <button class="btn btn-secondary btn-defeat-stats" id="btn-defeat-stats" onclick="uiShowStatsModal('DEFEAT')">📊 STATISTICS</button>
+      <button class="btn btn-secondary btn-defeat-menu" onclick="showMainMenu()">🏠 MAIN MENU</button>
+      <button class="btn btn-secondary btn-defeat-view" id="btn-defeat-view-table" onclick="uiHideModalToViewTable('DEFEAT')">👁️ VIEW TABLE</button>
+    </div>
+  </div>
+</div>
+
+<!-- ANTE 8 VICTORY / CONQUERED MODAL -->
+<div class="modal-backdrop hidden" id="ui-victory-modal">
+  <div class="modal-box victory-box" onclick="event.stopPropagation()">
+    <div class="victory-header">
+      <div class="victory-crown">👑</div>
+      <div class="victory-badge">VICTORY ACHIEVED</div>
+      <h1 class="victory-title">ANTE 8 CONQUERED!</h1>
+      <div class="victory-sub">You defeated the Boss and mastered the Casino!</div>
+    </div>
+
+    <div class="run-stats-grid victory-stats">
+      <div class="stat-box gold-border">
+        <div class="stat-box-lbl">Conquered</div>
+        <div class="stat-box-val gold-txt">Ante 8 Boss</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-lbl">Final Score</div>
+        <div class="stat-box-val" id="ui-victory-stat-score">0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-lbl">Total Cash</div>
+        <div class="stat-box-val" id="ui-victory-stat-money">$0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-lbl">Deals Saved</div>
+        <div class="stat-box-val" id="ui-victory-stat-deals">0</div>
+      </div>
+    </div>
+
+    <div class="victory-jokers-area">
+      <div class="victory-jokers-label">WINNING JOKER SYNERGY</div>
+      <div class="victory-jokers-row" id="ui-victory-jokers"></div>
+    </div>
+
+    <div class="victory-actions">
+      <button class="btn btn-deal btn-endless" onclick="uiContinueIntoEndless()">
+        <span>🚀 CONTINUE INTO ENDLESS</span>
+      </button>
+      <div class="victory-sub-actions">
+        <button class="btn btn-secondary btn-victory-stats" id="btn-victory-stats" onclick="uiShowStatsModal('VICTORY')">
+          <span>📊 STATISTICS</span>
+        </button>
+        <button class="btn btn-secondary" onclick="uiRestartFromVictory()">
+          <span>↻ NEW GAME</span>
+        </button>
+        <button class="btn btn-secondary" onclick="showMainMenu()">
+          <span>🏠 MAIN MENU</span>
+        </button>
+        <button class="btn btn-secondary" id="btn-victory-view-table" onclick="uiHideModalToViewTable('VICTORY')">
+          <span>👁️ VIEW TABLE</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RUN STATISTICS MODAL -->
+<div class="modal-backdrop hidden" id="ui-stats-modal">
+  <div class="modal-box stats-box" onclick="event.stopPropagation()">
+    <div class="stats-header">
+      <div class="stats-badge">RUN DOSSIER</div>
+      <h2 class="stats-title">RUN STATISTICS</h2>
+      <div class="stats-sub" id="ui-stats-status">Run Telemetry & Performance</div>
+    </div>
+
+    <!-- OVERVIEW STATS GRID -->
+    <div class="stats-section-title">📊 RUN OVERVIEW</div>
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="stat-box-lbl">Final Ante</div>
+        <div class="stat-box-val gold-txt" id="ui-stats-ante">Ante 1</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-lbl">Total Score</div>
+        <div class="stat-box-val" id="ui-stats-total-score">0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-lbl">Best Hand Score</div>
+        <div class="stat-box-val gold-txt" id="ui-stats-high-score">0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-lbl">Hands Record</div>
+        <div class="stat-box-val" id="ui-stats-hands-played">0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-lbl">Hand Win Rate</div>
+        <div class="stat-box-val" id="ui-stats-winrate">0.0%</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-lbl">Double Downs</div>
+        <div class="stat-box-val" id="ui-stats-doubles">0/0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-lbl">Cards Dealt</div>
+        <div class="stat-box-val" id="ui-stats-cards-drawn">0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-lbl">Tarots Used</div>
+        <div class="stat-box-val" id="ui-stats-tarots-used">0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-lbl">Vouchers Bought</div>
+        <div class="stat-box-val" id="ui-stats-vouchers-bought">0</div>
+      </div>
+    </div>
+
+    <!-- BASE HAND OUTCOMES BREAKDOWN -->
+    <div class="stats-section-title">🃏 BASE HAND OUTCOMES BREAKDOWN</div>
+    <div class="stats-outcomes-grid">
+      <div class="stats-eco-col eco-earned">
+        <div class="eco-header">
+          <span>WINNING &amp; SCORING HANDS</span>
+          <span class="eco-total gold-txt" id="ui-stats-outcomes-wins-total">0 Won</span>
+        </div>
+        <div id="ui-stats-outcomes-wins-list" class="stats-outcome-list">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <div class="stats-eco-col eco-spent">
+        <div class="eco-header">
+          <span>LOSSES &amp; TIES</span>
+          <span class="eco-total red-txt" id="ui-stats-outcomes-losses-total">0 Lost / 0 Push</span>
+        </div>
+        <div id="ui-stats-outcomes-losses-list" class="stats-outcome-list">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <!-- MONEY BREAKDOWN -->
+    <div class="stats-section-title">💰 MONEY BREAKDOWN</div>
+    <div class="stats-economy-grid">
+      <div class="stats-eco-col eco-earned">
+        <div class="eco-header">
+          <span>MONEY EARNED</span>
+          <span class="eco-total gold-txt" id="ui-stats-earned-total">+$0</span>
+        </div>
+        <div class="eco-row"><span>Blinds Rewards</span><span id="ui-stats-earned-blinds">+$0</span></div>
+        <div class="eco-row"><span>Unused Deals</span><span id="ui-stats-earned-deals">+$0</span></div>
+        <div class="eco-row"><span>Interest</span><span id="ui-stats-earned-interest">+$0</span></div>
+        <div class="eco-row"><span>In-Hand Cards / Jokers</span><span id="ui-stats-earned-scoring">+$0</span></div>
+        <div class="eco-row"><span>Sales (Jokers/Tarots)</span><span id="ui-stats-earned-sales">+$0</span></div>
+        <div class="eco-row"><span>Loan Shark Buyout</span><span id="ui-stats-earned-loan">+$0</span></div>
+      </div>
+
+      <div class="stats-eco-col eco-spent">
+        <div class="eco-header">
+          <span>MONEY SPENT</span>
+          <span class="eco-total red-txt" id="ui-stats-spent-total">-$0</span>
+        </div>
+        <div class="eco-row"><span>Jokers Purchased</span><span id="ui-stats-spent-jokers">-$0</span></div>
+        <div class="eco-row"><span>Tarots Purchased</span><span id="ui-stats-spent-tarots">-$0</span></div>
+        <div class="eco-row"><span>Shoe Cards Added</span><span id="ui-stats-spent-cards">-$0</span></div>
+        <div class="eco-row"><span>Vouchers Redeemed</span><span id="ui-stats-spent-vouchers">-$0</span></div>
+        <div class="eco-row"><span>Shop Rerolls</span><span id="ui-stats-spent-rerolls">-$0</span></div>
+        <div class="eco-row"><span>Loan Shark Fees</span><span id="ui-stats-spent-loan">-$0</span></div>
+      </div>
+    </div>
+    <div class="stats-eco-summary">
+      <div class="eco-summary-box">
+        <span>Net Cash Flow:</span>
+        <strong id="ui-stats-net-cash" class="gold-txt">$0</strong>
+      </div>
+      <div class="eco-summary-box">
+        <span>Final Cash Balance:</span>
+        <strong id="ui-stats-final-money" class="gold-txt">$0</strong>
+      </div>
+    </div>
+
+    <!-- JOKER TRIGGERS BREAKDOWN -->
+    <div class="stats-section-title">🃏 JOKER ACTIVATIONS & TRIGGERS</div>
+    <div class="stats-jokers-list" id="ui-stats-joker-triggers">
+      <!-- populated dynamically -->
+    </div>
+
+    <!-- MODAL ACTIONS -->
+    <div class="stats-actions">
+      <button class="btn btn-deal btn-stats-back" onclick="uiHideStatsModal()">← RETURN</button>
+    </div>
+  </div>
+</div>
+
+<!-- ARCHIVES & COMPENDIUM LIBRARY MODAL -->
+<div class="modal-backdrop hidden" id="ui-library-modal" onclick="closeLibraryModal()">
+  <div class="modal-box library-modal-box" onclick="event.stopPropagation()">
+    <!-- TOP BAR -->
+    <div class="library-top-bar">
+      <div class="library-top-left">
+        <button class="btn btn-secondary btn-library-nav-back" id="btn-library-back" onclick="handleLibraryBack()">
+          <span id="ui-lib-back-icon">←</span> <span id="ui-lib-back-label">Main Menu</span>
+        </button>
+        <div class="library-title-group">
+          <h2 class="library-title" id="ui-lib-title">ARCHIVES & COMPENDIUM</h2>
+          <div class="library-subtitle" id="ui-lib-subtitle">Select a collection to view all cards, upgrades & effects</div>
+        </div>
+      </div>
+      <div class="library-top-right">
+        <button class="btn btn-secondary btn-library-close" onclick="closeLibraryModal()" title="Close Library">✖</button>
+      </div>
+    </div>
+
+    <!-- CATEGORY TABS (visible in category view) -->
+    <div class="library-category-tabs hidden" id="ui-lib-category-tabs">
+      <button class="lib-tab-btn" id="lib-tab-jokers" onclick="switchLibraryCategory('jokers')">🃏 Jokers (35)</button>
+      <button class="lib-tab-btn" id="lib-tab-tarots" onclick="switchLibraryCategory('tarots')">🔮 Tarots (10)</button>
+      <button class="lib-tab-btn" id="lib-tab-vouchers" onclick="switchLibraryCategory('vouchers')">🎟️ Vouchers (10)</button>
+      <button class="lib-tab-btn" id="lib-tab-effects" onclick="switchLibraryCategory('effects')">✨ Card Effects (4)</button>
+      <button class="lib-tab-btn" id="lib-tab-packs" onclick="switchLibraryCategory('packs')">📦 Packs (5)</button>
+    </div>
+
+    <!-- VIEW 1: CATEGORY SELECTION MENU -->
+    <div class="library-page" id="ui-lib-categories-page">
+      <div class="lib-categories-grid">
+        <div class="lib-cat-card cat-jokers" id="lib-cat-card-jokers" onclick="openLibraryCategory('jokers')">
+          <div class="lib-cat-header">
+            <span class="lib-cat-icon">🃏</span>
+            <span class="lib-cat-count-badge">37 CARDS</span>
+          </div>
+          <div class="lib-cat-name">JOKERS</div>
+          <div class="lib-cat-desc">Rule-bending passive jokers providing Chips, Multipliers, economic perks, and hand synergies.</div>
+          <div class="lib-cat-tags">
+            <span class="lib-pill pill-common">Common (18)</span>
+            <span class="lib-pill pill-uncommon">Uncommon (11)</span>
+            <span class="lib-pill pill-rare">Rare (6)</span>
+          </div>
+          <div class="lib-cat-cta">BROWSE JOKERS →</div>
+        </div>
+
+        <div class="lib-cat-card cat-tarots" id="lib-cat-card-tarots" onclick="openLibraryCategory('tarots')">
+          <div class="lib-cat-header">
+            <span class="lib-cat-icon">🔮</span>
+            <span class="lib-cat-count-badge">17 CONSUMABLES</span>
+          </div>
+          <div class="lib-cat-name">TAROTS</div>
+          <div class="lib-cat-desc">Mystical single-use consumables that alter card ranks, apply special enhancements, or destroy weak cards.</div>
+          <div class="lib-cat-tags">
+            <span class="lib-pill pill-purple">Permanent Alteration</span>
+            <span class="lib-pill pill-purple">Special Editions</span>
+          </div>
+          <div class="lib-cat-cta">BROWSE TAROTS →</div>
+        </div>
+
+        <div class="lib-cat-card cat-vouchers" id="lib-cat-card-vouchers" onclick="openLibraryCategory('vouchers')">
+          <div class="lib-cat-header">
+            <span class="lib-cat-icon">🎟️</span>
+            <span class="lib-cat-count-badge">10 UPGRADES</span>
+          </div>
+          <div class="lib-cat-name">VOUCHERS</div>
+          <div class="lib-cat-desc">Permanent table perks lasting the entire run. Boost deals, expand joker slots, discount rerolls, and amplify base stats.</div>
+          <div class="lib-cat-tags">
+            <span class="lib-pill pill-gold">1 Per Ante</span>
+            <span class="lib-pill pill-gold">Permanent Passives</span>
+          </div>
+          <div class="lib-cat-cta">BROWSE VOUCHERS →</div>
+        </div>
+
+        <div class="lib-cat-card cat-effects" id="lib-cat-card-effects" onclick="openLibraryCategory('effects')">
+          <div class="lib-cat-header">
+            <span class="lib-cat-icon">✨</span>
+            <span class="lib-cat-count-badge">4 SPECIAL EFFECTS</span>
+          </div>
+          <div class="lib-cat-name">CARD EFFECTS</div>
+          <div class="lib-cat-desc">Special card editions with animated visual shaders: Foil (+30c), Holographic (+4m), Polychrome (×1.5m), and Gold (+$3).</div>
+          <div class="lib-cat-tags">
+            <span class="lib-pill pill-chips">Foil</span>
+            <span class="lib-pill pill-mult">Holo</span>
+            <span class="lib-pill pill-purple">Poly</span>
+            <span class="lib-pill pill-gold">Gold</span>
+          </div>
+          <div class="lib-cat-cta">BROWSE EFFECTS →</div>
+        </div>
+
+        <div class="lib-cat-card cat-packs" id="lib-cat-card-packs" onclick="openLibraryCategory('packs')">
+          <div class="lib-cat-header">
+            <span class="lib-cat-icon">📦</span>
+            <span class="lib-cat-count-badge">5 BOOSTER PACKS</span>
+          </div>
+          <div class="lib-cat-name">PACKS</div>
+          <div class="lib-cat-desc">Booster packs offered in the Pit Boss Shop. Open to draft powerful Jokers, Tarots, Table Cheats, Enhanced Playing Cards, or mixed Variety.</div>
+          <div class="lib-cat-tags">
+            <span class="lib-pill pill-blue">Joker Pack</span>
+            <span class="lib-pill pill-purple">Tarot Pack</span>
+            <span class="lib-pill pill-mult">Cheat Pack</span>
+            <span class="lib-pill pill-green">Variety Pack</span>
+          </div>
+          <div class="lib-cat-cta">BROWSE PACKS →</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW 2: CATEGORY ITEMS GRID PAGE -->
+    <div class="library-page hidden" id="ui-lib-items-page">
+      <div class="lib-subfilter-bar hidden" id="ui-lib-subfilter-bar"></div>
+      <div class="lib-items-grid" id="ui-lib-items-grid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ITEM ENLARGED DETAIL & TELEMETRY MODAL -->
+<div class="modal-backdrop hidden" id="ui-lib-detail-modal" onclick="closeLibraryDetail()">
+  <div class="modal-box lib-detail-box" onclick="event.stopPropagation()">
+    <div class="lib-detail-header">
+      <div class="lib-detail-tag-row">
+        <span class="lib-detail-badge" id="ui-lib-detail-badge">CATEGORY</span>
+        <span class="lib-detail-type" id="ui-lib-detail-type">ITEM TYPE</span>
+      </div>
+      <button class="btn btn-secondary btn-detail-close" onclick="closeLibraryDetail()">Close ✖</button>
+    </div>
+
+    <!-- Centered Enlarged Item Stage -->
+    <div class="lib-detail-stage" id="ui-lib-detail-stage"></div>
+
+    <!-- Item Information & Description -->
+    <div class="lib-detail-info">
+      <div class="lib-detail-name-row">
+        <h3 class="lib-detail-title" id="ui-lib-detail-title">Item Name</h3>
+        <span class="lib-detail-cost" id="ui-lib-detail-cost">$0</span>
+      </div>
+      <div class="lib-detail-desc" id="ui-lib-detail-desc">Item Description</div>
+      <div class="lib-detail-tip" id="ui-lib-detail-tip"></div>
+    </div>
+
+    <!-- Stats & Telemetry Section (Future Stat Tracking Architecture) -->
+    <div class="lib-detail-stats-section">
+      <div class="lib-stats-header">
+        <span class="lib-stats-title">📊 ITEM TELEMETRY & LIFETIME STATS</span>
+        <span class="lib-stats-pill" id="ui-lib-detail-stats-status">UPCOMING TRACKING</span>
+      </div>
+      <div class="lib-stats-grid" id="ui-lib-detail-stats-grid"></div>
+    </div>
+
+    <div class="lib-detail-actions">
+      <button class="btn btn-secondary" style="width:100%; padding:10px; font-weight:700;" onclick="closeLibraryDetail()">← Return to Collection</button>
+    </div>
+  </div>
+</div>
+
+<!-- FLOATING VIEW TABLE RETURN BAR (when victory or bust modal is hidden to inspect cards) -->
+<div id="ui-inspect-touch-shield" class="inspect-touch-shield hidden" onclick="uiRestoreModal()"></div>
+<div id="ui-view-table-bar" class="view-table-bar hidden">
+  <div class="view-table-info">
+    <span class="view-table-icon">👁️</span>
+    <span id="ui-view-table-label">Table View Mode</span>
+  </div>
+  <button class="btn btn-deal btn-return-screen" id="btn-return-modal" onclick="uiRestoreModal()">
+    <span>🔙 RETURN TO RESULTS</span>
+  </button>
+</div>
+
+<!-- Compiled TypeScript (npx.cmd tsc: src/*.ts -> dist/*.js). Plain global scripts; order matters. -->
+<script src="dist/gameState.js?v=0.15"></script>
+<script src="dist/deckEngine.js?v=0.15"></script>
+<script src="dist/modifierEngine.js?v=0.15"></script>
+<script src="dist/shopEngine.js?v=0.15"></script>
+<script src="dist/simulator.js?v=0.15"></script>
+<script src="dist/uiFx.js?v=0.15"></script>
+<script src="dist/main.js?v=0.15"></script>
+</body>
+</html>
