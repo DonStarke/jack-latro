@@ -136,6 +136,9 @@ interface BalanceConfig {
   unusedDealCashCap: number;
   pushRefundsDeal: boolean;
   anteHandScaling: boolean;
+  maxEndlessAnte?: number;
+  startingMoney?: number;
+  maxJokers?: number;
 }
 
 interface GameState {
@@ -247,7 +250,10 @@ const DEFAULT_BALANCE_CONFIG: BalanceConfig = {
   targetScalePct: 50,
   unusedDealCashCap: 0,
   pushRefundsDeal: true,
-  anteHandScaling: true
+  anteHandScaling: true,
+  maxEndlessAnte: 16,
+  startingMoney: 6,
+  maxJokers: 5
 };
 
 let _balanceConfig: BalanceConfig = { ...DEFAULT_BALANCE_CONFIG };
@@ -1173,9 +1179,9 @@ if (typeof window !== 'undefined') {
 function resetRunState(freshDeck: Card[]): void {
   _state.ante = 1;
   _state.blindIndex = 0;
-  _state.money = STARTING_MONEY;
+  _state.money = _balanceConfig.startingMoney ?? STARTING_MONEY;
   _state.maxHands = _balanceConfig.startingDeals;
-  _state.maxJokers = STARTING_MAX_JOKERS;
+  _state.maxJokers = _balanceConfig.maxJokers ?? STARTING_MAX_JOKERS;
   _state.baseWinChipBonus = 0;
   _state.baseWinMultBonus = 0;
   _state.jokers = [];

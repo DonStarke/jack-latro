@@ -10,7 +10,11 @@
 
 type BotType = 'expert' | 'synergy' | 'highroller' | 'charlie' | 'basic' | 'vanilla';
 type BotAction = 'HIT' | 'STAND' | 'DOUBLE';
-type SimConfig = BalanceConfig;
+interface SimConfig extends BalanceConfig {
+  maxEndlessAnte?: number;
+  startingMoney?: number;
+  maxJokers?: number;
+}
 
 const BOT_ORDER: ReadonlyArray<BotType> = ['expert', 'synergy', 'highroller', 'charlie', 'basic', 'vanilla'];
 
@@ -33,6 +37,9 @@ interface SimRun {
   handsWonInBlind?: number;
   previousHandTotal?: number | null;
   lastTarotUsedId?: string | null;
+  usedTarots: Set<string>;
+  usedCheats: Set<string>;
+  voucherAnteBought: Record<string, number>;
 }
 
 interface BlindStat {
@@ -82,6 +89,21 @@ interface VoucherStat {
   offered: number;
   bought: number;
   wins: number;
+  anteSum: number;
+  runsWithVoucher: number;
+}
+
+interface ConsumableStat {
+  id: string;
+  name: string;
+  category: 'tarot' | 'cheat';
+  offered: number;
+  bought: number;
+  timesUsed: number;
+  runsWithItem: number;
+  runsWonWithItem: number;
+  anteSum: number;
+  specialImpactSum: number;
 }
 
 interface PackStat {
@@ -91,6 +113,15 @@ interface PackStat {
   bought: number;
 }
 
+interface EndlessStat {
+  ante: number;
+  entered: number;
+  cleared: number;
+  clearRatePct: number;
+  scalingDeaths: number;
+  coldShoeDeaths: number;
+}
+
 interface SimData {
   numRuns: number;
   botType: BotType;
@@ -98,6 +129,7 @@ interface SimData {
   elapsedMs: number;
   wins: number;
   totalFinalAnte: number;
+  highestAnteReached: number;
   scalingDeaths: number;
   coldShoeDeaths: number;
   totalHandsWon: number;
@@ -108,19 +140,38 @@ interface SimData {
   outcomeCounters: OutcomeCounters;
   jokerStats: Record<string, JokerStat>;
   voucherStats: Record<string, VoucherStat>;
+  consumableStats: Record<string, ConsumableStat>;
   packStats: Record<string, PackStat>;
+  endlessStats: EndlessStat[];
+  maxEndlessAnte: number;
 }
 
 /* ---------- Tarot Card Application Helper (Shared by Packs and Shop) ---------- */
-function applySimTarotEffect(tarot: TarotDef, simRun: SimRun, botType: BotType): void {
+function applySimTarotEffect(
+  tarot: TarotDef,
+  simRun: SimRun,
+  botType: BotType,
+  consumableStats?: Record<string, ConsumableStat>
+): void {
   simRun.lastTarotUsedId = tarot.id;
+  simRun.usedTarots.add(tarot.id);
+  if (consumableStats && consumableStats[tarot.id]) {
+    consumableStats[tarot.id].timesUsed++;
+  }
   const ranks: Rank[] = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
 
   if (tarot.id === 'the_guillotine') {
     // Destroy up to 2 low cards (2, 3, 4, 5)
+    let destroyed = 0;
     for (let i = 0; i < 2; i++) {
       const idx = simRun.deck.findIndex(c => ['2', '3', '4', '5'].includes(c.rank));
-      if (idx >= 0) simRun.deck.splice(idx, 1);
+      if (idx >= 0) {
+        simRun.deck.splice(idx, 1);
+        destroyed++;
+      }
+    }
+    if (consumableStats && consumableStats[tarot.id]) {
+      consumableStats[tarot.id].specialImpactSum += destroyed;
     }
   } else if (tarot.id === 'card_forge') {
     // Increase rank of up to 2 cards by 1 (prefer upgrading high cards towards Ace)
@@ -139,6 +190,9 @@ function applySimTarotEffect(tarot: TarotDef, simRun: SimRun, botType: BotType):
         }
       }
     }
+    if (consumableStats && consumableStats[tarot.id]) {
+      consumableStats[tarot.id].specialImpactSum += count;
+    }
   } else if (tarot.id === 'card_shave') {
     // Reduce rank of up to 2 cards by 1 (ideal for Charlie bot)
     let count = 0;
@@ -156,6 +210,9 @@ function applySimTarotEffect(tarot: TarotDef, simRun: SimRun, botType: BotType):
         }
       }
     }
+    if (consumableStats && consumableStats[tarot.id]) {
+      consumableStats[tarot.id].specialImpactSum += count;
+    }
   } else if (tarot.id === 'polychrome_dice') {
     // Enhance up to 2 cards to Polychrome (x1.5 Mult)
     const targets = simRun.deck.filter(c => !c.enhancement && ['A', 'K', 'Q', 'J', '10'].includes(c.rank)).slice(0, 2);
@@ -164,6 +221,9 @@ function applySimTarotEffect(tarot: TarotDef, simRun: SimRun, botType: BotType):
       targets.push(...more);
     }
     targets.forEach(c => { c.enhancement = 'poly'; });
+    if (consumableStats && consumableStats[tarot.id]) {
+      consumableStats[tarot.id].specialImpactSum += targets.length;
+    }
   } else if (tarot.id === 'lucky_charm') {
     // Enhance up to 2 cards to Holo (+4 Mult)
     const targets = simRun.deck.filter(c => !c.enhancement && ['A', 'K', 'Q', 'J', '10'].includes(c.rank)).slice(0, 2);
@@ -172,30 +232,62 @@ function applySimTarotEffect(tarot: TarotDef, simRun: SimRun, botType: BotType):
       targets.push(...more);
     }
     targets.forEach(c => { c.enhancement = 'holo'; });
+    if (consumableStats && consumableStats[tarot.id]) {
+      consumableStats[tarot.id].specialImpactSum += targets.length;
+    }
   } else if (tarot.id === 'wild_suit' || tarot.id === 'prism_dye') {
     // Enhance up to 2 cards to Foil (+30 Chips)
     const targets = simRun.deck.filter(c => !c.enhancement).slice(0, 2);
     targets.forEach(c => { c.enhancement = 'foil'; });
+    if (consumableStats && consumableStats[tarot.id]) {
+      consumableStats[tarot.id].specialImpactSum += targets.length;
+    }
   } else if (tarot.id === 'midas_touch') {
     // Enhance 1 card to Gold (+$3)
     const target = simRun.deck.find(c => !c.enhancement && ['A', 'K', 'Q', '10'].includes(c.rank)) || simRun.deck.find(c => !c.enhancement);
-    if (target) target.enhancement = 'gold';
+    if (target) {
+      target.enhancement = 'gold';
+      if (consumableStats && consumableStats[tarot.id]) {
+        consumableStats[tarot.id].specialImpactSum += 1;
+      }
+    }
   } else if (tarot.id === 'the_lovers') {
     // Turn 1 card Wild (★)
     const target = simRun.deck.find(c => c.suit !== '★');
-    if (target) target.suit = '★';
+    if (target) {
+      target.suit = '★';
+      if (consumableStats && consumableStats[tarot.id]) {
+        consumableStats[tarot.id].specialImpactSum += 1;
+      }
+    }
   } else if (tarot.id === 'the_sun') {
     // Convert up to 3 cards to Hearts
-    simRun.deck.filter(c => c.suit !== '♥').slice(0, 3).forEach(c => { c.suit = '♥'; });
+    const converted = simRun.deck.filter(c => c.suit !== '♥').slice(0, 3);
+    converted.forEach(c => { c.suit = '♥'; });
+    if (consumableStats && consumableStats[tarot.id]) {
+      consumableStats[tarot.id].specialImpactSum += converted.length;
+    }
   } else if (tarot.id === 'the_star') {
     // Convert up to 3 cards to Diamonds
-    simRun.deck.filter(c => c.suit !== '♦').slice(0, 3).forEach(c => { c.suit = '♦'; });
+    const converted = simRun.deck.filter(c => c.suit !== '♦').slice(0, 3);
+    converted.forEach(c => { c.suit = '♦'; });
+    if (consumableStats && consumableStats[tarot.id]) {
+      consumableStats[tarot.id].specialImpactSum += converted.length;
+    }
   } else if (tarot.id === 'the_moon') {
     // Convert up to 3 cards to Clubs
-    simRun.deck.filter(c => c.suit !== '♣').slice(0, 3).forEach(c => { c.suit = '♣'; });
+    const converted = simRun.deck.filter(c => c.suit !== '♣').slice(0, 3);
+    converted.forEach(c => { c.suit = '♣'; });
+    if (consumableStats && consumableStats[tarot.id]) {
+      consumableStats[tarot.id].specialImpactSum += converted.length;
+    }
   } else if (tarot.id === 'the_world') {
     // Convert up to 3 cards to Spades
-    simRun.deck.filter(c => c.suit !== '♠').slice(0, 3).forEach(c => { c.suit = '♠'; });
+    const converted = simRun.deck.filter(c => c.suit !== '♠').slice(0, 3);
+    converted.forEach(c => { c.suit = '♠'; });
+    if (consumableStats && consumableStats[tarot.id]) {
+      consumableStats[tarot.id].specialImpactSum += converted.length;
+    }
   } else if (tarot.id === 'judgement') {
     // Create random unowned Joker if room
     if (simRun.jokers.length < simRun.maxJokers) {
@@ -204,12 +296,15 @@ function applySimTarotEffect(tarot: TarotDef, simRun: SimRun, botType: BotType):
       const rolled = pool.length > 0 ? shuffle(pool)[0] : shuffle(JOKER_CATALOG)[0];
       simRun.jokers.push({ ...rolled, bonusMult: 0, bonusChips: 0 });
       simRun.jokers.sort((a, b) => (a.isXMult ? 1 : 0) - (b.isXMult ? 1 : 0));
+      if (consumableStats && consumableStats[tarot.id]) {
+        consumableStats[tarot.id].specialImpactSum += 1;
+      }
     }
   } else if (tarot.id === 'nostradamus') {
     // Copy last used tarot
     if (simRun.lastTarotUsedId && simRun.lastTarotUsedId !== 'nostradamus') {
       const prevDef = TAROT_CATALOG.find(x => x.id === simRun.lastTarotUsedId);
-      if (prevDef) applySimTarotEffect(prevDef, simRun, botType);
+      if (prevDef) applySimTarotEffect(prevDef, simRun, botType, consumableStats);
     }
   }
 }
@@ -410,7 +505,8 @@ function evaluateAndPickPackOption(
   options: PackCardOption[],
   simRun: SimRun,
   botType: BotType,
-  jokerStats: Record<string, JokerStat>
+  jokerStats: Record<string, JokerStat>,
+  consumableStats: Record<string, ConsumableStat>
 ): boolean {
   let bestIdx = -1;
   let bestScore = -1;
@@ -470,8 +566,11 @@ function evaluateAndPickPackOption(
     // Keep XMult at the end so it multiplies after additive bonuses
     simRun.jokers.sort((a, b) => (a.isXMult ? 1 : 0) - (b.isXMult ? 1 : 0));
   } else if (chosen.kind === 'tarot') {
-    applySimTarotEffect(chosen.data, simRun, botType);
+    if (consumableStats[chosen.data.id]) consumableStats[chosen.data.id].bought++;
+    simRun.usedTarots.add(chosen.data.id);
+    applySimTarotEffect(chosen.data, simRun, botType, consumableStats);
   } else if (chosen.kind === 'cheat') {
+    if (consumableStats[chosen.data.id]) consumableStats[chosen.data.id].bought++;
     if (simRun.consumables.length < simRun.maxConsumables) {
       simRun.consumables.push(chosen.data);
     }
@@ -493,6 +592,7 @@ function simulateShopVisit(
   botType: BotType,
   jokerStats: Record<string, JokerStat>,
   voucherStats: Record<string, VoucherStat>,
+  consumableStats: Record<string, ConsumableStat>,
   packStats: Record<string, PackStat>,
   trackReroll: () => void
 ): void {
@@ -523,6 +623,7 @@ function simulateShopVisit(
       simRun.money -= v.cost;
       simRun.vouchers.push(v.id);
       simRun.anteVoucherBought = true;
+      simRun.voucherAnteBought[v.id] = simRun.ante;
       if (voucherStats[v.id]) voucherStats[v.id].bought++;
       const d = getVoucherDeltas(v.id);
       simRun.maxHands += d.maxHands || 0;
@@ -569,6 +670,7 @@ function simulateShopVisit(
           }
         }
       } else if (card.shopType === 'tarot') {
+        if (consumableStats[card.id]) consumableStats[card.id].offered++;
         const tScore = scoreTarotPriorityForBot(card, botType, simRun);
         const minReserve = (simRun.jokers.length < 2) ? 0 : 2;
         if (simRun.money >= card.cost + minReserve && tScore >= 6) {
@@ -576,12 +678,15 @@ function simulateShopVisit(
             if (simRun.consumables.length < simRun.maxConsumables) {
               simRun.money -= card.cost;
               card.bought = true;
+              if (consumableStats[card.id]) consumableStats[card.id].bought++;
               simRun.consumables.push(card);
             }
           } else {
             simRun.money -= card.cost;
             card.bought = true;
-            applySimTarotEffect(card, simRun, botType);
+            if (consumableStats[card.id]) consumableStats[card.id].bought++;
+            simRun.usedTarots.add(card.id);
+            applySimTarotEffect(card, simRun, botType, consumableStats);
           }
         }
       }
@@ -606,10 +711,12 @@ function simulateShopVisit(
         options.forEach(opt => {
           if (opt.kind === 'joker' && jokerStats[opt.data.id]) {
             jokerStats[opt.data.id].offered++;
+          } else if ((opt.kind === 'tarot' || opt.kind === 'cheat') && consumableStats[opt.data.id]) {
+            consumableStats[opt.data.id].offered++;
           }
         });
 
-        evaluateAndPickPackOption(options, simRun, botType, jokerStats);
+        evaluateAndPickPackOption(options, simRun, botType, jokerStats, consumableStats);
       }
     }
   };
@@ -647,19 +754,24 @@ function runBatchSimulationForBot(numRuns: number, botType: BotType, cfg: SimCon
   const baseDeckTemplate = createStandardDeck();
   const t0 = performance.now();
 
+  const maxEndlessAnte = Math.min(cfg.maxEndlessAnte && cfg.maxEndlessAnte >= 8 ? cfg.maxEndlessAnte : 16, 30);
+  const startMoney = cfg.startingMoney ?? STARTING_MONEY;
+  const startMaxJokers = cfg.maxJokers ?? STARTING_MAX_JOKERS;
+
   let wins = 0;
   let totalFinalAnte = 0;
+  let highestAnteReached = 1;
   let scalingDeaths = 0;
   let coldShoeDeaths = 0;
   let totalHandsWon = 0;
   let totalHandsPlayed = 0;
   let totalRerolls = 0;
 
-  const anteClearedCounts = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+  const anteClearedCounts: number[] = new Array(maxEndlessAnte + 1).fill(0);
 
-  // 24 Blinds telemetry (Ante 1..8 x Blind 0..2)
+  // Dynamic Blinds telemetry (Ante 1..maxEndlessAnte x Blind 0..2)
   const blindStats: BlindStat[] = [];
-  for (let a = 1; a <= 8; a++) {
+  for (let a = 1; a <= maxEndlessAnte; a++) {
     for (let b = 0; b < 3; b++) {
       blindStats.push({
         ante: a,
@@ -692,7 +804,23 @@ function runBatchSimulationForBot(numRuns: number, botType: BotType, cfg: SimCon
 
   const voucherStats: Record<string, VoucherStat> = {};
   VOUCHER_CATALOG.forEach(v => {
-    voucherStats[v.id] = { id: v.id, name: v.name, offered: 0, bought: 0, wins: 0 };
+    voucherStats[v.id] = { id: v.id, name: v.name, offered: 0, bought: 0, wins: 0, anteSum: 0, runsWithVoucher: 0 };
+  });
+
+  const consumableStats: Record<string, ConsumableStat> = {};
+  TAROT_CATALOG.forEach(t => {
+    consumableStats[t.id] = {
+      id: t.id,
+      name: t.name,
+      category: isCheatConsumable(t.id) ? 'cheat' : 'tarot',
+      offered: 0,
+      bought: 0,
+      timesUsed: 0,
+      runsWithItem: 0,
+      runsWonWithItem: 0,
+      anteSum: 0,
+      specialImpactSum: 0
+    };
   });
 
   const packStats: Record<string, PackStat> = {};
@@ -711,25 +839,32 @@ function runBatchSimulationForBot(numRuns: number, botType: BotType, cfg: SimCon
     const simRun: SimRun = {
       ante: 1,
       blindIndex: 0,
-      money: STARTING_MONEY,
+      money: startMoney,
       maxHands: cfg.startingDeals,
-      maxJokers: STARTING_MAX_JOKERS,
+      maxJokers: startMaxJokers,
       maxConsumables: 2,
       baseWinChipBonus: 0,
       baseWinMultBonus: 0,
       deck: baseDeckTemplate.map(c => ({ ...c })),
       jokers: [],
       vouchers: [],
-      consumables: []
+      consumables: [],
+      usedTarots: new Set<string>(),
+      usedCheats: new Set<string>(),
+      voucherAnteBought: {}
     };
 
     let runFailed = false;
+    let campaignWon = false;
+    let runTotalHands = 0;
+    let finalAnte = 1;
 
-    for (let a = 1; a <= 8 && !runFailed; a++) {
+    for (let a = 1; a <= maxEndlessAnte && !runFailed; a++) {
       simRun.ante = a;
       for (let b = 0; b < 3 && !runFailed; b++) {
         simRun.blindIndex = b;
-        const bStat = blindStats[(a - 1) * 3 + b];
+        const bIdx = (a - 1) * 3 + b;
+        const bStat = blindStats[bIdx];
         bStat.entered++;
 
         const targetScore = bStat.target;
@@ -751,9 +886,19 @@ function runBatchSimulationForBot(numRuns: number, botType: BotType, cfg: SimCon
         const hasCushion = simRun.jokers.some(j => j.id === 'bust_cushion');
 
         while (dealsLeft > 0 && roundScore < targetScore) {
+          // Safeguard 1: Max 30 deals per blind
+          if (dealsUsedThisBlind >= 30) break;
+
           dealsLeft--;
           dealsUsedThisBlind++;
           totalHandsPlayed++;
+          runTotalHands++;
+
+          // Safeguard 2: Max 300 hands per run
+          if (runTotalHands >= 300) {
+            runFailed = true;
+            break;
+          }
 
           const pHand: Card[] = [draw(), draw()];
           const dHand: Card[] = [draw(), draw()];
@@ -766,11 +911,21 @@ function runBatchSimulationForBot(numRuns: number, botType: BotType, cfg: SimCon
             if (xIdx >= 0) {
               simRunTempChips += 75;
               simRun.consumables.splice(xIdx, 1);
+              simRun.usedCheats.add('x_ray');
+              if (consumableStats['x_ray']) {
+                consumableStats['x_ray'].timesUsed++;
+                consumableStats['x_ray'].specialImpactSum += 75;
+              }
             }
             const aceIdx = simRun.consumables.findIndex(c => c.id === 'loaded_ace');
             if (aceIdx >= 0 && evaluateBlackjackTotal(pHand, hasCushion).total <= 10) {
               pHand.push({ uid: 9998, rank: 'A', suit: '♠', enhancement: 'foil' });
               simRun.consumables.splice(aceIdx, 1);
+              simRun.usedCheats.add('loaded_ace');
+              if (consumableStats['loaded_ace']) {
+                consumableStats['loaded_ace'].timesUsed++;
+                consumableStats['loaded_ace'].specialImpactSum += 1;
+              }
             }
           }
 
@@ -813,6 +968,11 @@ function runBatchSimulationForBot(numRuns: number, botType: BotType, cfg: SimCon
             if (dvIdx >= 0) {
               doubled = true;
               simRun.consumables.splice(dvIdx, 1);
+              simRun.usedCheats.add('double_vision');
+              if (consumableStats['double_vision']) {
+                consumableStats['double_vision'].timesUsed++;
+                consumableStats['double_vision'].specialImpactSum += 1;
+              }
             }
           }
 
@@ -875,7 +1035,9 @@ function runBatchSimulationForBot(numRuns: number, botType: BotType, cfg: SimCon
 
         if (roundScore < targetScore) {
           runFailed = true;
-          totalFinalAnte += a;
+          finalAnte = a;
+          if (a > highestAnteReached) highestAnteReached = a;
+
           const isScalingDeath = blindWins >= Math.ceil(simRun.maxHands * 0.42);
           if (isScalingDeath) {
             scalingDeaths++;
@@ -883,16 +1045,6 @@ function runBatchSimulationForBot(numRuns: number, botType: BotType, cfg: SimCon
           } else {
             coldShoeDeaths++;
             bStat.coldShoeDeaths++;
-          }
-
-          for (const j of simRun.jokers) {
-            if (jokerStats[j.id]) {
-              jokerStats[j.id].picks++;
-              jokerStats[j.id].anteSum += a;
-              if (j.id === 'daredevil') jokerStats[j.id].scalingSum += (j.bonusMult || 0);
-              if (j.id === 'chip_stacker') jokerStats[j.id].scalingSum += (j.bonusChips || 0);
-              if (j.id === 'hot_hand') jokerStats[j.id].scalingSum += (j.bonusMult || 0);
-            }
           }
         } else {
           bStat.cleared++;
@@ -902,47 +1054,92 @@ function runBatchSimulationForBot(numRuns: number, botType: BotType, cfg: SimCon
           simRun.money += calcBlindPayout(b, dealsLeft, simRun.money, cfg.unusedDealCashCap, maxInterest, interestPer, loanSharkFee).totalEarned;
           bStat.cashAfterSum += simRun.money;
 
-          simulateShopVisit(simRun, botType, jokerStats, voucherStats, packStats, () => { totalRerolls++; });
+          simulateShopVisit(simRun, botType, jokerStats, voucherStats, consumableStats, packStats, () => { totalRerolls++; });
         }
       }
+
       if (!runFailed) {
         anteClearedCounts[a]++;
+        if (a === 8) {
+          campaignWon = true;
+          wins++;
+        }
       }
     }
 
     if (!runFailed) {
-      wins++;
-      totalFinalAnte += 8;
-      for (const j of simRun.jokers) {
-        if (jokerStats[j.id]) {
-          jokerStats[j.id].picks++;
-          jokerStats[j.id].wins++;
-          jokerStats[j.id].anteSum += 9;
-          if (j.id === 'daredevil') jokerStats[j.id].scalingSum += (j.bonusMult || 0);
-          if (j.id === 'chip_stacker') jokerStats[j.id].scalingSum += (j.bonusChips || 0);
-          if (j.id === 'hot_hand') jokerStats[j.id].scalingSum += (j.bonusMult || 0);
-        }
+      finalAnte = maxEndlessAnte;
+      if (maxEndlessAnte > highestAnteReached) highestAnteReached = maxEndlessAnte;
+      if (!campaignWon && maxEndlessAnte >= 8) {
+        campaignWon = true;
+        wins++;
       }
-      for (const vId of simRun.vouchers) {
-        if (voucherStats[vId]) voucherStats[vId].wins++;
+    }
+
+    totalFinalAnte += finalAnte;
+
+    // End-of-run item attribution
+    for (const j of simRun.jokers) {
+      if (jokerStats[j.id]) {
+        jokerStats[j.id].picks++;
+        jokerStats[j.id].anteSum += finalAnte;
+        if (campaignWon) jokerStats[j.id].wins++;
+        if (j.id === 'daredevil') jokerStats[j.id].scalingSum += (j.bonusMult || 0);
+        if (j.id === 'chip_stacker') jokerStats[j.id].scalingSum += (j.bonusChips || 0);
+        if (j.id === 'hot_hand') jokerStats[j.id].scalingSum += (j.bonusMult || 0);
       }
+    }
+    for (const vId of simRun.vouchers) {
+      if (voucherStats[vId]) {
+        voucherStats[vId].runsWithVoucher++;
+        voucherStats[vId].anteSum += (simRun.voucherAnteBought[vId] || 1);
+        if (campaignWon) voucherStats[vId].wins++;
+      }
+    }
+    const combinedUsed = new Set<string>([...simRun.usedTarots, ...simRun.usedCheats]);
+    for (const cId of combinedUsed) {
+      if (consumableStats[cId]) {
+        consumableStats[cId].runsWithItem++;
+        consumableStats[cId].anteSum += finalAnte;
+        if (campaignWon) consumableStats[cId].runsWonWithItem++;
+      }
+    }
+  }
+
+  // Endless breakdown metrics (Ante 9+)
+  const endlessStats: EndlessStat[] = [];
+  if (maxEndlessAnte > 8) {
+    for (let a = 9; a <= maxEndlessAnte; a++) {
+      const bIdx0 = (a - 1) * 3;
+      const entered = blindStats[bIdx0]?.entered || 0;
+      const cleared = anteClearedCounts[a] || 0;
+      const sD = (blindStats[bIdx0]?.scalingDeaths || 0) + (blindStats[bIdx0 + 1]?.scalingDeaths || 0) + (blindStats[bIdx0 + 2]?.scalingDeaths || 0);
+      const cD = (blindStats[bIdx0]?.coldShoeDeaths || 0) + (blindStats[bIdx0 + 1]?.coldShoeDeaths || 0) + (blindStats[bIdx0 + 2]?.coldShoeDeaths || 0);
+      endlessStats.push({
+        ante: a,
+        entered,
+        cleared,
+        clearRatePct: entered > 0 ? (cleared / entered) * 100 : 0,
+        scalingDeaths: sD,
+        coldShoeDeaths: cD
+      });
     }
   }
 
   const elapsedMs = Math.round(performance.now() - t0);
   return {
-    numRuns, botType, cfg, elapsedMs, wins, totalFinalAnte,
+    numRuns, botType, cfg, elapsedMs, wins, totalFinalAnte, highestAnteReached,
     scalingDeaths, coldShoeDeaths, totalHandsWon, totalHandsPlayed, totalRerolls,
-    anteClearedCounts, blindStats, outcomeCounters, jokerStats, voucherStats, packStats
+    anteClearedCounts, blindStats, outcomeCounters, jokerStats, voucherStats, consumableStats, packStats, endlessStats, maxEndlessAnte
   };
 }
 
 /* ---------- Report Formatting ---------- */
 function formatBotReportSection(simData: SimData): string {
   const {
-    numRuns, botType, cfg, elapsedMs, wins, totalFinalAnte,
+    numRuns, botType, cfg, elapsedMs, wins, totalFinalAnte, highestAnteReached,
     scalingDeaths, coldShoeDeaths, totalHandsWon, totalHandsPlayed, totalRerolls,
-    anteClearedCounts, blindStats, outcomeCounters, jokerStats, voucherStats, packStats
+    anteClearedCounts, blindStats, outcomeCounters, jokerStats, voucherStats, consumableStats, packStats, endlessStats, maxEndlessAnte
   } = simData;
 
   const botNames: Record<BotType, string> = {
@@ -969,7 +1166,10 @@ function formatBotReportSection(simData: SimData): string {
   lines.push(`BOT STRATEGY: ${botNames[botType] || botType}`);
   lines.push('================================================================================');
   lines.push(`Runs Simulated        : ${numRuns.toLocaleString()} (${elapsedMs} ms)`);
+  lines.push(`Max Simulation Depth  : Ante ${maxEndlessAnte} ${maxEndlessAnte > 8 ? '(Endless Mode Active)' : '(Campaign Mode Only)'}`);
   lines.push(`Starting Deals/Blind  : ${cfg.startingDeals}`);
+  lines.push(`Starting Bankroll     : $${cfg.startingMoney ?? STARTING_MONEY}`);
+  lines.push(`Max Joker Slots       : ${cfg.maxJokers ?? STARTING_MAX_JOKERS}`);
   lines.push(`Target Score Scaling  : ${cfg.targetScalePct}%`);
   lines.push(`Unused Deal Cash Cap  : $${cfg.unusedDealCashCap}`);
   lines.push(`Pushes Refund Deal    : ${cfg.pushRefundsDeal ? 'ON' : 'OFF'}`);
@@ -977,6 +1177,7 @@ function formatBotReportSection(simData: SimData): string {
   lines.push('--------------------------------------------------------------------------------');
   lines.push(`OVERALL KPI SUMMARY`);
   lines.push(`  Ante 8 Victory Rate : ${winRate}% (${wins} / ${numRuns})`);
+  lines.push(`  Peak Endless Ante   : Ante ${highestAnteReached || 8}`);
   lines.push(`  Avg Final Ante      : ${avgAnte}`);
   lines.push(`  Total Hands Played  : ${totalHandsPlayed.toLocaleString()} (Avg ${(totalHandsPlayed / numRuns).toFixed(1)} hands/run)`);
   lines.push(`  BJ Hand Win Rate    : ${handWinPct}%`);
@@ -996,15 +1197,16 @@ function formatBotReportSection(simData: SimData): string {
   lines.push(`  Safety Net Saves    : ${outcomeCounters.safetyNetSaves} busts scored`);
   lines.push('--------------------------------------------------------------------------------');
   lines.push(`ANTE SURVIVAL FUNNEL (% of runs clearing all 3 Blinds of Ante)`);
-  for (let a = 1; a <= 8; a++) {
-    const c = anteClearedCounts[a];
+  for (let a = 1; a <= maxEndlessAnte; a++) {
+    const c = anteClearedCounts[a] || 0;
     const p = ((c / numRuns) * 100).toFixed(2);
-    lines.push(`  Ante ${a} Cleared      : ${padL(p + '%', 7)} (${c} / ${numRuns})`);
+    const tag = a > 8 ? ' (Endless)' : '';
+    lines.push(`  Ante ${pad(a + tag, 14)} : ${padL(p + '%', 7)} (${c} / ${numRuns})`);
   }
   lines.push('--------------------------------------------------------------------------------');
-  lines.push(`BLIND-BY-BLIND PROGRESSION & DEATH DIAGNOSTICS (24 BLINDS)`);
-  lines.push(`${pad('Blind', 10)} | ${padL('Target', 7)} | ${padL('Entered', 7)} | ${padL('Clear%', 7)} | ${padL('AvgScore', 8)} | ${padL('AvgDeals', 8)} | ${padL('AvgCash$', 8)} | ${padL('ScaleDth', 8)} | ${padL('ShoeDth', 7)}`);
-  lines.push('-'.repeat(96));
+  lines.push(`BLIND-BY-BLIND PROGRESSION & DEATH DIAGNOSTICS (${blindStats.length} BLINDS)`);
+  lines.push(`${pad('Blind', 10)} | ${padL('Target', 8)} | ${padL('Entered', 7)} | ${padL('Clear%', 7)} | ${padL('AvgScore', 8)} | ${padL('AvgDeals', 8)} | ${padL('AvgCash$', 8)} | ${padL('ScaleDth', 8)} | ${padL('ShoeDth', 7)}`);
+  lines.push('-'.repeat(97));
   for (const b of blindStats) {
     if (b.entered === 0) continue;
     const clrPct = ((b.cleared / b.entered) * 100).toFixed(1) + '%';
@@ -1012,13 +1214,13 @@ function formatBotReportSection(simData: SimData): string {
     const avgDls = (b.dealsUsedSum / b.entered).toFixed(2);
     const avgCsh = b.cleared > 0 ? '$' + (b.cashAfterSum / b.cleared).toFixed(1) : '-';
     lines.push(
-      `${pad(b.label, 10)} | ${padL(b.target, 7)} | ${padL(b.entered, 7)} | ${padL(clrPct, 7)} | ${padL(avgScr, 8)} | ${padL(avgDls, 8)} | ${padL(avgCsh, 8)} | ${padL(b.scalingDeaths, 8)} | ${padL(b.coldShoeDeaths, 7)}`
+      `${pad(b.label, 10)} | ${padL(b.target, 8)} | ${padL(b.entered, 7)} | ${padL(clrPct, 7)} | ${padL(avgScr, 8)} | ${padL(avgDls, 8)} | ${padL(avgCsh, 8)} | ${padL(b.scalingDeaths, 8)} | ${padL(b.coldShoeDeaths, 7)}`
     );
   }
   lines.push('--------------------------------------------------------------------------------');
   lines.push(`JOKER PERFORMANCE LEADERBOARD (Sorted by End-of-Run Win Rate)`);
-  lines.push(`${pad('Joker Name', 18)} | ${pad('Rarity', 8)} | ${padL('Cost', 4)} | ${padL('Offered', 7)} | ${padL('Bought', 6)} | ${padL('EndHeld', 7)} | ${padL('RunWin%', 8)} | ${padL('AvgAnte', 7)} | ${pad('Avg Scaling Bonus', 18)}`);
-  lines.push('-'.repeat(107));
+  lines.push(`${pad('Joker Name', 18)} | ${pad('Rarity', 8)} | ${padL('Cost', 4)} | ${padL('Offered', 7)} | ${padL('Bought', 6)} | ${padL('EndHeld', 7)} | ${padL('RunWin%', 8)} | ${padL('Lift%', 7)} | ${padL('AvgAnte', 7)} | ${pad('Avg Scaling Bonus', 18)}`);
+  lines.push('-'.repeat(117));
 
   const sortedJokers = Object.values(jokerStats)
     .filter(j => j.picks > 0 || j.offered > 0)
@@ -1028,8 +1230,13 @@ function formatBotReportSection(simData: SimData): string {
       return wrB - wrA;
     });
 
+  const baseWinPctVal = (wins / numRuns) * 100;
+
   for (const j of sortedJokers) {
     const winPct = j.picks > 0 ? ((j.wins / j.picks) * 100).toFixed(1) + '%' : '0.0%';
+    const rawWinPct = j.picks > 0 ? (j.wins / j.picks) * 100 : 0;
+    const liftPct = j.picks > 0 ? (rawWinPct - baseWinPctVal).toFixed(1) : '0.0';
+    const liftStr = (Number(liftPct) >= 0 ? '+' : '') + liftPct + '%';
     const avgA = j.picks > 0 ? (j.anteSum / j.picks).toFixed(2) : '-';
     let scaleNote = '-';
     if (j.id === 'daredevil' && j.picks > 0) {
@@ -1040,8 +1247,46 @@ function formatBotReportSection(simData: SimData): string {
       scaleNote = `+${(j.scalingSum / j.picks).toFixed(1)} Mult`;
     }
     lines.push(
-      `${pad(j.name, 18)} | ${pad(j.rarity.toUpperCase(), 8)} | ${padL('$' + j.cost, 4)} | ${padL(j.offered, 7)} | ${padL(j.bought, 6)} | ${padL(j.picks, 7)} | ${padL(winPct, 8)} | ${padL(avgA, 7)} | ${pad(scaleNote, 18)}`
+      `${pad(j.name, 18)} | ${pad(j.rarity.toUpperCase(), 8)} | ${padL('$' + j.cost, 4)} | ${padL(j.offered, 7)} | ${padL(j.bought, 6)} | ${padL(j.picks, 7)} | ${padL(winPct, 8)} | ${padL(liftStr, 7)} | ${padL(avgA, 7)} | ${pad(scaleNote, 18)}`
     );
+  }
+
+  if (consumableStats && Object.keys(consumableStats).length > 0) {
+    lines.push('--------------------------------------------------------------------------------');
+    lines.push(`TAROT & BATTLE CHEAT PERFORMANCE LEADERBOARD (Sorted by Win Rate Lift)`);
+    lines.push(`${pad('Consumable Name', 18)} | ${pad('Type', 6)} | ${padL('Offered', 7)} | ${padL('Bought', 6)} | ${padL('Used', 6)} | ${padL('Runs', 6)} | ${padL('Win%', 7)} | ${padL('Lift%', 7)} | ${padL('AvgAnte', 7)} | ${pad('Tactical Impact', 20)}`);
+    lines.push('-'.repeat(117));
+
+    const sortedConsumables = Object.values(consumableStats)
+      .filter(c => c.offered > 0 || c.bought > 0 || c.runsWithItem > 0)
+      .sort((a, b) => {
+        const wrA = a.runsWithItem > 0 ? a.runsWonWithItem / a.runsWithItem : -1;
+        const wrB = b.runsWithItem > 0 ? b.runsWonWithItem / b.runsWithItem : -1;
+        return wrB - wrA;
+      });
+
+    for (const c of sortedConsumables) {
+      const cWinPct = c.runsWithItem > 0 ? ((c.runsWonWithItem / c.runsWithItem) * 100).toFixed(1) + '%' : '0.0%';
+      const rawCWin = c.runsWithItem > 0 ? (c.runsWonWithItem / c.runsWithItem) * 100 : 0;
+      const cLift = c.runsWithItem > 0 ? (rawCWin - baseWinPctVal).toFixed(1) : '0.0';
+      const cLiftStr = (Number(cLift) >= 0 ? '+' : '') + cLift + '%';
+      const cAvgA = c.runsWithItem > 0 ? (c.anteSum / c.runsWithItem).toFixed(2) : '-';
+      let impactNote = '-';
+      if (c.id === 'the_guillotine' && c.runsWithItem > 0) impactNote = `${(c.specialImpactSum / c.runsWithItem).toFixed(1)} cards pruned`;
+      else if (c.id === 'card_forge' && c.runsWithItem > 0) impactNote = `${(c.specialImpactSum / c.runsWithItem).toFixed(1)} cards ranked up`;
+      else if (c.id === 'card_shave' && c.runsWithItem > 0) impactNote = `${(c.specialImpactSum / c.runsWithItem).toFixed(1)} cards shaved`;
+      else if (c.id === 'polychrome_dice' && c.runsWithItem > 0) impactNote = `${(c.specialImpactSum / c.runsWithItem).toFixed(1)} poly cards`;
+      else if (c.id === 'lucky_charm' && c.runsWithItem > 0) impactNote = `${(c.specialImpactSum / c.runsWithItem).toFixed(1)} holo cards`;
+      else if ((c.id === 'wild_suit' || c.id === 'prism_dye') && c.runsWithItem > 0) impactNote = `${(c.specialImpactSum / c.runsWithItem).toFixed(1)} foil cards`;
+      else if (c.id === 'midas_touch' && c.runsWithItem > 0) impactNote = `${(c.specialImpactSum / c.runsWithItem).toFixed(1)} gold cards`;
+      else if (c.id === 'x_ray' && c.runsWithItem > 0) impactNote = `+${c.specialImpactSum.toLocaleString()} bonus chips`;
+      else if (c.id === 'loaded_ace' && c.runsWithItem > 0) impactNote = `${c.specialImpactSum.toLocaleString()} aces summoned`;
+      else if (c.id === 'double_vision' && c.runsWithItem > 0) impactNote = `${c.specialImpactSum.toLocaleString()} x2 mult hands`;
+
+      lines.push(
+        `${pad(c.name, 18)} | ${pad(c.category.toUpperCase(), 6)} | ${padL(c.offered, 7)} | ${padL(c.bought, 6)} | ${padL(c.timesUsed, 6)} | ${padL(c.runsWithItem, 6)} | ${padL(cWinPct, 7)} | ${padL(cLiftStr, 7)} | ${padL(cAvgA, 7)} | ${pad(impactNote, 20)}`
+      );
+    }
   }
 
   lines.push('--------------------------------------------------------------------------------');
@@ -1056,11 +1301,35 @@ function formatBotReportSection(simData: SimData): string {
   lines.push(`  Total Shop Rerolls    : ${totalRerolls.toLocaleString()} (Avg ${(totalRerolls / numRuns).toFixed(2)} rerolls/run)`);
 
   lines.push('--------------------------------------------------------------------------------');
-  lines.push(`VOUCHER PERFORMANCE`);
+  lines.push(`VOUCHER PERFORMANCE LEADERBOARD`);
+  lines.push(`${pad('Voucher Name', 22)} | ${padL('Offered', 7)} | ${padL('Bought', 6)} | ${padL('BuyRate', 7)} | ${padL('Win%', 7)} | ${padL('Lift%', 7)} | ${padL('AvgAnteBought', 13)}`);
+  lines.push('-'.repeat(88));
   for (const v of Object.values(voucherStats)) {
+    const vBuyRate = v.offered > 0 ? ((v.bought / v.offered) * 100).toFixed(1) + '%' : '0.0%';
     const vWinPct = v.bought > 0 ? ((v.wins / v.bought) * 100).toFixed(1) + '%' : '0.0%';
-    lines.push(`  ${pad(v.name, 20)} : Offered ${padL(v.offered, 5)} | Bought ${padL(v.bought, 5)} | Run Win Rate when bought: ${vWinPct}`);
+    const rawVWin = v.bought > 0 ? (v.wins / v.bought) * 100 : 0;
+    const vLift = v.bought > 0 ? (rawVWin - baseWinPctVal).toFixed(1) : '0.0';
+    const vLiftStr = (Number(vLift) >= 0 ? '+' : '') + vLift + '%';
+    const vAvgA = v.bought > 0 ? (v.anteSum / v.bought).toFixed(1) : '-';
+    lines.push(
+      `${pad(v.name, 22)} | ${padL(v.offered, 7)} | ${padL(v.bought, 6)} | ${padL(vBuyRate, 7)} | ${padL(vWinPct, 7)} | ${padL(vLiftStr, 7)} | ${padL('Ante ' + vAvgA, 13)}`
+    );
   }
+
+  if (endlessStats && endlessStats.length > 0) {
+    lines.push('--------------------------------------------------------------------------------');
+    lines.push(`ENDLESS MODE PROGRESSION BREAKDOWN (ANTE 9+)`);
+    lines.push(`${pad('Ante', 10)} | ${padL('Target (Small)', 14)} | ${padL('Entered', 8)} | ${padL('Cleared', 8)} | ${padL('Survival%', 10)} | ${padL('ScaleDeaths', 11)} | ${padL('ShoeDeaths', 10)}`);
+    lines.push('-'.repeat(88));
+    for (const e of endlessStats) {
+      if (e.entered === 0) continue;
+      const smallTarget = computeBlindTarget(e.ante, 0, cfg.targetScalePct);
+      lines.push(
+        `${pad(`Ante ${e.ante}`, 10)} | ${padL(smallTarget.toLocaleString(), 14)} | ${padL(e.entered, 8)} | ${padL(e.cleared, 8)} | ${padL(e.clearRatePct.toFixed(1) + '%', 10)} | ${padL(e.scalingDeaths, 11)} | ${padL(e.coldShoeDeaths, 10)}`
+      );
+    }
+  }
+
   lines.push('');
   return lines.join('\n');
 }
@@ -1068,7 +1337,7 @@ function formatBotReportSection(simData: SimData): string {
 /** Full text for a single-bot run (header + section). */
 function buildSingleBotReport(simData: SimData): string {
   const header = [
-    `JACK-LATRO v1.7 // MONTE CARLO TELEMETRY REPORT`,
+    `JACK-LATRO v1.8 // MONTE CARLO TELEMETRY REPORT`,
     `Generated: ${new Date().toISOString()}`,
     ''
   ].join('\n');
@@ -1096,19 +1365,20 @@ function runBotSuite(numRuns: number, cfg: SimConfig): SuiteResult {
     reports.push(formatBotReportSection(simData));
 
     const winPct = ((simData.wins / numRuns) * 100).toFixed(2) + '%';
+    const peakA = simData.highestAnteReached || 8;
     const avgA = (simData.totalFinalAnte / numRuns).toFixed(2);
     const bjWin = ((simData.totalHandsWon / Math.max(1, simData.totalHandsPlayed)) * 100).toFixed(2) + '%';
     summaryRows.push(
-      `  ${bType.padEnd(12, ' ')} | Win Rate: ${winPct.padStart(7, ' ')} | Avg Ante: ${avgA.padStart(5, ' ')} | BJ Hand Win%: ${bjWin.padStart(7, ' ')}`
+      `  ${bType.padEnd(12, ' ')} | Win Rate: ${winPct.padStart(7, ' ')} | Peak Ante: ${String('Ante ' + peakA).padStart(8, ' ')} | Avg Ante: ${avgA.padStart(5, ' ')} | BJ Hand Win%: ${bjWin.padStart(7, ' ')}`
     );
   }
 
   const masterHeader = [
     `================================================================================`,
-    `JACK-LATRO v1.7 // FULL 6-BOT COMPARATIVE TELEMETRY SUITE`,
+    `JACK-LATRO v1.8 // FULL 6-BOT COMPARATIVE TELEMETRY SUITE`,
     `Generated: ${new Date().toISOString()}`,
     `Runs Per Bot: ${numRuns.toLocaleString()} (${(numRuns * BOT_ORDER.length).toLocaleString()} Total Simulated Games)`,
-    `Settings: Deals=${cfg.startingDeals}, TargetScale=${cfg.targetScalePct}%, DealCashCap=$${cfg.unusedDealCashCap}, PushRefund=${cfg.pushRefundsDeal}, AnteScale=${cfg.anteHandScaling}`,
+    `Settings: Depth=Ante ${cfg.maxEndlessAnte ?? 16}, Cash=$${cfg.startingMoney ?? STARTING_MONEY}, Jokers=${cfg.maxJokers ?? STARTING_MAX_JOKERS}, Deals=${cfg.startingDeals}, TargetScale=${cfg.targetScalePct}%, DealCashCap=$${cfg.unusedDealCashCap}, PushRefund=${cfg.pushRefundsDeal}, AnteScale=${cfg.anteHandScaling}`,
     `================================================================================`,
     `HEAD-TO-HEAD BOT SUMMARY:`,
     ...summaryRows,

@@ -1686,11 +1686,25 @@ function copyLastSimReport() {
   });
 }
 
+let activeSimTab: string = 'overview';
+
+function switchSimTab(tabId: string): void {
+  activeSimTab = tabId;
+  const navBtns = document.querySelectorAll('.sim-tab-btn');
+  navBtns.forEach(b => {
+    b.classList.toggle('active', b.getAttribute('data-tab') === tabId);
+  });
+  const panes = document.querySelectorAll('.sim-tab-pane');
+  panes.forEach(p => {
+    p.classList.toggle('hidden', p.getAttribute('data-pane') !== tabId);
+  });
+}
+
 function renderSimResultsToModal(simData: SimData): void {
   const {
-    numRuns, elapsedMs, wins, totalFinalAnte,
+    numRuns, elapsedMs, wins, totalFinalAnte, highestAnteReached,
     scalingDeaths, totalHandsWon, totalHandsPlayed,
-    anteClearedCounts, jokerStats
+    anteClearedCounts, jokerStats, voucherStats, consumableStats, endlessStats, maxEndlessAnte
   } = simData;
 
   const winRate = ((wins / numRuns) * 100).toFixed(1);
@@ -1699,128 +1713,354 @@ function renderSimResultsToModal(simData: SimData): void {
   const totalDeaths = Math.max(1, numRuns - wins);
   const scalingDeathPct = Math.round((scalingDeaths / totalDeaths) * 100);
   const coldShoeDeathPct = 100 - scalingDeathPct;
+  const baseWinPctVal = (wins / numRuns) * 100;
 
-  const sortedJokers = Object.values(jokerStats)
-    .filter(j => j.picks > 0)
-    .sort((a, b) => (b.wins / b.picks) - (a.wins / a.picks));
-
-  const funnelHtml = [1,2,3,4,5,6,7,8].map(a => {
-    const pct = ((anteClearedCounts[a] / numRuns) * 100).toFixed(1);
-    return `
+  // 1. Funnel HTML (1..maxEndlessAnte)
+  const funnelHtml = [];
+  for (let a = 1; a <= maxEndlessAnte; a++) {
+    const c = anteClearedCounts[a] || 0;
+    const pct = ((c / numRuns) * 100).toFixed(1);
+    const tag = a > 8 ? ' <span style="color:#a855f7; font-size:10px;">(Endless)</span>' : '';
+    funnelHtml.push(`
       <div class="funnel-row">
-        <span style="width:58px; font-weight:bold; color:var(--gold);">Ante ${a}</span>
+        <span style="width:105px; font-weight:bold; color:var(--gold); font-size:11px;">Ante ${a}${tag}</span>
         <div class="funnel-bar-bg">
           <div class="funnel-bar-fill" style="width:${pct}%"></div>
         </div>
-        <span style="width:48px; text-align:right; font-weight:bold;">${pct}%</span>
+        <span style="width:48px; text-align:right; font-weight:bold; font-size:11px;">${pct}%</span>
       </div>
-    `;
-  }).join('');
+    `);
+  }
+
+  // 2. Jokers Table HTML
+  const sortedJokers = Object.values(jokerStats)
+    .filter(j => j.picks > 0 || j.offered > 0)
+    .sort((a, b) => {
+      const wrA = a.picks > 0 ? a.wins / a.picks : -1;
+      const wrB = b.picks > 0 ? b.wins / b.picks : -1;
+      return wrB - wrA;
+    });
 
   const topJokersHtml = sortedJokers.length > 0 ? sortedJokers.map(j => {
-    const wPct = ((j.wins / j.picks) * 100).toFixed(1);
-    const avgA = (j.anteSum / j.picks).toFixed(1);
+    const wPct = j.picks > 0 ? ((j.wins / j.picks) * 100).toFixed(1) : '0.0';
+    const rawWin = j.picks > 0 ? (j.wins / j.picks) * 100 : 0;
+    const liftVal = j.picks > 0 ? (rawWin - baseWinPctVal).toFixed(1) : '0.0';
+    const liftNum = Number(liftVal);
+    const liftBadgeClass = liftNum > 0 ? 'lift-pos' : (liftNum < 0 ? 'lift-neg' : 'lift-neutral');
+    const liftStr = (liftNum >= 0 ? '+' : '') + liftVal + '%';
+    const avgA = j.picks > 0 ? (j.anteSum / j.picks).toFixed(1) : '-';
     let extra = '';
-    if (j.id === 'daredevil') extra = ` <span style="color:var(--mult);font-size:10px;">(Avg +${(j.scalingSum / j.picks).toFixed(1)}m)</span>`;
-    if (j.id === 'chip_stacker') extra = ` <span style="color:var(--chips);font-size:10px;">(Avg +${(j.scalingSum / j.picks).toFixed(1)}c)</span>`;
-    if (j.id === 'hot_hand') extra = ` <span style="color:var(--mult);font-size:10px;">(Avg +${(j.scalingSum / j.picks).toFixed(1)}m)</span>`;
+    if (j.id === 'daredevil') extra = ` <span style="color:var(--mult);font-size:10px;">(Avg +${(j.scalingSum / Math.max(1, j.picks)).toFixed(1)}m)</span>`;
+    if (j.id === 'chip_stacker') extra = ` <span style="color:var(--chips);font-size:10px;">(Avg +${(j.scalingSum / Math.max(1, j.picks)).toFixed(1)}c)</span>`;
+    if (j.id === 'hot_hand') extra = ` <span style="color:var(--mult);font-size:10px;">(Avg +${(j.scalingSum / Math.max(1, j.picks)).toFixed(1)}m)</span>`;
     const rBadge = `<span class="rarity-badge rarity-${j.rarity || 'common'}" style="font-size:9px; padding:1px 4px; margin-left:4px;">${(j.rarity || 'common').toUpperCase()}</span>`;
     return `
       <tr>
         <td><strong>${j.name}</strong> ${rBadge}${extra}</td>
+        <td>$${j.cost}</td>
+        <td>${j.offered}</td>
+        <td>${j.bought}</td>
         <td>${j.picks}</td>
         <td style="color:var(--green); font-weight:bold;">${wPct}%</td>
+        <td><span class="lift-badge ${liftBadgeClass}">${liftStr}</span></td>
         <td>Ante ${avgA}</td>
       </tr>
     `;
-  }).join('') : `<tr><td colspan="4" style="text-align:center; color:#94a3b8;">No Jokers purchased (No-Jokers Baseline active)</td></tr>`;
+  }).join('') : `<tr><td colspan="8" style="text-align:center; color:#94a3b8;">No Jokers purchased (No-Jokers Baseline active)</td></tr>`;
+
+  // 3. Tarots & Cheats Table HTML
+  const sortedConsumables = Object.values(consumableStats || {})
+    .filter(c => c.offered > 0 || c.bought > 0 || c.runsWithItem > 0)
+    .sort((a, b) => {
+      const wrA = a.runsWithItem > 0 ? a.runsWonWithItem / a.runsWithItem : -1;
+      const wrB = b.runsWithItem > 0 ? b.runsWonWithItem / b.runsWithItem : -1;
+      return wrB - wrA;
+    });
+
+  const consumablesHtml = sortedConsumables.length > 0 ? sortedConsumables.map(c => {
+    const cWinPct = c.runsWithItem > 0 ? ((c.runsWonWithItem / c.runsWithItem) * 100).toFixed(1) : '0.0';
+    const rawCWin = c.runsWithItem > 0 ? (c.runsWonWithItem / c.runsWithItem) * 100 : 0;
+    const cLiftVal = c.runsWithItem > 0 ? (rawCWin - baseWinPctVal).toFixed(1) : '0.0';
+    const cLiftNum = Number(cLiftVal);
+    const cLiftBadgeClass = cLiftNum > 0 ? 'lift-pos' : (cLiftNum < 0 ? 'lift-neg' : 'lift-neutral');
+    const cLiftStr = (cLiftNum >= 0 ? '+' : '') + cLiftVal + '%';
+    const cAvgA = c.runsWithItem > 0 ? (c.anteSum / c.runsWithItem).toFixed(1) : '-';
+    let impactNote = '-';
+    if (c.id === 'the_guillotine' && c.runsWithItem > 0) impactNote = `${(c.specialImpactSum / c.runsWithItem).toFixed(1)} cards pruned`;
+    else if (c.id === 'card_forge' && c.runsWithItem > 0) impactNote = `${(c.specialImpactSum / c.runsWithItem).toFixed(1)} cards ranked up`;
+    else if (c.id === 'card_shave' && c.runsWithItem > 0) impactNote = `${(c.specialImpactSum / c.runsWithItem).toFixed(1)} cards shaved`;
+    else if (c.id === 'polychrome_dice' && c.runsWithItem > 0) impactNote = `${(c.specialImpactSum / c.runsWithItem).toFixed(1)} poly cards`;
+    else if (c.id === 'lucky_charm' && c.runsWithItem > 0) impactNote = `${(c.specialImpactSum / c.runsWithItem).toFixed(1)} holo cards`;
+    else if ((c.id === 'wild_suit' || c.id === 'prism_dye') && c.runsWithItem > 0) impactNote = `${(c.specialImpactSum / c.runsWithItem).toFixed(1)} foil cards`;
+    else if (c.id === 'midas_touch' && c.runsWithItem > 0) impactNote = `${(c.specialImpactSum / c.runsWithItem).toFixed(1)} gold cards`;
+    else if (c.id === 'x_ray' && c.runsWithItem > 0) impactNote = `+${c.specialImpactSum.toLocaleString()} chips`;
+    else if (c.id === 'loaded_ace' && c.runsWithItem > 0) impactNote = `${c.specialImpactSum.toLocaleString()} aces`;
+    else if (c.id === 'double_vision' && c.runsWithItem > 0) impactNote = `${c.specialImpactSum.toLocaleString()} x2 mults`;
+
+    const catBadge = c.category === 'cheat'
+      ? `<span style="background:rgba(244,63,94,0.18); color:#fb7185; border:1px solid rgba(244,63,94,0.4); border-radius:4px; font-size:9px; padding:1px 5px;">CHEAT</span>`
+      : `<span style="background:rgba(168,85,247,0.18); color:#c084fc; border:1px solid rgba(168,85,247,0.4); border-radius:4px; font-size:9px; padding:1px 5px;">TAROT</span>`;
+
+    return `
+      <tr>
+        <td><strong>${c.name}</strong></td>
+        <td>${catBadge}</td>
+        <td>${c.offered}</td>
+        <td>${c.bought}</td>
+        <td>${c.timesUsed}</td>
+        <td>${c.runsWithItem}</td>
+        <td style="color:var(--green); font-weight:bold;">${cWinPct}%</td>
+        <td><span class="lift-badge ${cLiftBadgeClass}">${cLiftStr}</span></td>
+        <td>Ante ${cAvgA}</td>
+        <td style="color:#cbd5e1; font-size:11px;">${impactNote}</td>
+      </tr>
+    `;
+  }).join('') : `<tr><td colspan="10" style="text-align:center; color:#94a3b8;">No Tarots or Cheats offered or used</td></tr>`;
+
+  // 4. Vouchers Table HTML
+  const sortedVouchers = Object.values(voucherStats || {})
+    .sort((a, b) => {
+      const wrA = a.bought > 0 ? a.wins / a.bought : -1;
+      const wrB = b.bought > 0 ? b.wins / b.bought : -1;
+      return wrB - wrA;
+    });
+
+  const vouchersHtml = sortedVouchers.map(v => {
+    const vBuyRate = v.offered > 0 ? ((v.bought / v.offered) * 100).toFixed(1) + '%' : '0.0%';
+    const vWinPct = v.bought > 0 ? ((v.wins / v.bought) * 100).toFixed(1) : '0.0';
+    const rawVWin = v.bought > 0 ? (v.wins / v.bought) * 100 : 0;
+    const vLiftVal = v.bought > 0 ? (rawVWin - baseWinPctVal).toFixed(1) : '0.0';
+    const vLiftNum = Number(vLiftVal);
+    const vLiftBadgeClass = vLiftNum > 0 ? 'lift-pos' : (vLiftNum < 0 ? 'lift-neg' : 'lift-neutral');
+    const vLiftStr = (vLiftNum >= 0 ? '+' : '') + vLiftVal + '%';
+    const vAvgA = v.bought > 0 ? (v.anteSum / v.bought).toFixed(1) : '-';
+
+    return `
+      <tr>
+        <td><strong>${v.name}</strong></td>
+        <td>${v.offered}</td>
+        <td>${v.bought}</td>
+        <td>${vBuyRate}</td>
+        <td style="color:var(--green); font-weight:bold;">${vWinPct}%</td>
+        <td><span class="lift-badge ${vLiftBadgeClass}">${vLiftStr}</span></td>
+        <td>Ante ${vAvgA}</td>
+      </tr>
+    `;
+  }).join('');
+
+  // 5. Endless Table HTML
+  const endlessRowsHtml = (endlessStats && endlessStats.length > 0) ? endlessStats.map(e => {
+    const smallTarget = computeBlindTarget(e.ante, 0, simData.cfg.targetScalePct);
+    return `
+      <tr>
+        <td style="font-weight:bold; color:var(--gold);">Ante ${e.ante}</td>
+        <td style="color:#38bdf8;">${smallTarget.toLocaleString()}</td>
+        <td>${e.entered}</td>
+        <td>${e.cleared}</td>
+        <td style="color:var(--green); font-weight:bold;">${e.clearRatePct.toFixed(1)}%</td>
+        <td style="color:var(--mult);">${e.scalingDeaths}</td>
+        <td style="color:#cbd5e1;">${e.coldShoeDeaths}</td>
+      </tr>
+    `;
+  }).join('') : `<tr><td colspan="7" style="text-align:center; color:#94a3b8; padding:12px;">Endless Mode was not enabled for this run. Increase 'Endless Mode Max Depth' above to benchmark Ante 9+.</td></tr>`;
 
   $('sim-results-area').innerHTML = `
-    <div class="sim-kpi-row">
-      <div class="sim-kpi">
-        <div class="sim-kpi-val">${winRate}%</div>
-        <div class="sim-kpi-lbl">Ante 8 Win Rate</div>
-      </div>
-      <div class="sim-kpi">
-        <div class="sim-kpi-val" style="color:var(--gold);">${avgAnte}</div>
-        <div class="sim-kpi-lbl">Avg Death Ante</div>
-      </div>
-      <div class="sim-kpi">
-        <div class="sim-kpi-val" style="color:var(--chips);">${handWinPct}%</div>
-        <div class="sim-kpi-lbl">BJ Hand Win %</div>
-      </div>
-      <div class="sim-kpi">
-        <div class="sim-kpi-val" style="color:#cbd5e1;">${elapsedMs}ms</div>
-        <div class="sim-kpi-lbl">${numRuns.toLocaleString()} Runs Time</div>
-      </div>
+    <!-- TAB NAVIGATION BAR -->
+    <div class="sim-tabs-nav">
+      <button class="sim-tab-btn ${activeSimTab === 'overview' ? 'active' : ''}" data-tab="overview" onclick="switchSimTab('overview')">📊 KPI Overview</button>
+      <button class="sim-tab-btn ${activeSimTab === 'jokers' ? 'active' : ''}" data-tab="jokers" onclick="switchSimTab('jokers')">🃏 Jokers (${sortedJokers.length})</button>
+      <button class="sim-tab-btn ${activeSimTab === 'consumables' ? 'active' : ''}" data-tab="consumables" onclick="switchSimTab('consumables')">🔮 Tarots &amp; Cheats (${sortedConsumables.length})</button>
+      <button class="sim-tab-btn ${activeSimTab === 'vouchers' ? 'active' : ''}" data-tab="vouchers" onclick="switchSimTab('vouchers')">🎟️ Vouchers (${sortedVouchers.length})</button>
+      <button class="sim-tab-btn ${activeSimTab === 'endless' ? 'active' : ''}" data-tab="endless" onclick="switchSimTab('endless')">♾️ Endless Depth (Ante ${highestAnteReached || 8})</button>
     </div>
 
-    <div style="background:#0b0e14; padding:8px 12px; border-radius:8px; border:1px solid #283246; margin-bottom:10px; display:flex; flex-wrap:wrap; gap:12px; font-size:11px; align-items:center; justify-content:space-between;">
-      <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
-        <span style="font-weight:bold; color:var(--gold);">📦 PACKS OPENED:</span>
-        <span>🃏 Jokers: <strong style="color:#38bdf8;">${simData.packStats?.pack_joker?.bought ?? 0}</strong></span>
-        <span style="color:#475569;">|</span>
-        <span>🌀 Variety: <strong style="color:#10b981;">${simData.packStats?.pack_variety?.bought ?? 0}</strong></span>
-        <span style="color:#475569;">|</span>
-        <span>🔮 Tarots: <strong style="color:#a855f7;">${simData.packStats?.pack_tarot?.bought ?? 0}</strong></span>
-        <span style="color:#475569;">|</span>
-        <span>🕶️ Cheats: <strong style="color:#f43f5e;">${simData.packStats?.pack_cheat?.bought ?? 0}</strong></span>
-        <span style="color:#475569;">|</span>
-        <span>🎴 Cards: <strong style="color:#eab308;">${simData.packStats?.pack_card?.bought ?? 0}</strong></span>
-      </div>
-      <div>
-        <span style="color:#cbd5e1;">🔄 Rerolls: <strong style="color:var(--gold);">${(simData.totalRerolls ?? 0).toLocaleString()}</strong></span>
-      </div>
-    </div>
-
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-      <div style="background:#0b0e14; padding:10px; border-radius:8px; border:1px solid #283246;">
-        <div style="font-size:11px; font-weight:bold; color:var(--gold); margin-bottom:6px;">ANTE SURVIVAL FUNNEL (% CLEARED)</div>
-        ${funnelHtml}
+    <!-- TAB 1: OVERVIEW -->
+    <div class="sim-tab-pane ${activeSimTab === 'overview' ? '' : 'hidden'}" data-pane="overview">
+      <div class="sim-kpi-row">
+        <div class="sim-kpi">
+          <div class="sim-kpi-val">${winRate}%</div>
+          <div class="sim-kpi-lbl">Ante 8 Win Rate</div>
+        </div>
+        <div class="sim-kpi">
+          <div class="sim-kpi-val" style="color:#a855f7;">Ante ${highestAnteReached || 8}</div>
+          <div class="sim-kpi-lbl">Peak Endless Ante</div>
+        </div>
+        <div class="sim-kpi">
+          <div class="sim-kpi-val" style="color:var(--gold);">Ante ${avgAnte}</div>
+          <div class="sim-kpi-lbl">Avg Death Ante</div>
+        </div>
+        <div class="sim-kpi">
+          <div class="sim-kpi-val" style="color:var(--chips);">${handWinPct}%</div>
+          <div class="sim-kpi-lbl">BJ Hand Win %</div>
+        </div>
       </div>
 
-      <div style="background:#0b0e14; padding:10px; border-radius:8px; border:1px solid #283246; display:flex; flex-direction:column; justify-content:space-between;">
+      <div style="background:#0b0e14; padding:8px 12px; border-radius:8px; border:1px solid #283246; display:flex; flex-wrap:wrap; gap:12px; font-size:11px; align-items:center; justify-content:space-between;">
+        <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
+          <span style="font-weight:bold; color:var(--gold);">📦 PACKS OPENED:</span>
+          <span>🃏 Jokers: <strong style="color:#38bdf8;">${simData.packStats?.pack_joker?.bought ?? 0}</strong></span>
+          <span style="color:#475569;">|</span>
+          <span>🌀 Variety: <strong style="color:#10b981;">${simData.packStats?.pack_variety?.bought ?? 0}</strong></span>
+          <span style="color:#475569;">|</span>
+          <span>🔮 Tarots: <strong style="color:#a855f7;">${simData.packStats?.pack_tarot?.bought ?? 0}</strong></span>
+          <span style="color:#475569;">|</span>
+          <span>🕶️ Cheats: <strong style="color:#f43f5e;">${simData.packStats?.pack_cheat?.bought ?? 0}</strong></span>
+          <span style="color:#475569;">|</span>
+          <span>🎴 Cards: <strong style="color:#eab308;">${simData.packStats?.pack_card?.bought ?? 0}</strong></span>
+        </div>
         <div>
-          <div style="font-size:11px; font-weight:bold; color:var(--gold); margin-bottom:6px;">CAUSE OF DEATH DIAGNOSTIC</div>
-          <div style="font-size:11px; color:#e2e8f0; margin-bottom:6px;">
-            • <strong style="color:var(--mult);">Scaling Wall (${scalingDeathPct}% of losses):</strong> Bot won plenty of Blackjack hands in the Blind, but its Chips × Mult couldn't reach the Target Score.
-          </div>
-          <div style="font-size:11px; color:#e2e8f0;">
-            • <strong style="color:var(--chips);">Cold Shoe / Dealer Streak (${coldShoeDeathPct}% of losses):</strong> Dealer drew hot totals or player busted repeatedly, scoring too few hands.
-          </div>
+          <span style="color:#cbd5e1;">🔄 Rerolls: <strong style="color:var(--gold);">${(simData.totalRerolls ?? 0).toLocaleString()}</strong></span>
         </div>
-        <div style="font-size:10px; color:var(--green); border-top:1px solid #1e293b; padding-top:6px;">
-          ✓ Telemetry ready! Click <strong>💾 Export Last Sim (.TXT)</strong> above to save the full 24-blind report.
+      </div>
+
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+        <div style="background:#0b0e14; padding:10px; border-radius:8px; border:1px solid #283246;">
+          <div style="font-size:11px; font-weight:bold; color:var(--gold); margin-bottom:6px;">ANTE SURVIVAL FUNNEL (% CLEARED)</div>
+          ${funnelHtml.join('')}
+        </div>
+
+        <div style="background:#0b0e14; padding:10px; border-radius:8px; border:1px solid #283246; display:flex; flex-direction:column; justify-content:space-between;">
+          <div>
+            <div style="font-size:11px; font-weight:bold; color:var(--gold); margin-bottom:6px;">CAUSE OF DEATH DIAGNOSTIC</div>
+            <div style="font-size:11px; color:#e2e8f0; margin-bottom:6px;">
+              • <strong style="color:var(--mult);">Scaling Wall (${scalingDeathPct}% of losses):</strong> Bot won Blackjack hands in the Blind, but its Chips × Mult couldn't reach the target score.
+            </div>
+            <div style="font-size:11px; color:#e2e8f0; margin-bottom:6px;">
+              • <strong style="color:var(--chips);">Cold Shoe / Dealer Streak (${coldShoeDeathPct}% of losses):</strong> Dealer drew hot totals or player busted repeatedly, scoring too few hands.
+            </div>
+            <div style="font-size:11px; color:#94a3b8; border-top:1px solid #1e293b; padding-top:6px; margin-top:6px;">
+              ⚡ <strong>Simulation Depth:</strong> Ante ${maxEndlessAnte} | <strong>Starting Cash:</strong> $${simData.cfg.startingMoney ?? 6} | <strong>Joker Slots:</strong> ${simData.cfg.maxJokers ?? 5}
+            </div>
+          </div>
+          <div style="font-size:10px; color:var(--green); border-top:1px solid #1e293b; padding-top:6px;">
+            ✓ Click <strong>💾 Export Last Sim (.TXT)</strong> above to save the full telemetry report.
+          </div>
         </div>
       </div>
     </div>
 
-    <div style="background:#0b0e14; padding:10px; border-radius:8px; border:1px solid #283246;">
-      <div style="font-size:11px; font-weight:bold; color:var(--gold); margin-bottom:6px;">JOKER PERFORMANCE LEADERBOARD (END-OF-RUN)</div>
-      <table class="rules-table">
-        <thead>
-          <tr>
-            <th>Joker</th>
-            <th>Times Held</th>
-            <th>Run Win %</th>
-            <th>Avg Ante Reached</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${topJokersHtml}
-        </tbody>
-      </table>
+    <!-- TAB 2: JOKERS LEADERBOARD -->
+    <div class="sim-tab-pane ${activeSimTab === 'jokers' ? '' : 'hidden'}" data-pane="jokers">
+      <div style="background:#0b0e14; padding:10px; border-radius:8px; border:1px solid #283246;">
+        <div style="font-size:11px; font-weight:bold; color:var(--gold); margin-bottom:6px;">JOKER PERFORMANCE LEADERBOARD (SORTED BY WIN RATE)</div>
+        <div class="sim-table-wrap">
+          <table class="rules-table">
+            <thead>
+              <tr>
+                <th>Joker</th>
+                <th>Cost</th>
+                <th>Offered</th>
+                <th>Bought</th>
+                <th>Held End</th>
+                <th>Run Win %</th>
+                <th>Win Lift</th>
+                <th>Avg Ante</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${topJokersHtml}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: TAROTS & CHEATS LEADERBOARD -->
+    <div class="sim-tab-pane ${activeSimTab === 'consumables' ? '' : 'hidden'}" data-pane="consumables">
+      <div style="background:#0b0e14; padding:10px; border-radius:8px; border:1px solid #283246;">
+        <div style="font-size:11px; font-weight:bold; color:var(--gold); margin-bottom:6px;">TAROT &amp; BATTLE CHEAT PERFORMANCE (SORTED BY WIN RATE LIFT)</div>
+        <div class="sim-table-wrap">
+          <table class="rules-table">
+            <thead>
+              <tr>
+                <th>Consumable</th>
+                <th>Type</th>
+                <th>Offered</th>
+                <th>Bought</th>
+                <th>Used</th>
+                <th>Runs</th>
+                <th>Win %</th>
+                <th>Win Lift</th>
+                <th>Avg Ante</th>
+                <th>Tactical Impact</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${consumablesHtml}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: VOUCHERS LEADERBOARD -->
+    <div class="sim-tab-pane ${activeSimTab === 'vouchers' ? '' : 'hidden'}" data-pane="vouchers">
+      <div style="background:#0b0e14; padding:10px; border-radius:8px; border:1px solid #283246;">
+        <div style="font-size:11px; font-weight:bold; color:var(--gold); margin-bottom:6px;">VOUCHER PERFORMANCE LEADERBOARD</div>
+        <div class="sim-table-wrap">
+          <table class="rules-table">
+            <thead>
+              <tr>
+                <th>Voucher</th>
+                <th>Offered</th>
+                <th>Bought</th>
+                <th>Buy Rate</th>
+                <th>Run Win %</th>
+                <th>Win Lift</th>
+                <th>Avg Ante Bought</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${vouchersHtml}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 5: ENDLESS PROGRESSION -->
+    <div class="sim-tab-pane ${activeSimTab === 'endless' ? '' : 'hidden'}" data-pane="endless">
+      <div style="background:#0b0e14; padding:10px; border-radius:8px; border:1px solid #283246;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <div style="font-size:11px; font-weight:bold; color:var(--gold);">ENDLESS MODE SURVIVAL &amp; BOT CEILING (ANTE 9+)</div>
+          <div style="font-size:11px; color:#38bdf8; font-weight:bold;">Peak Ante: Ante ${highestAnteReached || 8}</div>
+        </div>
+        <div class="sim-table-wrap">
+          <table class="rules-table">
+            <thead>
+              <tr>
+                <th>Ante</th>
+                <th>Target (Small)</th>
+                <th>Entered</th>
+                <th>Cleared</th>
+                <th>Survival %</th>
+                <th>Scaling Wall Deaths</th>
+                <th>Cold Shoe Deaths</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${endlessRowsHtml}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   `;
 }
 
 function getSimConfigFromInputs(): SimConfig {
+  const endlessEl = document.getElementById('sim-endless') as HTMLInputElement | null;
+  const cashEl = document.getElementById('sim-start-cash') as HTMLInputElement | null;
+  const jokersEl = document.getElementById('sim-joker-slots') as HTMLInputElement | null;
   return {
     startingDeals: parseInt($<HTMLInputElement>('sim-deals').value, 10),
     targetScalePct: parseInt($<HTMLInputElement>('sim-scale').value, 10),
     unusedDealCashCap: parseInt($<HTMLInputElement>('sim-dealcap').value, 10),
     pushRefundsDeal: $<HTMLInputElement>('sim-push-refund').checked,
-    anteHandScaling: $<HTMLInputElement>('sim-ante-leveling').checked
+    anteHandScaling: $<HTMLInputElement>('sim-ante-leveling').checked,
+    maxEndlessAnte: endlessEl ? parseInt(endlessEl.value, 10) : 16,
+    startingMoney: cashEl ? parseInt(cashEl.value, 10) : 6,
+    maxJokers: jokersEl ? parseInt(jokersEl.value, 10) : 5
   };
 }
 
@@ -4757,6 +4997,9 @@ function renderRunStats(): void {
 (window as any).playerDouble = playerDouble;
 (window as any).handlePrimaryDealBtn = handlePrimaryDealBtn;
 (window as any).runMonteCarloSimulation = runMonteCarloSimulation;
+(window as any).switchSimTab = switchSimTab;
+(window as any).getSimConfigFromInputs = getSimConfigFromInputs;
+(window as any).renderSimResultsToModal = renderSimResultsToModal;
 (window as any).runAllBotsSuiteAndExport = runAllBotsSuiteAndExport;
 (window as any).downloadLastSimReport = downloadLastSimReport;
 (window as any).copyLastSimReport = copyLastSimReport;

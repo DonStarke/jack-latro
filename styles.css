@@ -2699,6 +2699,91 @@
     height: 100%;
     background: linear-gradient(90deg, var(--chips), var(--green));
   }
+  /* Simulation Modal Tabs & Telemetry Tables */
+  .sim-tabs-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    background: #0b0e14;
+    padding: 6px;
+    border-radius: 8px;
+    border: 1px solid #283246;
+  }
+
+  .sim-tab-btn {
+    flex: 1;
+    min-width: 100px;
+    background: #161f2e;
+    border: 1px solid #334155;
+    color: #94a3b8;
+    padding: 7px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    text-align: center;
+    white-space: nowrap;
+    user-select: none;
+  }
+
+  .sim-tab-btn:hover {
+    background: #1e293b;
+    color: #f1f5f9;
+    border-color: #475569;
+  }
+
+  .sim-tab-btn.active {
+    background: linear-gradient(135deg, rgba(234, 179, 8, 0.22), rgba(16, 185, 129, 0.18));
+    color: var(--gold);
+    border-color: var(--gold);
+    box-shadow: 0 0 10px rgba(234, 179, 8, 0.25);
+  }
+
+  .sim-tab-pane {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    animation: simPaneFadeIn 0.2s ease-out;
+  }
+
+  .sim-tab-pane.hidden {
+    display: none !important;
+  }
+
+  @keyframes simPaneFadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .sim-table-wrap {
+    overflow-x: auto;
+    border-radius: 6px;
+  }
+
+  .lift-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: bold;
+    text-align: center;
+  }
+  .lift-pos {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.4);
+  }
+  .lift-neg {
+    background: rgba(244, 63, 94, 0.15);
+    color: #fb7185;
+    border: 1px solid rgba(244, 63, 94, 0.35);
+  }
+  .lift-neutral {
+    background: rgba(148, 163, 184, 0.15);
+    color: #94a3b8;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+  }
 
   /* ----------------------------------------------------------
      SCORING CASCADE OVERHAUL: PLAQUES, SPOTLIGHTS & FLYING TOKENS

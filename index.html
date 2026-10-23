@@ -431,8 +431,8 @@
   <div class="modal-box wide-deck" onclick="event.stopPropagation()">
     <div style="display:flex; justify-content:space-between; align-items:center;">
       <div>
-        <h3 style="color:var(--gold); font-size:16px;">📊 MONTE CARLO BALANCE LAB (v1.7)</h3>
-        <div style="font-size:12px; color:#94a3b8;">Simulate 3,000 to 20,000 runs and export a full telemetry .TXT file for analysis.</div>
+        <h3 style="color:var(--gold); font-size:16px;">📊 MONTE CARLO BALANCE LAB (v1.8)</h3>
+        <div style="font-size:12px; color:#94a3b8;">Simulate 1,000 to 20,000 runs, explore deep Endless survival, and analyze Joker, Tarot, Cheat &amp; Voucher telemetry.</div>
       </div>
       <button class="btn btn-secondary" onclick="toggleSimModal(false)">Close</button>
     </div>
@@ -441,6 +441,7 @@
       <div class="sim-field">
         <label><span>Runs to Simulate</span><span id="sim-lbl-runs">3000</span></label>
         <select id="sim-runs" onchange="document.getElementById('sim-lbl-runs').textContent=this.value">
+          <option value="1000">1,000 Runs (Fast Endless)</option>
           <option value="3000" selected>3,000 Runs</option>
           <option value="5000">5,000 Runs</option>
           <option value="20000">20,000 Runs (Deep Precision)</option>
@@ -460,15 +461,33 @@
       </div>
 
       <div class="sim-field">
+        <label><span>Endless Mode Max Depth</span><span id="sim-lbl-endless">Ante 16 (Endless)</span></label>
+        <input type="range" id="sim-endless" min="8" max="24" step="1" value="16"
+          oninput="document.getElementById('sim-lbl-endless').textContent=this.value === '8' ? 'Ante 8 (Campaign Only)' : 'Ante ' + this.value + ' (Endless)'">
+      </div>
+
+      <div class="sim-field">
         <label><span>Starting Deals / Blind</span><span id="sim-lbl-deals">7</span></label>
         <input type="range" id="sim-deals" min="4" max="10" step="1" value="7"
           oninput="document.getElementById('sim-lbl-deals').textContent=this.value">
       </div>
 
       <div class="sim-field">
-        <label><span>Target Score Scaling</span><span id="sim-lbl-scale">50%</span></label>
+        <label><span>Target Score Scaling (Normal 50%)</span><span id="sim-lbl-scale">50%</span></label>
         <input type="range" id="sim-scale" min="50" max="130" step="5" value="50"
           oninput="document.getElementById('sim-lbl-scale').textContent=this.value+'%'">
+      </div>
+
+      <div class="sim-field">
+        <label><span>Starting Cash</span><span id="sim-lbl-cash">$6</span></label>
+        <input type="range" id="sim-start-cash" min="4" max="20" step="1" value="6"
+          oninput="document.getElementById('sim-lbl-cash').textContent='$'+this.value">
+      </div>
+
+      <div class="sim-field">
+        <label><span>Max Joker Slots</span><span id="sim-lbl-jokers">5 Slots</span></label>
+        <input type="range" id="sim-joker-slots" min="3" max="7" step="1" value="5"
+          oninput="document.getElementById('sim-lbl-jokers').textContent=this.value+' Slots'">
       </div>
 
       <div class="sim-field">

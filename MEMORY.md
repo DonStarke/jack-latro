@@ -105,16 +105,31 @@
       * `synergy`: Adaptive combo builder, leans into owned Joker synergies (Bust Cushion, Daredevil, Chip Stacker, Sweet 16, Snake Eyes, Deja Vu).
       * `expert`: Optimal tournament AI with tempo-first early game bankroll, deck sculpting, XMult positioning, and Clearance Rack rerolls.
   * **Automated Verification**: All 17 test suites (500+ unit and integration checks) passing 100%.
-* **Item Lifetime Telemetry & Compendium Stats Tracking**:
-  * **Full Lifetime Persistence & Schema Versioning**: Implemented versioned `LifetimeTelemetryStore` (`CURRENT_TELEMETRY_SCHEMA_VERSION = 1`) in `src/gameState.ts` with local persistence (`jacklatro_library_telemetry` in `localStorage`), tracking historical metrics across all runs with resilient auto-migration and fail-safes.
-  * **Non-Destructive Auto-Migration**: Updates deep-merge catalogs and historical data safely. Adding new jokers, tarots, vouchers, or metrics never wipes existing player numbers. Malformed/corrupt numeric entries are sanitized without resetting records.
-  * **Emergency Archival & Dual Storage**: Simultaneous write to secondary backup key (`jacklatro_library_telemetry_backup`) prevents data loss during sudden shutdowns; corrupted raw JSON strings are safely archived to `jacklatro_library_telemetry_corrupted_raw` while restoring from backup.
-  * **Jokers Telemetry (35 Cards)**: Tracks `Times Discovered` (shop rolls & packs), `Rounds Held` (active blinds completed), `Hands Triggered` (scoring activations), cumulative `Chips Contributed` (`+Xc`), cumulative `Mult Contributed` (`+Xm`), and `Win Rate When Held` (percentage of completed blinds won).
-  * **Tarot Telemetry (10 Spells)**: Tracks `Times Acquired` (shop purchases & drafted cards), `Times Cast` (in-hand activations), `Times Sold` (liquidations), and `Win Rate When Cast` (victories on hands where spell was cast).
-  * **Vouchers Telemetry (10 Upgrades)**: Tracks `Times Redeemed`, `Earliest Ante Acquired` (lowest ante number ever purchased), `Runs Won With Voucher` (Ante 8 Boss victories with perk active), and `Est. Value Contributed` (cumulative bonus chips, deals, interest, and discounts).
-  * **Card Editions Telemetry (4 Effects)**: Tracks `Cards Enhanced` (upgrades created via spells or drafts), `Times Scored In Hand`, `Bonus Impact` (chips for Foil, mult for Holo/Poly, cash for Gold), and `Deck Saturation Peak` (highest percentage of the deck enhanced).
-  * **Booster Packs Telemetry (4 Packs)**: Tracks `Packs Opened`, `Cards Drafted`, `Packs Skipped`, and `Total Money Invested`.
-  * **Automated Verification**: Added `tests/item-telemetry-tracking.test.js` covering 84 checks across schema migration (v0 -> v1), corrupt field sanitization, emergency archival/recovery, dual storage buffers, live tracking updates, and live UI detail modal rendering. All 13 test suites (500+ checks) passing 100%.
+* **Endless Mode Bot Simulation & Comprehensive Telemetry Expansion (v1.8)**:
+  * **Endless Mode Simulation with Strict Safeguards**:
+    * Outer simulation loop now supports configurable `maxEndlessAnte` from Ante 8 (Campaign) up to Ante 24 (Endless), with a hard internal circuit-breaker ceiling of Ante 30.
+    * Integrated dual anti-infinite safeguards: max 30 deals per blind and max 300 hands per run, preventing infinite push-refund or card loops.
+    * Tracks `highestAnteReached`, `endlessStats` (Ante 9+ entered, cleared, survival %, scaling deaths vs cold shoe deaths).
+  * **Full Tarot & Battle Cheat Telemetry (`consumableStats`)**:
+    * Tracks offered, bought, timesUsed, runsWithItem, runsWonWithItem, win rate lift % vs baseline, avg death ante, and tactical impacts (cards pruned by Guillotine, ranks forged/shaved, poly/holo/foil/gold editions created, X-Ray bonus chips, Loaded Aces summoned, Double Vision 2x mults).
+  * **Extended Voucher Telemetry**:
+    * Tracks offered, bought, buy rate %, run win rate when bought, win rate lift %, and average ante purchased.
+  * **New Interactive Configuration Sliders**:
+    * Added **Endless Mode Max Depth** slider (`#sim-endless`: Ante 8 to 24, default Ante 16).
+    * Added **Starting Cash** slider (`#sim-start-cash`: $4 to $20, default $6).
+    * Added **Max Joker Slots** slider (`#sim-joker-slots`: 3 to 7 slots, default 5).
+    * Added **1,000 Runs** fast preset to `#sim-runs`.
+    * Clarified Target Score Scaling label with `(Normal 50%)`.
+  * **Tabbed Results Modal**:
+    * Converted simulation results area into 5 responsive glassmorphic tabs:
+      1. `📊 KPI Overview`: 4 KPI cards (Win Rate, Peak Endless Ante, Avg Death Ante, BJ Hand Win %), Packs Opened/Rerolls, Ante Survival Funnel (1..maxEndlessAnte), Cause of Death Diagnostic.
+      2. `🃏 Jokers`: Full leaderboard with Rarity, Cost, Times Held, Run Win %, Win Lift %, Avg Ante.
+      3. `🔮 Tarots & Cheats`: Leaderboard with Type badge, Offered, Bought, Used, Runs, Win %, Win Lift %, Avg Ante, Tactical Impact.
+      4. `🎟️ Vouchers`: Leaderboard with Offered, Bought, Buy Rate %, Win %, Win Lift %, Avg Ante Bought.
+      5. `♾️ Endless Depth`: Peak Ante banner, Ante 9+ progression table with targets, survival %, and scaling wall bottlenecks.
+  * **Automated Verification**:
+    * Added `tests/endless-simulation-and-stats.test.js` validating all 48 checks across DOM sliders, parsing, endless loop progression, safeguards, consumable telemetry, voucher extensions, tab navigation, and report formatting.
+    * All 18 test suites passing 100%.
 
 
 
