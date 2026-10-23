@@ -42,7 +42,9 @@ const JOKER_CATALOG: ReadonlyArray<JokerDef> = [
   { id: 'slow_and_steady', name: 'Slow & Steady', cost: 5, rarity: 'common', isXMult: false, icon: '🐢', archetype: 'chips', desc: '+20 Chips for each Deal remaining in the current Blind when you Win.' },
   { id: 'card_sharp_joker', name: 'Card Sharp', cost: 8, rarity: 'rare', isXMult: true, icon: '🪒', archetype: 'mult', desc: '×1.75 Mult if you have already won a hand in this Blind.' },
   { id: 'loan_shark', name: 'Loan Shark', cost: 4, rarity: 'common', isXMult: false, icon: '💼', archetype: 'econ', desc: 'Grants +$15 immediately when bought. Costs -$1 at the end of each Blind.' },
-  { id: 'deja_vu', name: 'Deja Vu', cost: 8, rarity: 'rare', isXMult: true, icon: '🌀', archetype: 'mult', desc: '×1.5 Mult if your final hand total matches your final total from the previous winning hand.' }
+  { id: 'deja_vu', name: 'Deja Vu', cost: 8, rarity: 'rare', isXMult: true, icon: '🌀', archetype: 'mult', desc: '×1.5 Mult if your final hand total matches your final total from the previous winning hand.' },
+  { id: 'rain_man', name: 'Rain Man', cost: 8, rarity: 'rare', isXMult: true, icon: '🧠', archetype: 'mult', desc: 'Hi-Lo Count (2-6: +1, 7-9: 0, 10-A: -1 from 0). When Count ≥ +2: Double Down applies ×3 Mult & Blackjacks/21s grant ×1.5 Mult & +$2.' },
+  { id: 'the_spotter', name: 'The Spotter', cost: 8, rarity: 'rare', isXMult: false, icon: '🔭', archetype: 'chips', desc: 'Shoe Count = (Remaining 10s & Aces) - (Remaining 2-6s). On scoring hands, grants +15 Chips & +2 Mult per point of positive Shoe Count.' }
 ];
 
 const DECK_TAROT_CATALOG: ReadonlyArray<TarotDef> = [
@@ -197,6 +199,8 @@ interface ScoreContext {
   handsLeft?: number;
   handsWonInBlind?: number;
   previousHandTotal?: number | null;
+  runningCount?: number;
+  shoe?: ReadonlyArray<Card>;
 }
 
 type ScoreStepKind = 'base' | 'card' | 'joker' | 'double';
@@ -524,9 +528,31 @@ function scoreHand(ctx: ScoreContext): ScoreResult {
           mult = round1(mult * 1.5); logs.push(`Deja Vu (${pTotal}) ×1.5m`); triggered = true;
         }
         break;
+      case 'rain_man': {
+        const rc = ctx.runningCount || 0;
+        if (rc >= 2 && (outcomeType === 'NATURAL' || outcomeType === 'EXACT21' || pTotal === 21)) {
+          mult = round1(mult * 1.5);
+          money += 2;
+          logs.push(`Rain Man (RC +${rc}) ×1.5m/+$2`);
+          triggered = true;
+        }
+        break;
+      }
+      case 'the_spotter': {
+        const shoeAdv = ctx.shoe ? calculateShoeCount(ctx.shoe) : 0;
+        if (shoeAdv > 0) {
+          const addC = shoeAdv * 15;
+          const addM = shoeAdv * 2;
+          chips += addC;
+          mult += addM;
+          logs.push(`Spotter (Shoe +${shoeAdv}) +${addC}c/+${addM}m`);
+          triggered = true;
+        }
+        }
+        break;
     }
     if (triggered) {
-      const isX = j.isXMult || ['the_shark', 'blackjack_tycoon', 'minimalist', 'snake_eyes', 'monochrome', 'card_sharp_joker', 'deja_vu'].includes(j.id);
+      const isX = j.isXMult || ['the_shark', 'blackjack_tycoon', 'minimalist', 'snake_eyes', 'monochrome', 'card_sharp_joker', 'deja_vu', 'rain_man'].includes(j.id);
       const dMult = isX ? (prevMult > 0 ? round1(mult / prevMult) : mult) : round1(mult - prevMult);
       steps.push({
         kind: 'joker',
@@ -545,11 +571,26 @@ function scoreHand(ctx: ScoreContext): ScoreResult {
 
   if (ctx.doubledDown && !safetyNetSaved) {
     const hasDoN = owns('double_or_nothing');
-    const dblMult = hasDoN ? 3 : 2;
+    const hasRainMan = owns('rain_man') && (ctx.runningCount || 0) >= 2;
+    let dblMult = 2;
+    let label = 'Double Down ×2m';
+    if (hasDoN && hasRainMan) {
+      dblMult = 4;
+      label = 'DoN + Rain Man ×4m';
+    } else if (hasDoN) {
+      dblMult = 3;
+      label = 'Double or Nothing ×3m';
+    } else if (hasRainMan) {
+      dblMult = 3;
+      label = 'Rain Man Double ×3m';
+    }
     mult = round1(mult * dblMult);
-    const label = hasDoN ? 'Double or Nothing ×3m' : 'Double Down ×2m';
+
     logs.push(label);
     const donIdx = hasDoN ? ctx.jokers.findIndex(j => j.id === 'double_or_nothing') : undefined;
+    const rmIdx = hasRainMan ? ctx.jokers.findIndex(j => j.id === 'rain_man') : undefined;
+    const jId = (hasDoN && hasRainMan) ? 'rain_man' : (hasDoN ? 'double_or_nothing' : (hasRainMan ? 'rain_man' : undefined));
+    const jIdx = (hasDoN && hasRainMan) ? rmIdx : (hasDoN ? donIdx : (hasRainMan ? rmIdx : undefined));
     steps.push({
       kind: 'double',
       chips: Math.round(chips),
@@ -557,8 +598,8 @@ function scoreHand(ctx: ScoreContext): ScoreResult {
       deltaMult: dblMult,
       isXMult: true,
       sourceName: label,
-      jokerId: hasDoN ? 'double_or_nothing' : undefined,
-      jokerIndex: donIdx !== undefined && donIdx >= 0 ? donIdx : undefined
+      jokerId: jId,
+      jokerIndex: jIdx !== undefined && jIdx >= 0 ? jIdx : undefined
     });
   }
 

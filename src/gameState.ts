@@ -172,6 +172,8 @@ interface GameState {
   handsWonInBlind?: number;
   previousHandTotal?: number | null;
   roundCashEarned?: number;
+  cardsSeenThisBlind?: { uid: number; rank: Rank }[];
+  runningCount?: number;
 
   jokers: JokerInstance[];
   consumables: (TarotDef | ShopTarot)[];
@@ -338,6 +340,8 @@ let _state: GameState = {
   handsWonInBlind: 0,
   previousHandTotal: null,
   roundCashEarned: 0,
+  cardsSeenThisBlind: [],
+  runningCount: 0,
 
   jokers: [],
   consumables: [],
@@ -1197,6 +1201,8 @@ function resetRunState(freshDeck: Card[]): void {
   _state.activePackOpening = null;
   _state.lastTarotUsedId = null;
   _state.lastTarotUsedName = null;
+  _state.cardsSeenThisBlind = [];
+  _state.runningCount = 0;
   _state.roundCashEarned = 0;
   _state.runStats = createInitialRunStats();
   clearTarotsInHand();

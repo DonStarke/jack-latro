@@ -4682,3 +4682,145 @@
     color: #64748b;
     line-height: 1.2;
   }
+
+  /* Card Counter Jokers: Table & Shoe Styling */
+  .shoe-widget.has-counter-joker {
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    padding: 4px 2px !important;
+    gap: 3px !important;
+  }
+  .shoe-widget.has-counter-joker .shoe-count {
+    font-size: 10px !important;
+    padding: 1px 4px !important;
+    margin-bottom: 2px !important;
+  }
+  .shoe-widget.has-rain-man {
+    border-color: #38bdf8 !important;
+    box-shadow: -3px 3px 0 #0284c7, -6px 6px 0 #0369a1, 0 0 14px rgba(56, 189, 248, 0.5) !important;
+  }
+  .shoe-widget.has-rain-man.is-hot {
+    border-color: #f59e0b !important;
+    box-shadow: -3px 3px 0 #d97706, -6px 6px 0 #b45309, 0 0 18px rgba(245, 158, 11, 0.8) !important;
+    animation: pulse-hot-shoe 1.5s infinite ease-in-out !important;
+  }
+  @keyframes pulse-hot-shoe {
+    0%, 100% { box-shadow: -3px 3px 0 #d97706, -6px 6px 0 #b45309, 0 0 12px rgba(245, 158, 11, 0.5) !important; }
+    50% { box-shadow: -3px 3px 0 #d97706, -6px 6px 0 #b45309, 0 0 24px rgba(245, 158, 11, 0.95) !important; }
+  }
+  .shoe-widget.has-spotter {
+    border-color: #10b981 !important;
+    box-shadow: -3px 3px 0 #059669, -6px 6px 0 #047857, 0 0 14px rgba(16, 185, 129, 0.5) !important;
+  }
+  .shoe-widget.has-both-counters {
+    border-color: #a855f7 !important;
+    box-shadow: -3px 3px 0 #7e22ce, -6px 6px 0 #6b21a8, 0 0 18px rgba(168, 85, 247, 0.7) !important;
+  }
+  .deck-counter-hud {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    width: 100%;
+    align-items: center;
+  }
+  .deck-count-pill {
+    width: 52px;
+    background: rgba(0, 0, 0, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 4px;
+    padding: 2px 3px;
+    text-align: center;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .deck-count-pill .pill-label {
+    font-size: 8px;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: #94a3b8;
+    line-height: 1;
+    letter-spacing: 0.4px;
+  }
+  .deck-count-pill .pill-val {
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1.1;
+  }
+  .deck-count-pill .pill-tag {
+    font-size: 7px;
+    font-weight: 900;
+    line-height: 1;
+    margin-top: 1px;
+    letter-spacing: 0.2px;
+  }
+  .deck-count-pill.rain-man-pill .pill-val {
+    color: #38bdf8;
+  }
+  .deck-count-pill.rain-man-pill.hot-glow {
+    border-color: #f59e0b;
+    background: rgba(30, 20, 5, 0.94);
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+  }
+  .deck-count-pill.rain-man-pill.hot-glow .pill-val {
+    color: #f59e0b;
+    text-shadow: 0 0 5px rgba(245, 158, 11, 0.8);
+  }
+  .deck-count-pill.rain-man-pill.hot-glow .pill-tag {
+    color: #f59e0b;
+  }
+  .deck-count-pill.rain-man-pill.cold-glow .pill-val {
+    color: #38bdf8;
+  }
+  .deck-count-pill.spotter-pill .pill-val {
+    color: #cbd5e1;
+  }
+  .deck-count-pill.spotter-pill.emerald-glow {
+    border-color: #10b981;
+    background: rgba(5, 25, 15, 0.94);
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+  }
+  .deck-count-pill.spotter-pill.emerald-glow .pill-val {
+    color: #34d399;
+    text-shadow: 0 0 5px rgba(52, 211, 153, 0.8);
+  }
+  .deck-count-pill.spotter-pill.emerald-glow .pill-tag {
+    color: #34d399;
+  }
+
+  .shoe-float-count {
+    position: absolute;
+    top: -12px;
+    right: -8px;
+    font-size: 14px;
+    font-weight: 900;
+    pointer-events: none;
+    border-radius: 4px;
+    padding: 1px 5px;
+    z-index: 50;
+    animation: float-count-up 0.75s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  }
+  @keyframes float-count-up {
+    0% { opacity: 0; transform: translateY(6px) scale(0.7); }
+    25% { opacity: 1; transform: translateY(0) scale(1.15); }
+    75% { opacity: 1; transform: translateY(-16px) scale(1.0); }
+    100% { opacity: 0; transform: translateY(-28px) scale(0.9); }
+  }
+  .shoe-float-count.count-pos {
+    background: rgba(16, 185, 129, 0.95);
+    color: #fff;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.6);
+    border: 1px solid #6ee7b7;
+  }
+  .shoe-float-count.count-neg {
+    background: rgba(239, 68, 68, 0.95);
+    color: #fff;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
+    border: 1px solid #fca5a5;
+  }
+  .shoe-float-count.count-zero {
+    background: rgba(100, 116, 139, 0.9);
+    color: #fff;
+    border: 1px solid #94a3b8;
+  }

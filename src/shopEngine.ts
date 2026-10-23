@@ -102,7 +102,9 @@ function beginBlindState(): void {
     doubledDown: false,
     tempBonusChips: 0,
     handsWonInBlind: 0,
-    roundCashEarned: 0
+    roundCashEarned: 0,
+    cardsSeenThisBlind: [],
+    runningCount: 0
   });
   setShoe(buildShoeFromDeck());
 }
@@ -958,7 +960,9 @@ function useConsumable(index: number, targetCardUid?: number | string | (number 
     message = 'Loaded Ace drawn into hand!';
   } else if (c.id === 'double_vision') {
     patchState({ doubledDown: true });
-    const dblMult = s.jokers.some(j => j.id === 'double_or_nothing') ? 3 : 2;
+    const hasDoN = s.jokers.some(j => j.id === 'double_or_nothing');
+    const hasRainMan = s.jokers.some(j => j.id === 'rain_man') && (s.runningCount || 0) >= 2;
+    const dblMult = (hasDoN && hasRainMan) ? 4 : (hasDoN || hasRainMan ? 3 : 2);
     message = `Double Vision: Hand Doubled Down (×${dblMult} Mult)!`;
   } else if (c.id === 'judgement') {
     if (s.jokers.length >= s.maxJokers) {

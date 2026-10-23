@@ -312,6 +312,8 @@ Player begins with **5 Joker slots** (expandable to 6 with VIP Lounge Pass).
 | `dark_knight` | **Dark Knight** | $5 | Flat Chips & Mult| Each Black Card | $+10\text{ Chips}$ and $+3\text{ Mult}$ for each $\spadesuit$ or $\clubsuit$ in hand. |
 | `compound_edge` | **Compound Edge** | $6 | Economy +Chips | Every $\$5$ held | $+20\text{ Chips}$ for each full $\$5$ currently held in purse. |
 | `minimalist` | **Minimalist** | $6 | $\times\text{Mult}$ | Win with 2 cards | Multiplies Mult by $\times 1.75$ if winning with exactly 2 cards. |
+| `rain_man` | **Rain Man** | $8 | $\times\text{Mult}$ + Utility | Running Count $\ge +2$ | Hi-Lo Count ($2\text{--}6: +1$, $7\text{--}9: 0$, $10\text{--}\text{A}: -1$ from $0$). When Count $\ge +2$: Double Down applies $\times 3\text{ Mult}$ and Blackjacks / Exact 21s grant $\times 1.5\text{ Mult}$ & $+\$2\text{ Cash}$. |
+| `the_spotter` | **The Spotter** | $8 | Scaling Chips & Mult | Scoring Hand | Shoe Count = $(\text{Remaining } 10\text{s \& Aces}) - (\text{Remaining } 2\text{--}6\text{s})$. Grants $+15\text{ Chips}$ & $+2\text{ Mult}$ per point of positive Shoe Count. |
 
 ---
 

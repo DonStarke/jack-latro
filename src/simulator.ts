@@ -430,7 +430,7 @@ function scoreJokerPriorityForBot(joker: JokerInstance, botType: BotType): numbe
   if (joker.id === 'hot_hand') score += 6 + (joker.bonusMult || 0) * 0.5;
 
   if (botType === 'expert') {
-    if (['bust_cushion', 'the_shark', 'blackjack_tycoon', 'card_sharp_joker', 'double_or_nothing', 'deja_vu', 'monochrome'].includes(joker.id)) score += 6;
+    if (['bust_cushion', 'the_shark', 'blackjack_tycoon', 'card_sharp_joker', 'double_or_nothing', 'deja_vu', 'monochrome', 'rain_man', 'the_spotter'].includes(joker.id)) score += 6;
     if (['golden_parachute', 'loan_shark', 'diamond_cutter', 'the_grinder', 'compound_edge'].includes(joker.id)) score += 4;
     if (['vip_high_roller', 'ace_up_sleeve', 'push_it_good', 'trips_ahoy', 'spade_slicer', 'crimson_heart', 'club_sandwich', 'slow_and_steady', 'sweet_16'].includes(joker.id)) score += 3;
     return score;
@@ -439,9 +439,9 @@ function scoreJokerPriorityForBot(joker: JokerInstance, botType: BotType): numbe
   if (botType === 'charlie') {
     if (['bust_cushion', 'safety_net', 'hit_me_baby', 'card_counter', 'even_steven', 'odd_ball', 'the_grinder', 'trips_ahoy'].includes(joker.id)) score += 8;
   } else if (botType === 'highroller') {
-    if (['vip_high_roller', 'ace_up_sleeve', 'blackjack_tycoon', 'minimalist', 'double_or_nothing', 'the_shark', 'pocket_rockets', 'trips_ahoy'].includes(joker.id)) score += 8;
+    if (['vip_high_roller', 'ace_up_sleeve', 'blackjack_tycoon', 'minimalist', 'double_or_nothing', 'the_shark', 'pocket_rockets', 'trips_ahoy', 'rain_man'].includes(joker.id)) score += 8;
   } else if (botType === 'synergy') {
-    if (['bust_cushion', 'daredevil', 'chip_stacker', 'the_shark', 'blackjack_tycoon', 'ace_up_sleeve', 'push_it_good', 'compound_edge', 'hot_hand', 'spade_slicer', 'crimson_heart', 'diamond_cutter', 'club_sandwich', 'monochrome', 'card_sharp_joker', 'slow_and_steady'].includes(joker.id)) score += 6;
+    if (['bust_cushion', 'daredevil', 'chip_stacker', 'the_shark', 'blackjack_tycoon', 'ace_up_sleeve', 'push_it_good', 'compound_edge', 'hot_hand', 'spade_slicer', 'crimson_heart', 'diamond_cutter', 'club_sandwich', 'monochrome', 'card_sharp_joker', 'slow_and_steady', 'the_spotter', 'rain_man'].includes(joker.id)) score += 6;
   }
   return score;
 }
@@ -874,9 +874,17 @@ function runBatchSimulationForBot(numRuns: number, botType: BotType, cfg: SimCon
         if (bossBlind && bossBlind.id === 'the_cooler') dealsLeft = Math.max(1, dealsLeft - 1);
 
         let shoe = shuffle(simRun.deck.map(c => ({ ...c })));
+        let simRunningCount = 0;
         const draw = (): Card => {
-          if (shoe.length === 0) shoe = shuffle(simRun.deck.map(c => ({ ...c })));
-          return shoe.pop() as Card;
+          if (shoe.length === 0) {
+            shoe = shuffle(simRun.deck.map(c => ({ ...c })));
+            simRunningCount = 0;
+          }
+          const c = shoe.pop() as Card;
+          if (typeof getHiLoDelta === 'function') {
+            simRunningCount += getHiLoDelta(c.rank);
+          }
+          return c;
         };
 
         let roundScore = 0;

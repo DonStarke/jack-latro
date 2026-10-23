@@ -79,7 +79,7 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   const cardPacks = $('lib-cat-card-packs');
 
   ck('Category choice for Jokers exists', !!cardJokers);
-  ck('Jokers category displays "35 CARDS"', cardJokers && cardJokers.textContent.includes('35 CARDS'));
+  ck('Jokers category displays "37 CARDS"', cardJokers && cardJokers.textContent.includes('37 CARDS'));
   ck('Category choice for Tarots exists', !!cardTarots);
   ck('Tarots category displays "17 CONSUMABLES"', cardTarots && cardTarots.textContent.includes('17 CONSUMABLES'));
   ck('Category choice for Vouchers exists', !!cardVouchers);
@@ -101,7 +101,7 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
 
   const itemsGrid = $('ui-lib-items-grid');
   const jokerCards = itemsGrid.querySelectorAll('.lib-joker-card');
-  ck('Items grid renders all 35 Jokers', jokerCards.length === 35);
+  ck(`Items grid renders all ${w.JOKER_CATALOG.length} Jokers`, jokerCards.length === w.JOKER_CATALOG.length);
 
   const subfilterBar = $('ui-lib-subfilter-bar');
   ck('Jokers category renders subfilter bar', !isHidden(subfilterBar));
@@ -111,12 +111,13 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   rareFilterBtn.click();
   await sleep(50);
   const rareCards = itemsGrid.querySelectorAll('.lib-joker-card');
-  ck('Filtering by Rare renders exactly 6 Rare Jokers', rareCards.length === 6);
+  const expectedRareCount = w.JOKER_CATALOG.filter(j => j.rarity === 'rare').length;
+  ck(`Filtering by Rare renders exactly ${expectedRareCount} Rare Jokers`, rareCards.length === expectedRareCount);
 
   const allFilterBtn = subfilterBar.querySelector('.lib-filter-pill');
   allFilterBtn.click();
   await sleep(50);
-  ck('Restoring ALL filter renders 35 Jokers again', itemsGrid.querySelectorAll('.lib-joker-card').length === 35);
+  ck(`Restoring ALL filter renders ${w.JOKER_CATALOG.length} Jokers again`, itemsGrid.querySelectorAll('.lib-joker-card').length === w.JOKER_CATALOG.length);
 
   console.log('\n--- TEST 4: JOKER ENLARGED DETAIL & TELEMETRY STATS MODAL ---');
   const detailModal = $('ui-lib-detail-modal');

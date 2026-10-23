@@ -86,10 +86,40 @@ function buildShoeFromDeck(): Card[] {
 function drawFromShoe(): Card {
   if (getState().shoe.length === 0) {
     setShoe(buildShoeFromDeck());
+    if (typeof patchState === 'function') {
+      patchState({ cardsSeenThisBlind: [], runningCount: 0 });
+    }
   }
   const card = popShoeCard();
   if (!card) throw new Error('drawFromShoe: deck is empty (no cards available to build a shoe).');
   return card;
+}
+
+/** Hi-Lo delta for card counting: 2-6: +1, 7-9: 0, 10-A: -1 */
+function getHiLoDelta(rank: Rank): number {
+  if (['2', '3', '4', '5', '6'].includes(rank)) return 1;
+  if (['7', '8', '9'].includes(rank)) return 0;
+  if (FACE_RANKS.includes(rank) || rank === '10' || rank === 'A') return -1;
+  return 0;
+}
+
+/** Computes running count from an array of seen cards with ranks */
+function calculateRunningCount(cards: ReadonlyArray<{ rank: Rank }>): number {
+  let rc = 0;
+  for (const c of cards) {
+    rc += getHiLoDelta(c.rank);
+  }
+  return rc;
+}
+
+/** Computes absolute shoe advantage: (10s & Aces in shoe) - (2-6s in shoe) */
+function calculateShoeCount(shoe: ReadonlyArray<Card>): number {
+  let count = 0;
+  for (const c of shoe) {
+    if (['2', '3', '4', '5', '6'].includes(c.rank)) count -= 1;
+    else if (FACE_RANKS.includes(c.rank) || c.rank === '10' || c.rank === 'A') count += 1;
+  }
+  return count;
 }
 
 /* ==========================================================
@@ -187,4 +217,10 @@ function classifyHand(
     dBust,
     cushioned: pEval.cushioned
   };
+}
+
+if (typeof window !== 'undefined') {
+  (window as any).getHiLoDelta = getHiLoDelta;
+  (window as any).calculateRunningCount = calculateRunningCount;
+  (window as any).calculateShoeCount = calculateShoeCount;
 }

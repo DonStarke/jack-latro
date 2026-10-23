@@ -37,6 +37,17 @@ function setPlayfieldLocked(locked: boolean): void {
 /* ---------- Joker text helpers ---------- */
 
 function getJokerFullDesc(j: JokerInstance): string {
+  if (j.id === 'rain_man') {
+    const rc = getState().runningCount || 0;
+    const status = rc >= 2 ? '🔥 ACTIVE (≥+2 for 3x)' : 'Inactive (<+2)';
+    return `Hi-Lo Count (2-6: +1, 7-9: 0, 10-A: -1 from 0 this blind). When Count ≥ +2: Double Down applies ×3 Mult & Blackjacks/21s grant ×1.5 Mult & +$2. (Current Count: ${rc >= 0 ? '+' + rc : rc} — ${status})`;
+  }
+  if (j.id === 'the_spotter') {
+    const shoeAdv = typeof calculateShoeCount === 'function' ? calculateShoeCount(getState().shoe) : 0;
+    const chips = Math.max(0, shoeAdv * 15);
+    const mult = Math.max(0, shoeAdv * 2);
+    return `Shoe Count = (Remaining 10s & Aces) - (Remaining 2-6s). On scoring hands, grants +15 Chips & +2 Mult per point of positive Shoe Count. (Current Shoe Count: ${shoeAdv >= 0 ? '+' + shoeAdv : shoeAdv} — yielding +${chips}c / +${mult}m)`;
+  }
   if (j.id === 'daredevil') {
     const cur = j.bonusMult || 0;
     return `Permanently gains +1 Mult on safe Hit on 15+ for the rest of run. (Currently: +${cur} Mult)`;
@@ -61,6 +72,17 @@ function getJokerFullDesc(j: JokerInstance): string {
 }
 
 function getJokerMiniSubHTML(j: JokerInstance): string {
+  if (j.id === 'rain_man') {
+    const rc = getState().runningCount || 0;
+    const col = rc >= 2 ? '#f59e0b' : (rc > 0 ? '#10b981' : (rc < 0 ? '#38bdf8' : '#cbd5e1'));
+    const tag = rc >= 2 ? '🔥 ×3m/21' : '(≥+2 for 3x)';
+    return `<span style="color:${col};font-weight:900;">RC ${rc >= 0 ? '+' + rc : rc}</span> ${tag}`;
+  }
+  if (j.id === 'the_spotter') {
+    const shoeAdv = typeof calculateShoeCount === 'function' ? calculateShoeCount(getState().shoe) : 0;
+    const col = shoeAdv > 0 ? '#10b981' : '#cbd5e1';
+    return `<span style="color:${col};font-weight:900;">Shoe ${shoeAdv >= 0 ? '+' + shoeAdv : shoeAdv}</span> ${shoeAdv > 0 ? `(+${shoeAdv * 15}c/+${shoeAdv * 2}m)` : '(0c/0m)'}`;
+  }
   if (j.id === 'daredevil') {
     const cur = j.bonusMult || 0;
     return `<span style="color:var(--mult);font-weight:900;">+${cur}m</span> (+1m on Hit 15+)`;
@@ -907,7 +929,10 @@ function buildScoreEquationHTML(res: ScoreResult, playerHand: ReadonlyArray<Card
   const doubleStep = res.steps.find(s => s.kind === 'double');
   if (doubleStep) {
     const dMult = formatScoringVal(doubleStep.deltaMult || 2);
-    const dName = (doubleStep.deltaMult === 3 || (doubleStep.sourceName && doubleStep.sourceName.includes('Double or Nothing'))) ? 'Double or Nothing' : 'Double Down';
+    let dName = 'Double Down';
+    if (doubleStep.sourceName && doubleStep.sourceName.includes('DoN + Rain Man')) dName = 'DoN + Rain Man';
+    else if (doubleStep.sourceName && doubleStep.sourceName.includes('Rain Man')) dName = 'Rain Man Double';
+    else if (doubleStep.deltaMult === 3 || (doubleStep.sourceName && doubleStep.sourceName.includes('Double or Nothing'))) dName = 'Double or Nothing';
     parts.push(`${dName}[×${dMult}<span class="eq-m">m</span>]`);
   }
 
@@ -1013,7 +1038,10 @@ function renderScoringBanner(
     const doubleStep = res.steps.find(s => s.kind === 'double');
     if (doubleStep) {
       const dMult = formatScoringVal(doubleStep.deltaMult || 2);
-      const dName = (doubleStep.deltaMult === 3 || (doubleStep.sourceName && doubleStep.sourceName.includes('Double or Nothing'))) ? 'Double or Nothing' : 'Double Down';
+      let dName = 'Double Down';
+    if (doubleStep.sourceName && doubleStep.sourceName.includes('DoN + Rain Man')) dName = 'DoN + Rain Man';
+    else if (doubleStep.sourceName && doubleStep.sourceName.includes('Rain Man')) dName = 'Rain Man Double';
+    else if (doubleStep.deltaMult === 3 || (doubleStep.sourceName && doubleStep.sourceName.includes('Double or Nothing'))) dName = 'Double or Nothing';
       parts.push(`${dName}[×${dMult}m]`);
     }
   }
@@ -1279,6 +1307,50 @@ function renderShop() {
   }
 }
 
+function spawnShoeCountFloat(delta: number): void {
+  const shoeEl = document.getElementById('ui-shoe-widget');
+  if (!shoeEl) return;
+  const pop = document.createElement('div');
+  pop.className = `shoe-float-count ${delta > 0 ? 'count-pos' : delta < 0 ? 'count-neg' : 'count-zero'}`;
+  pop.textContent = delta > 0 ? `+${delta}` : `${delta}`;
+  shoeEl.appendChild(pop);
+  setTimeout(() => pop.remove(), 750);
+}
+
+function updateSeenCardsAndRunningCount(): void {
+  const state = getState();
+  const seen = [...(state.cardsSeenThisBlind || [])];
+  let changed = false;
+
+  const markSeen = (card: Card) => {
+    if (!card) return;
+    if (!seen.some(s => s.uid === card.uid)) {
+      seen.push({ uid: card.uid, rank: card.rank });
+      changed = true;
+    }
+  };
+
+  if (state.playerHand) {
+    for (const c of state.playerHand) {
+      markSeen(c);
+    }
+  }
+
+  if (state.dealerHand && state.dealerHand.length > 0) {
+    markSeen(state.dealerHand[0]);
+    if (state.dealerHoleRevealed) {
+      for (let i = 1; i < state.dealerHand.length; i++) {
+        markSeen(state.dealerHand[i]);
+      }
+    }
+  }
+
+  if (changed) {
+    const rc = typeof calculateRunningCount === 'function' ? calculateRunningCount(seen) : 0;
+    patchState({ cardsSeenThisBlind: seen, runningCount: rc });
+  }
+}
+
 function updateAllUI() {
   const state = getState();
   const tagEl = $('ui-blind-tag');
@@ -1327,6 +1399,54 @@ function updateAllUI() {
   $('ui-money').textContent = '$' + state.money;
   $('ui-ante').textContent = state.ante > 8 ? `Ante ${state.ante} (Endless)` : `Ante ${state.ante}/8`;
   $('ui-shoe-count').textContent = `${state.shoe.length}/${state.deck.length}`;
+
+  updateSeenCardsAndRunningCount();
+
+  const shoeWidget = $('ui-shoe-widget');
+  const counterHud = $('ui-deck-counter-hud');
+  const hasRainMan = state.jokers.some(j => j.id === 'rain_man');
+  const hasSpotter = state.jokers.some(j => j.id === 'the_spotter');
+  const rc = state.runningCount || 0;
+  const shoeAdv = typeof calculateShoeCount === 'function' ? calculateShoeCount(state.shoe) : 0;
+
+  if (shoeWidget) {
+    shoeWidget.classList.toggle('has-rain-man', hasRainMan);
+    shoeWidget.classList.toggle('is-hot', hasRainMan && rc >= 2);
+    shoeWidget.classList.toggle('has-spotter', hasSpotter);
+    shoeWidget.classList.toggle('has-both-counters', hasRainMan && hasSpotter);
+    shoeWidget.classList.toggle('has-counter-joker', hasRainMan || hasSpotter);
+  }
+
+  if (counterHud) {
+    if (!hasRainMan && !hasSpotter) {
+      counterHud.innerHTML = '';
+      counterHud.classList.add('hidden');
+    } else {
+      counterHud.classList.remove('hidden');
+      let hudHTML = '';
+      if (hasRainMan) {
+        const hotClass = rc >= 2 ? 'hot-glow' : (rc < 0 ? 'cold-glow' : '');
+        hudHTML += `
+          <div class="deck-count-pill rain-man-pill ${hotClass}" title="Rain Man Hi-Lo Running Count: ${rc >= 0 ? '+' + rc : rc}">
+            <div class="pill-label">🧠 RC</div>
+            <div class="pill-val">${rc >= 0 ? '+' + rc : rc}</div>
+            ${rc >= 2 ? '<div class="pill-tag">HOT!</div>' : ''}
+          </div>
+        `;
+      }
+      if (hasSpotter) {
+        const emClass = shoeAdv > 0 ? 'emerald-glow' : '';
+        hudHTML += `
+          <div class="deck-count-pill spotter-pill ${emClass}" title="The Spotter Shoe Count: ${shoeAdv >= 0 ? '+' + shoeAdv : shoeAdv} (Remaining 10s/Aces minus 2-6s)">
+            <div class="pill-label">🔭 SHOE</div>
+            <div class="pill-val">${shoeAdv >= 0 ? '+' + shoeAdv : shoeAdv}</div>
+            ${shoeAdv > 0 ? `<div class="pill-tag">+${shoeAdv * 15}c</div>` : ''}
+          </div>
+        `;
+      }
+      counterHud.innerHTML = hudHTML;
+    }
+  }
 
   $('ui-joker-slots').textContent = `JOKERS ${state.jokers.length}/${state.maxJokers}`;
   const jRow = $('ui-joker-row');
@@ -3363,6 +3483,15 @@ async function dealCardAnimated(target: 'player' | 'dealer'): Promise<void> {
   if (target === 'player') addCardToPlayerHand(card);
   else addCardToDealerHand(card);
   playCardDealSound();
+
+  const state = getState();
+  const hasRainMan = state.jokers.some(j => j.id === 'rain_man');
+  const isDealerHole = target === 'dealer' && state.dealerHand.length === 2 && !state.dealerHoleRevealed;
+  if (hasRainMan && !isDealerHole && typeof getHiLoDelta === 'function') {
+    const delta = getHiLoDelta(card.rank);
+    spawnShoeCountFloat(delta);
+  }
+
   updateAllUI();
   await sleep(DEAL_DELAY_MS);
 }
@@ -3508,7 +3637,9 @@ async function resolveRound(): Promise<void> {
     vouchers: state.vouchersBought,
     handsLeft: state.handsLeft,
     handsWonInBlind: state.handsWonInBlind || 0,
-    previousHandTotal: state.previousHandTotal
+    previousHandTotal: state.previousHandTotal,
+    runningCount: state.runningCount,
+    shoe: state.shoe
   });
 
   // Hand outcome sound plays IMMEDIATELY after player and dealer finish playing, just before scoring
@@ -3774,14 +3905,19 @@ async function resolveRound(): Promise<void> {
         }
 
       } else if (step.kind === 'double') {
-        const isDoN = step.deltaMult === 3 || step.jokerId === 'double_or_nothing';
-        const bannerTitle = isDoN ? 'Double or Nothing: ×3 Mult!' : 'Double Down: ×2 Mult!';
+        const isDoN = step.jokerId === 'double_or_nothing' || (step.sourceName && step.sourceName.includes('Double or Nothing'));
+        const isRainMan = step.jokerId === 'rain_man' || (step.sourceName && step.sourceName.includes('Rain Man'));
+        let bannerTitle = 'Double Down: ×2 Mult!';
+        if (isRainMan && isDoN) bannerTitle = 'DoN + Rain Man: ×4 Mult!';
+        else if (isRainMan) bannerTitle = 'Rain Man: ×3 Mult!';
+        else if (isDoN || step.deltaMult === 3) bannerTitle = 'Double or Nothing: ×3 Mult!';
         setBanner(bannerTitle, 'Tap table felt to skip');
 
         let tokenSource: HTMLElement = $('ui-table-felt');
         let jEl: HTMLElement | null = null;
-        if (isDoN) {
-          const jIdx = step.jokerIndex !== undefined ? step.jokerIndex : getState().jokers.findIndex(j => j.id === 'double_or_nothing');
+        const targetJokerId = isRainMan ? 'rain_man' : (isDoN ? 'double_or_nothing' : undefined);
+        if (targetJokerId) {
+          const jIdx = step.jokerIndex !== undefined ? step.jokerIndex : getState().jokers.findIndex(j => j.id === targetJokerId);
           if (jIdx !== -1 && jRow.children[jIdx]) {
             jEl = jRow.children[jIdx] as HTMLElement;
             tokenSource = jEl;
@@ -3869,7 +4005,10 @@ async function resolveRound(): Promise<void> {
       recordJokerTriggerStats(step.jokerId, step.deltaChips || 0, step.deltaMult || 0);
     } else if (step.kind === 'double' && step.jokerId === 'double_or_nothing') {
       recordJokerTrigger('double_or_nothing', 'Double or Nothing');
-      recordJokerTriggerStats('double_or_nothing', 0, 3);
+      recordJokerTriggerStats('double_or_nothing', 0, step.deltaMult || 3);
+    } else if (step.kind === 'double' && step.jokerId === 'rain_man') {
+      recordJokerTrigger('rain_man', 'Rain Man');
+      recordJokerTriggerStats('rain_man', 0, step.deltaMult || 3);
     } else if (step.kind === 'card' && step.cardIndex !== undefined) {
       const card = state.playerHand[step.cardIndex];
       if (card && card.enhancement) {

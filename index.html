@@ -163,8 +163,9 @@
   <main class="table-felt" id="ui-table-felt">
     <!-- DEALER ZONE + VISUAL DECK -->
     <div class="dealer-area">
-      <div class="shoe-widget" onclick="toggleDeckModal(true)" title="Tap to view Deck">
+      <div class="shoe-widget" id="ui-shoe-widget" onclick="toggleDeckModal(true)" title="Tap to view Deck">
         <span class="shoe-count" id="ui-shoe-count">52/52</span>
+        <div class="deck-counter-hud hidden" id="ui-deck-counter-hud"></div>
       </div>
 
       <div class="hand-zone">
@@ -870,7 +871,7 @@
         <div class="lib-cat-card cat-jokers" id="lib-cat-card-jokers" onclick="openLibraryCategory('jokers')">
           <div class="lib-cat-header">
             <span class="lib-cat-icon">🃏</span>
-            <span class="lib-cat-count-badge">35 CARDS</span>
+            <span class="lib-cat-count-badge">37 CARDS</span>
           </div>
           <div class="lib-cat-name">JOKERS</div>
           <div class="lib-cat-desc">Rule-bending passive jokers providing Chips, Multipliers, economic perks, and hand synergies.</div>
