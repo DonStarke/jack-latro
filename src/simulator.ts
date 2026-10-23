@@ -553,7 +553,27 @@ function simulateExpertShopVisit(
     }
   }
 
-  // 2. Booster Pack Shopping
+  // 2. Single Cards & Booster Pack Shopping
+  const processSingleCards = (cards: ShopJokerSlot[]): void => {
+    for (const card of cards) {
+      if (card.bought) continue;
+      if (card.shopType === 'joker') {
+        jokerStats[card.id].offered++;
+        if (simRun.jokers.length >= simRun.maxJokers) continue;
+        const reserve = (simRun.jokers.length >= 4) ? Math.floor(targetBank * 0.7) : (simRun.jokers.length >= 2 ? Math.floor(targetBank * 0.3) : 0);
+        if (simRun.money < card.cost + reserve) continue;
+        const prio = scoreJokerPriorityForBot(card, 'expert');
+        if (prio >= 10) {
+          simRun.money -= card.cost;
+          card.bought = true;
+          simRun.jokers.push(card);
+          jokerStats[card.id].bought++;
+          if (card.id === 'loan_shark') simRun.money += 15;
+        }
+      }
+    }
+  };
+
   const processPacks = (packs: PackDef[]): void => {
     const sortedPacks = packs.slice().sort((a, b) =>
       scorePackPriority(b, simRun, 'expert') - scorePackPriority(a, simRun, 'expert')
@@ -578,12 +598,16 @@ function simulateExpertShopVisit(
     }
   };
 
+  // Initial single cards and packs offered
+  let currentSingleCards = generateShopSingleCards(simRun.ante, simRun.jokers.length, simRun.jokers.map(j => j.id));
+  processSingleCards(currentSingleCards);
+
   const hasOverstock = simRun.vouchers.includes('overstock');
-  let currentPacks = generateShopPacks(simRun.ante, simRun.jokers.length, hasOverstock);
+  const currentPacks = generateShopPacks(simRun.ante, simRun.jokers.length, hasOverstock);
   currentPacks.forEach(p => { packStats[p.id].offered++; });
   processPacks(currentPacks);
 
-  // 3. Shop Rerolls
+  // 3. Shop Rerolls (Rerolls only single cards; packs remain fixed)
   let rerollCost = simRun.vouchers.includes('clearance_sale') ? 1 : 2;
   let rerollsDone = 0;
   const maxRerolls = 2;
@@ -605,9 +629,9 @@ function simulateExpertShopVisit(
     }
     rerollsDone++;
 
-    currentPacks = generateShopPacks(simRun.ante, simRun.jokers.length, hasOverstock);
-    currentPacks.forEach(p => { packStats[p.id].offered++; });
-    processPacks(currentPacks);
+    // Only reroll single cards! Packs are NOT rerolled.
+    currentSingleCards = generateShopSingleCards(simRun.ante, simRun.jokers.length, simRun.jokers.map(j => j.id));
+    processSingleCards(currentSingleCards);
   }
 }
 
@@ -651,7 +675,27 @@ function simulateShopVisit(
     }
   }
 
-  // 2. Booster Pack Shopping
+  // 2. Single Cards & Booster Pack Shopping
+  const processSingleCards = (cards: ShopJokerSlot[]): void => {
+    for (const card of cards) {
+      if (card.bought) continue;
+      if (card.shopType === 'joker') {
+        jokerStats[card.id].offered++;
+        if (simRun.jokers.length >= simRun.maxJokers) continue;
+        const minReserve = (simRun.jokers.length === 0) ? 0 : 2;
+        if (simRun.money < card.cost + minReserve) continue;
+        const prio = scoreJokerPriorityForBot(card, botType);
+        if (prio >= 8) {
+          simRun.money -= card.cost;
+          card.bought = true;
+          simRun.jokers.push(card);
+          jokerStats[card.id].bought++;
+          if (card.id === 'loan_shark') simRun.money += 15;
+        }
+      }
+    }
+  };
+
   const processPacks = (packs: PackDef[]): void => {
     const sortedPacks = packs.slice().sort((a, b) =>
       scorePackPriority(b, simRun, botType) - scorePackPriority(a, simRun, botType)
@@ -675,19 +719,21 @@ function simulateShopVisit(
     }
   };
 
+  let currentSingleCards = generateShopSingleCards(simRun.ante, simRun.jokers.length, simRun.jokers.map(j => j.id));
+  processSingleCards(currentSingleCards);
+
   const hasOverstock = simRun.vouchers.includes('overstock');
-  let packs = generateShopPacks(simRun.ante, simRun.jokers.length, hasOverstock);
+  const packs = generateShopPacks(simRun.ante, simRun.jokers.length, hasOverstock);
   packs.forEach(p => { packStats[p.id].offered++; });
   processPacks(packs);
 
-  // Occasional reroll if flush with cash but lacking jokers
+  // Occasional reroll if flush with cash but lacking jokers (rerolls only single cards)
   const rerollCost = simRun.vouchers.includes('clearance_sale') ? 1 : 2;
   if (simRun.money >= 12 && simRun.jokers.length < 2) {
     simRun.money -= rerollCost;
     trackReroll();
-    packs = generateShopPacks(simRun.ante, simRun.jokers.length, hasOverstock);
-    packs.forEach(p => { packStats[p.id].offered++; });
-    processPacks(packs);
+    currentSingleCards = generateShopSingleCards(simRun.ante, simRun.jokers.length, simRun.jokers.map(j => j.id));
+    processSingleCards(currentSingleCards);
   }
 }
 

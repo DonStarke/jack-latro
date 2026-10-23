@@ -122,7 +122,7 @@ const VOUCHER_CATALOG: ReadonlyArray<VoucherDef> = [
   { id: 'clearance_sale', name: 'Clearance Rack', cost: 10, desc: 'Shop rerolls start at $1 permanently.' },
   { id: 'liquidity_pass', name: 'Liquid Assets', cost: 10, desc: 'Earn interest for every $4 held instead of every $5 permanently.' },
   { id: 'card_shark_voucher', name: 'Card Sharp License', cost: 10, desc: '+1 Max Deal and +20 Base Chips on all hands permanently.' },
-  { id: 'overstock', name: 'Overstock Shelves', cost: 10, desc: 'Shop offers +1 additional card/item slot permanently.' }
+  { id: 'overstock', name: 'Overstock Shelves', cost: 10, desc: 'Shop offers +1 Booster Pack slot permanently (3 packs instead of 2).' }
 ];
 
 const BOSS_BLINDS: ReadonlyArray<BossBlindDef> = [

@@ -1162,26 +1162,31 @@ function renderShop() {
     jGrid.innerHTML = state.shopJokers.map((item, idx) => {
       const isJoker = item.shopType === 'joker';
       const jokerItem = isJoker ? (item as JokerInstance) : null;
+      const isCheat = item.shopType === 'tarot' && (item as TarotDef).consumableType === 'cheat';
       const rarityClass = jokerItem && jokerItem.rarity ? `rarity-${jokerItem.rarity}` : '';
       const archClass = jokerItem && jokerItem.archetype ? `archetype-${jokerItem.archetype}` : '';
-      const icon = jokerItem?.icon || '🃏';
-      const badgeHtml = jokerItem && jokerItem.rarity
-        ? `<span class="rarity-badge rarity-${jokerItem.rarity}">${jokerItem.rarity.toUpperCase()}</span>`
-        : '';
-      const watermarkHtml = isJoker ? `<div class="shop-item-watermark">${icon}</div>` : '';
-      const titleHtml = isJoker
-        ? `<span class="joker-icon-mini">${icon}</span> ${item.name}`
-        : item.name;
+      const icon = isJoker ? (jokerItem?.icon || '🃏') : (isCheat ? '🕶️' : '🔮');
+      let badgeHtml = '';
+      if (isJoker && jokerItem && jokerItem.rarity) {
+        badgeHtml = `<span class="rarity-badge rarity-${jokerItem.rarity}">${jokerItem.rarity.toUpperCase()}</span>`;
+      } else if (isCheat) {
+        badgeHtml = `<span class="rarity-badge pack-badge-cheat">CHEAT</span>`;
+      } else if (item.shopType === 'tarot') {
+        badgeHtml = `<span class="rarity-badge pack-badge-tarot">TAROT</span>`;
+      }
+      const watermarkHtml = `<div class="shop-item-watermark">${icon}</div>`;
+      const titleHtml = `<span class="joker-icon-mini">${icon}</span> ${item.name}`;
+      const subLabel = isJoker ? 'Joker' : (isCheat ? 'Table Cheat' : 'Tarot');
       return `
-      <div class="shop-item type-${item.shopType} ${rarityClass} ${archClass}">
+      <div class="shop-item type-${item.shopType} ${rarityClass} ${archClass} ${item.bought ? 'item-bought' : ''}">
         ${watermarkHtml}
         <div>
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
-            <div class="shop-item-sub">${item.shopType}</div>
+            <div class="shop-item-sub">${subLabel}</div>
             ${badgeHtml}
           </div>
           <div class="shop-item-title">${titleHtml}</div>
-          <div class="shop-item-desc">${item.shopType === 'joker' ? getJokerFullDesc(item) : item.desc}</div>
+          <div class="shop-item-desc">${isJoker ? getJokerFullDesc(item) : item.desc}</div>
         </div>
         <button class="btn btn-deal" style="padding:6px; font-size:12px;"
           onclick="uiBuyShopItem('shopJokers', ${idx})"
@@ -1905,7 +1910,7 @@ function uiBuyShopItem(listName: 'shopJokers' | 'shopExtras', idx: number): void
   const res = buyShopItem(listName, idx);
   if (!res.ok) {
     if (res.reason === 'jokers_full') alert('Joker slots full! Tap an active Joker at the top to sell it.');
-    if (res.reason === 'tarots_full') alert('Tarot slots full!');
+    if (res.reason === 'tarots_full') alert('Consumable slots full! Tap an active card at the top to use or sell it.');
     return;
   }
   playCardDealSound();

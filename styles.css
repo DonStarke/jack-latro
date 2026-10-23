@@ -1409,8 +1409,15 @@
 
   .shop-item.type-joker { border-color: var(--gold); }
   .shop-item.type-voucher { border-color: var(--green); }
-  .shop-item.type-tarot { border-color: var(--purple); }
+  .shop-item.type-tarot {
+    border-color: #a855f7;
+    background: radial-gradient(circle at 90% 90%, rgba(168, 85, 247, 0.18) 0%, #1a212d 75%);
+  }
   .shop-item.type-card { border-color: var(--chips); }
+  .shop-item.item-bought {
+    opacity: 0.55;
+    filter: grayscale(40%);
+  }
 
   .shop-item.type-joker.archetype-mult {
     background: radial-gradient(circle at 90% 90%, rgba(239, 68, 68, 0.18) 0%, #1a212d 75%);

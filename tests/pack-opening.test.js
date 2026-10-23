@@ -42,7 +42,7 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   const text = id => $(id).textContent;
   const isHidden = el => el.classList.contains('hidden');
 
-  console.log('\n--- TEST 1: SHOP OFFERS PACKS INSTEAD OF INDIVIDUAL CARDS ---');
+  console.log('\n--- TEST 1: SHOP OFFERS PACKS ALONGSIDE INDIVIDUAL CARDS ---');
   w.startNewRun();
   w.generateShopStock();
   const s1 = w.getState();
@@ -51,10 +51,12 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   ck('Default shop offers 2 packs', s1.shopPacks.length === 2);
   ck('Ante 1 Blind 0 offers at least one Joker pack', s1.shopPacks.some(p => p.packType === 'joker'));
   ck('Shop extras contains the Ante voucher', s1.shopExtras.some(e => e.shopType === 'voucher'));
-  ck('Shop jokers is empty (no individual cards sold)', s1.shopJokers.length === 0);
+  ck('Shop offers single cards (Jokers & Tarots)', s1.shopJokers.length === 2);
+  ck('Shop jokers contain valid shop types', s1.shopJokers.every(item => item.shopType === 'joker' || item.shopType === 'tarot'));
 
   w.renderShop();
   ck('Packs grid renders in shop UI', $('ui-shop-packs').children.length === 2);
+  ck('Cards grid renders in shop UI', $('ui-shop-jokers').children.length === 2);
   ck('Vouchers grid renders in shop UI', $('ui-shop-extras').children.length >= 1);
 
   console.log('\n--- TEST 2: OVERSTOCK VOUCHER EXPANDS SHOP TO 3 PACKS ---');
@@ -247,17 +249,52 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   ck('Variety pack contains 1 joker, 1 tarot, and 1 card', kinds.includes('joker') && kinds.includes('tarot') && kinds.includes('card'));
   w.uiSkipPack();
 
-  console.log('\n--- TEST 8: REROLL SHOP REFRESHES PACKS ---');
+  console.log('\n--- TEST 8: REROLL SHOP REFRESHES SINGLE CARDS AND PRESERVES PACKS ---');
   w.patchState({ money: 50, rerollCost: 2 });
   w.generateShopStock();
+  const initialPackIds = w.getState().shopPacks.map(p => p.id);
+
+  // Mark 1 pack as bought to verify bought status is preserved across reroll
+  w.markShopPackBought(0);
+  ck('First pack marked opened/bought', w.getState().shopPacks[0].bought === true);
+
   w.uiRerollShop();
   await sleep(50);
-  ck('Reroll generates unbought fresh packs', w.getState().shopPacks.every(p => p.bought === false));
+
+  const afterRerollState = w.getState();
+  ck('Reroll preserves pack count', afterRerollState.shopPacks.length === initialPackIds.length);
+  ck('Reroll preserves exact pack types', afterRerollState.shopPacks.map(p => p.id).join(',') === initialPackIds.join(','));
+  ck('Reroll preserves bought status of packs (cannot reroll for more packs)', afterRerollState.shopPacks[0].bought === true);
+  ck('Reroll generated fresh single cards', afterRerollState.shopJokers.length === 2);
+  ck('All new single cards are unbought', afterRerollState.shopJokers.every(c => c.bought === false));
 
   console.log('\n--- TEST 9: VOUCHERS UNTOUCHED & REMAIN 1 PER ANTE ---');
   const vSlot = w.getState().shopExtras.find(e => e.shopType === 'voucher');
   ck('Voucher offer remains available in shopExtras', !!vSlot);
   ck('Voucher persists 1 per ante', typeof vSlot.cost === 'number' && vSlot.cost > 0 && vSlot.shopType === 'voucher');
+
+  console.log('\n--- TEST 10: BUYING INDIVIDUAL JOKER AND TAROT DIRECTLY FROM SHOP ---');
+  w.patchState({ money: 50, jokers: [], consumables: [] });
+  const testJoker = w.JOKER_CATALOG[0];
+  const testTarot = w.TAROT_CATALOG[0];
+  w.getState().shopJokers = [
+    { ...testJoker, bonusMult: 0, bonusChips: 0, shopType: 'joker', bought: false },
+    { ...testTarot, shopType: 'tarot', bought: false }
+  ];
+  w.renderShop();
+
+  const initialJokersCount = w.getState().jokers.length;
+  const initialConsumablesCount = w.getState().consumables.length;
+
+  // Buy Joker
+  w.uiBuyShopItem('shopJokers', 0);
+  ck('Buying single Joker succeeded', w.getState().shopJokers[0].bought === true);
+  ck('Joker added to inventory', w.getState().jokers.length === initialJokersCount + 1);
+
+  // Buy Tarot
+  w.uiBuyShopItem('shopJokers', 1);
+  ck('Buying single Tarot succeeded', w.getState().shopJokers[1].bought === true);
+  ck('Tarot added to consumables inventory', w.getState().consumables.length === initialConsumablesCount + 1);
 
   console.log('\n--- ALL PACK OPENING TESTS COMPLETED ---');
   for (const r of results) console.log(r);

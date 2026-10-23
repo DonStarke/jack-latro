@@ -433,12 +433,73 @@ function generateShopPacks(ante: number, jokersCount: number, hasOverstock: bool
   return packsOffered;
 }
 
+/* ---------- Single Cards (Jokers & Tarots) Generation ---------- */
+function generateShopSingleCards(ante: number, jokersCount: number, ownedJokerIds?: string[]): ShopJokerSlot[] {
+  const ownedIds = ownedJokerIds !== undefined ? [...ownedJokerIds] : getState().jokers.map(j => j.id);
+  const excludedJokerIds = [...ownedIds];
+  const excludedTarotIds: string[] = [];
+  const slots: ShopJokerSlot[] = [];
+
+  // Balatro standard shop offers 2 single card slots
+  const slotCount = 2;
+
+  for (let i = 0; i < slotCount; i++) {
+    // In Ante 1 with 0 jokers, guarantee at least 1 Joker in slot 0 to jumpstart synergy
+    const forceJoker = (ante === 1 && jokersCount === 0 && i === 0);
+    // Standard Balatro distribution: ~65% Joker, ~35% Tarot
+    const rollIsJoker = forceJoker || Math.random() < 0.65;
+
+    if (rollIsJoker) {
+      const rolled = rollWeightedJoker(excludedJokerIds);
+      if (rolled) {
+        excludedJokerIds.push(rolled.id);
+        slots.push({
+          ...rolled,
+          bonusMult: 0,
+          bonusChips: 0,
+          shopType: 'joker' as const,
+          bought: false
+        });
+        continue;
+      }
+    }
+
+    // Roll Tarot / Consumable
+    const unpickedTarots = TAROT_CATALOG.filter(t => !excludedTarotIds.includes(t.id));
+    const pool = unpickedTarots.length > 0 ? unpickedTarots : TAROT_CATALOG;
+    const rolledTarot = shuffle([...pool])[0];
+    if (rolledTarot) {
+      excludedTarotIds.push(rolledTarot.id);
+      slots.push({
+        ...rolledTarot,
+        shopType: 'tarot' as const,
+        bought: false
+      });
+    } else {
+      // Fallback to any available Joker
+      const anyJoker = rollWeightedJoker(excludedJokerIds) || shuffle(JOKER_CATALOG)[0];
+      slots.push({
+        ...anyJoker,
+        bonusMult: 0,
+        bonusChips: 0,
+        shopType: 'joker' as const,
+        bought: false
+      });
+    }
+  }
+
+  return slots;
+}
+
 /* ---------- Shop stock ---------- */
 function generateShopStock(): void {
   const s = getState();
   const hasOverstock = s.vouchersBought.includes('overstock');
   const packs = generateShopPacks(s.ante, s.jokers.length, hasOverstock);
   const packsOffered: ShopPackSlot[] = packs.map(p => ({ ...p, shopType: 'pack', bought: false }));
+
+  // Generate single cards (Jokers and Tarots)
+  const singleCards = generateShopSingleCards(s.ante, s.jokers.length, s.jokers.map(j => j.id));
 
   // Voucher handling: 1 voucher per ante, persisting across blinds until bought or next ante
   let voucherOffer: ShopVoucher[] = [];
@@ -460,9 +521,13 @@ function generateShopStock(): void {
     }
   }
 
-  setShopStock([], voucherOffer, packsOffered);
+  setShopStock(singleCards, voucherOffer, packsOffered);
 
   // Lifetime Telemetry: Record offered items
+  for (const c of singleCards) {
+    if (c.shopType === 'joker') recordJokerDiscovered(c.id);
+    else if (c.shopType === 'tarot') recordTarotDiscovered(c.id);
+  }
   for (const p of packsOffered) {
     recordPackDiscovered(p.id);
   }
@@ -492,7 +557,17 @@ function rerollShop(): ShopActionResult {
     recordVoucherValue('clearance_sale', 1);
   }
   patchState({ rerollCost: s.rerollCost + 1 });
-  generateShopStock();
+
+  // Reroll ONLY single cards; packs and voucher remain fixed
+  const freshSingleCards = generateShopSingleCards(s.ante, s.jokers.length, s.jokers.map(j => j.id));
+  setShopStock(freshSingleCards, s.shopExtras, s.shopPacks);
+
+  // Record discovery telemetry for newly rolled single cards
+  for (const c of freshSingleCards) {
+    if (c.shopType === 'joker') recordJokerDiscovered(c.id);
+    else if (c.shopType === 'tarot') recordTarotDiscovered(c.id);
+  }
+
   return { ok: true };
 }
 
@@ -1017,4 +1092,5 @@ if (typeof window !== 'undefined') {
   (window as any).selectPackDeckCard = selectPackDeckCard;
   (window as any).applyTarotToDeckCards = applyTarotToDeckCards;
   (window as any).applyTarotToDeckCard = applyTarotToDeckCard;
+  (window as any).generateShopSingleCards = generateShopSingleCards;
 }
