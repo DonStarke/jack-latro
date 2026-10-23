@@ -42,11 +42,11 @@ const JOKER_CATALOG: ReadonlyArray<JokerDef> = [
   { id: 'slow_and_steady', name: 'Slow & Steady', cost: 5, rarity: 'common', isXMult: false, icon: '🐢', archetype: 'chips', desc: '+20 Chips for each Deal remaining in the current Blind when you Win.' },
   { id: 'card_sharp_joker', name: 'Card Sharp', cost: 8, rarity: 'rare', isXMult: true, icon: '🪒', archetype: 'mult', desc: '×1.75 Mult if you have already won a hand in this Blind.' },
   { id: 'loan_shark', name: 'Loan Shark', cost: 4, rarity: 'common', isXMult: false, icon: '💼', archetype: 'econ', desc: 'Grants +$15 immediately when bought. Costs -$1 at the end of each Blind.' },
-  { id: 'deja_vu', name: 'Deja Vu', cost: 8, rarity: 'rare', isXMult: true, icon: '🌀', archetype: 'mult', desc: '×1.5 Mult if your final hand total matches your final total from the previous hand.' }
+  { id: 'deja_vu', name: 'Deja Vu', cost: 8, rarity: 'rare', isXMult: true, icon: '🌀', archetype: 'mult', desc: '×1.5 Mult if your final hand total matches your final total from the previous winning hand.' }
 ];
 
 const DECK_TAROT_CATALOG: ReadonlyArray<TarotDef> = [
-  { id: 'midas_touch', name: 'Midas Touch', cost: 3, consumableType: 'tarot', desc: 'Enhance a selected card to Gold (+$3 when scored).' },
+  { id: 'midas_touch', name: 'Midas Touch', cost: 3, consumableType: 'tarot', desc: 'Enhance a single card to Gold (+$3 when scored).' },
   { id: 'polychrome_dice', name: 'Polychrome Dice', cost: 4, consumableType: 'tarot', desc: 'Enhance up to 2 selected cards to Polychrome (×1.5 Mult).' },
   { id: 'the_guillotine', name: 'The Guillotine', cost: 4, consumableType: 'tarot', desc: 'Permanently destroy up to 2 selected cards from your deck.' },
   { id: 'card_forge', name: 'Card Forge', cost: 3, consumableType: 'tarot', desc: 'Increase the rank of up to 2 selected cards by 1.' },

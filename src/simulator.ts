@@ -838,7 +838,6 @@ function runBatchSimulationForBot(numRuns: number, botType: BotType, cfg: SimCon
         let blindWins = 0;
         let dealsUsedThisBlind = 0;
         simRun.handsWonInBlind = 0;
-        simRun.previousHandTotal = null;
         const hasCushion = simRun.jokers.some(j => j.id === 'bust_cushion');
 
         while (dealsLeft > 0 && roundScore < targetScore) {
@@ -964,8 +963,10 @@ function runBatchSimulationForBot(numRuns: number, botType: BotType, cfg: SimCon
             }
           }
 
-          if (res.isWin) simRun.handsWonInBlind = (simRun.handsWonInBlind || 0) + 1;
-          simRun.previousHandTotal = res.pBust ? null : res.pTotal;
+          if (res.isWin) {
+            simRun.handsWonInBlind = (simRun.handsWonInBlind || 0) + 1;
+            simRun.previousHandTotal = res.pTotal;
+          }
 
           simRun.money += res.moneyGained;
           roundScore += res.handScore;

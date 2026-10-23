@@ -102,7 +102,6 @@ function beginBlindState(): void {
     doubledDown: false,
     tempBonusChips: 0,
     handsWonInBlind: 0,
-    previousHandTotal: null,
     roundCashEarned: 0
   });
   setShoe(buildShoeFromDeck());
@@ -236,8 +235,22 @@ const PACK_CATALOG: ReadonlyArray<PackDef> = [
   }
 ];
 
-function generatePackOptions(pack: PackDef, ownedJokerIds?: string[]): PackCardOption[] {
+function pickDistinctCards<T extends { id: string }>(catalog: ReadonlyArray<T>, count: number, excludeIds: string[]): T[] {
+  const unowned = catalog.filter(item => !excludeIds.includes(item.id));
+  const pool = unowned.length > 0 ? unowned : catalog;
+  const shuffled = shuffle([...pool]);
+  if (shuffled.length >= count) {
+    return shuffled.slice(0, count);
+  }
+  const picked = [...shuffled];
+  const remaining = catalog.filter(item => !picked.some(p => p.id === item.id));
+  const extra = shuffle([...remaining]).slice(0, count - picked.length);
+  return [...picked, ...extra];
+}
+
+function generatePackOptions(pack: PackDef, ownedJokerIds?: string[], ownedConsumableIds?: string[]): PackCardOption[] {
   const ownedIds = ownedJokerIds !== undefined ? ownedJokerIds : getState().jokers.map(j => j.id);
+  const ownedConsumables = ownedConsumableIds !== undefined ? ownedConsumableIds : (getState().consumables || []).map(c => c.id);
   const options: PackCardOption[] = [];
 
   if (pack.packType === 'joker') {
@@ -255,14 +268,12 @@ function generatePackOptions(pack: PackDef, ownedJokerIds?: string[]): PackCardO
       }
     }
   } else if (pack.packType === 'tarot') {
-    const shuffled = shuffle([...DECK_TAROT_CATALOG]);
-    const picked = shuffled.slice(0, pack.cardsCount);
+    const picked = pickDistinctCards(DECK_TAROT_CATALOG, pack.cardsCount, ownedConsumables);
     for (const t of picked) {
       options.push({ kind: 'tarot', data: t });
     }
   } else if (pack.packType === 'cheat') {
-    const shuffled = shuffle([...CHEAT_CATALOG]);
-    const picked = shuffled.slice(0, pack.cardsCount);
+    const picked = pickDistinctCards(CHEAT_CATALOG, pack.cardsCount, ownedConsumables);
     for (const c of picked) {
       options.push({ kind: 'cheat', data: c });
     }
@@ -285,7 +296,8 @@ function generatePackOptions(pack: PackDef, ownedJokerIds?: string[]): PackCardO
     options.push({ kind: 'joker', data: j });
 
     // 1 Deck Tarot
-    const t = shuffle([...DECK_TAROT_CATALOG])[0];
+    const availTarots = DECK_TAROT_CATALOG.filter(t => !ownedConsumables.includes(t.id));
+    const t = shuffle([...(availTarots.length > 0 ? availTarots : DECK_TAROT_CATALOG)])[0];
     options.push({ kind: 'tarot', data: t });
 
     // 1 Playing card
@@ -434,10 +446,11 @@ function generateShopPacks(ante: number, jokersCount: number, hasOverstock: bool
 }
 
 /* ---------- Single Cards (Jokers & Tarots) Generation ---------- */
-function generateShopSingleCards(ante: number, jokersCount: number, ownedJokerIds?: string[]): ShopJokerSlot[] {
+function generateShopSingleCards(ante: number, jokersCount: number, ownedJokerIds?: string[], ownedConsumableIds?: string[]): ShopJokerSlot[] {
   const ownedIds = ownedJokerIds !== undefined ? [...ownedJokerIds] : getState().jokers.map(j => j.id);
+  const ownedConsumables = ownedConsumableIds !== undefined ? [...ownedConsumableIds] : (getState().consumables || []).map(c => c.id);
   const excludedJokerIds = [...ownedIds];
-  const excludedTarotIds: string[] = [];
+  const excludedTarotIds: string[] = [...ownedConsumables];
   const slots: ShopJokerSlot[] = [];
 
   // Balatro standard shop offers 2 single card slots
@@ -466,8 +479,9 @@ function generateShopSingleCards(ante: number, jokersCount: number, ownedJokerId
 
     // Roll Tarot / Consumable
     const unpickedTarots = TAROT_CATALOG.filter(t => !excludedTarotIds.includes(t.id));
-    const pool = unpickedTarots.length > 0 ? unpickedTarots : TAROT_CATALOG;
-    const rolledTarot = shuffle([...pool])[0];
+    const pool = unpickedTarots.length > 0 ? unpickedTarots : TAROT_CATALOG.filter(t => !ownedConsumables.includes(t.id));
+    const finalPool = pool.length > 0 ? pool : TAROT_CATALOG;
+    const rolledTarot = shuffle([...finalPool])[0];
     if (rolledTarot) {
       excludedTarotIds.push(rolledTarot.id);
       slots.push({
@@ -499,7 +513,7 @@ function generateShopStock(): void {
   const packsOffered: ShopPackSlot[] = packs.map(p => ({ ...p, shopType: 'pack', bought: false }));
 
   // Generate single cards (Jokers and Tarots)
-  const singleCards = generateShopSingleCards(s.ante, s.jokers.length, s.jokers.map(j => j.id));
+  const singleCards = generateShopSingleCards(s.ante, s.jokers.length, s.jokers.map(j => j.id), s.consumables.map(c => c.id));
 
   // Voucher handling: 1 voucher per ante, persisting across blinds until bought or next ante
   let voucherOffer: ShopVoucher[] = [];
@@ -559,7 +573,7 @@ function rerollShop(): ShopActionResult {
   patchState({ rerollCost: s.rerollCost + 1 });
 
   // Reroll ONLY single cards; packs and voucher remain fixed
-  const freshSingleCards = generateShopSingleCards(s.ante, s.jokers.length, s.jokers.map(j => j.id));
+  const freshSingleCards = generateShopSingleCards(s.ante, s.jokers.length, s.jokers.map(j => j.id), s.consumables.map(c => c.id));
   setShopStock(freshSingleCards, s.shopExtras, s.shopPacks);
 
   // Record discovery telemetry for newly rolled single cards
@@ -623,7 +637,7 @@ function buyAndOpenPack(idx: number): { ok: boolean; reason?: ShopFailReason; pa
   markShopPackBought(idx);
   recordPackOpened(pack.id, pack.cost);
 
-  const options = generatePackOptions(pack);
+  const options = generatePackOptions(pack, s.jokers.map(j => j.id), s.consumables.map(c => c.id));
   for (const opt of options) {
     if (opt.kind === 'joker' && opt.data) recordJokerDiscovered(opt.data.id);
     else if ((opt.kind === 'tarot' || opt.kind === 'cheat') && opt.data) recordTarotDiscovered(opt.data.id);
@@ -909,15 +923,29 @@ interface ConsumableResult {
   message?: string;
   /** Warning text on failure (UI may show it in an alert). */
   warning?: string;
+  /** Target cards modified by this tarot. */
+  targetCards?: Card[];
 }
 
 function useConsumable(index: number, targetCardUid?: number | string | (number | string)[]): ConsumableResult {
   const s = getState();
-  if (!s.inHand || s.isDealing) return { ok: false };
   const c = s.consumables[index];
   if (!c) return { ok: false };
 
+  const inHand = s.inHand && !s.isDealing;
+  const isPackDeck = !inHand && !!(s.activePackOpening && s.activePackOpening.deckCards && s.activePackOpening.deckCards.length > 0);
+  const isSelfCasting = ['judgement', 'nostradamus'].includes(c.id);
+
+  if (!inHand && !isPackDeck && !isSelfCasting) {
+    return { ok: false, warning: 'You can only use this card while a hand is actively in progress!' };
+  }
+
+  if (['x_ray', 'loaded_ace', 'double_vision'].includes(c.id) && !inHand) {
+    return { ok: false, warning: 'Table Cheats can only be used during an active hand!' };
+  }
+
   let message = '';
+  let targetCardsResult: Card[] = [];
   if (c.id === 'x_ray') {
     patchState({ dealerHoleRevealed: true, tempBonusChips: s.tempBonusChips + 75 });
     message = 'X-Ray Specs: Hole card revealed & +75 Chips!';
@@ -940,7 +968,13 @@ function useConsumable(index: number, targetCardUid?: number | string | (number 
     const chosen = unowned.length > 0 ? shuffle(unowned)[0] : shuffle(JOKER_CATALOG)[0];
     addJoker({ ...chosen, bonusMult: 0, bonusChips: 0 });
     recordJokerAcquired(chosen.id);
-    message = `Judgement summoned ${chosen.name}!`;
+    recordTarotAcquired(c.id);
+    recordTarotCast(c.id);
+    if (inHand) recordTarotCastInHand(c.id);
+    _state.runStats.tarotsUsed++;
+    patchState({ lastTarotUsedId: c.id, lastTarotUsedName: c.name });
+    removeConsumableAt(index);
+    return { ok: true, message: `Judgement summoned ${chosen.name}!` };
   } else if (c.id === 'nostradamus') {
     if (!s.lastTarotUsedId || s.lastTarotUsedId === 'nostradamus') {
       return { ok: false, warning: 'Cannot be used: last tarot used was Nostradamus or none!' };
@@ -952,7 +986,8 @@ function useConsumable(index: number, targetCardUid?: number | string | (number 
     removeConsumableAt(index);
     addConsumable({ ...prevDef });
     recordTarotAcquired(prevDef.id);
-    recordTarotCastInHand(c.id);
+    recordTarotCast(c.id);
+    if (inHand) recordTarotCastInHand(c.id);
     _state.runStats.tarotsUsed++;
     patchState({ lastTarotUsedId: c.id, lastTarotUsedName: c.name });
     return { ok: true, message: `Nostradamus created ${prevDef.name}!` };
@@ -964,10 +999,61 @@ function useConsumable(index: number, targetCardUid?: number | string | (number 
       uids = targetCardUid.map(Number);
     } else if (targetCardUid !== undefined && targetCardUid !== null) {
       uids = [Number(targetCardUid)];
+    } else if (isPackDeck && s.activePackOpening?.selectedDeckCardUids?.length) {
+      uids = [...s.activePackOpening.selectedDeckCardUids];
+    } else if (isPackDeck && s.activePackOpening?.selectedDeckCardUid != null) {
+      uids = [s.activePackOpening.selectedDeckCardUid];
     }
 
     if (uids.length > max) {
       return { ok: false, warning: `Too many cards selected! ${c.name} allows up to ${max} cards (currently ${uids.length}).` };
+    }
+
+    if (isPackDeck) {
+      const packCards = s.activePackOpening!.deckCards || [];
+      let targetCards: Card[] = [];
+      for (const u of uids) {
+        const found = packCards.find(card => card.uid === u) || s.deck.find(card => card.uid === u);
+        if (!found) {
+          return { ok: false, warning: 'Selected card is not in the pack tray!' };
+        }
+        targetCards.push(found);
+      }
+      if (targetCards.length === 0) {
+        return { ok: false, warning: max > 1 ? `Please select up to ${max} playing cards from below!` : 'Please select a playing card from below!' };
+      }
+      for (const tgt of targetCards) {
+        if (!isCardEligibleForTarot(c.id, tgt)) {
+          return { ok: false, warning: `The selected card ${tgt.rank}${tgt.suit} is not eligible for ${c.name}!` };
+        }
+      }
+      const deckRefs = targetCards.map(tgt => s.deck.find(d => d.uid === tgt.uid) || tgt);
+      const applyRes = applyTarotToDeckCards(c, deckRefs);
+      if (!applyRes.ok) {
+        return { ok: false, warning: applyRes.warning };
+      }
+      // Sync pack deck cards with deck
+      targetCards.forEach((tgt, i) => {
+        const ref = deckRefs[i];
+        tgt.rank = ref.rank;
+        tgt.suit = ref.suit;
+        tgt.enhancement = ref.enhancement;
+      });
+      if (c.id === 'the_guillotine') {
+        if (s.activePackOpening && s.activePackOpening.deckCards) {
+          s.activePackOpening.deckCards = s.activePackOpening.deckCards.filter(d => !uids.includes(d.uid));
+        }
+      }
+      if (s.activePackOpening) {
+        s.activePackOpening.selectedDeckCardUids = [];
+        s.activePackOpening.selectedDeckCardUid = null;
+      }
+      recordTarotCast(c.id);
+      _state.runStats.tarotsUsed++;
+      patchState({ lastTarotUsedId: c.id, lastTarotUsedName: c.name });
+      removeConsumableAt(index);
+      targetCardsResult = targetCards;
+      return { ok: true, message: applyRes.message, targetCards: targetCardsResult };
     }
 
     let targetCards: Card[] = [];
@@ -1078,13 +1164,14 @@ function useConsumable(index: number, targetCardUid?: number | string | (number 
         deckRef.enhancement = tc.enhancement;
       }
     });
+    targetCardsResult = targetCards;
   }
 
   recordTarotCastInHand(c.id);
   _state.runStats.tarotsUsed++;
   patchState({ lastTarotUsedId: c.id, lastTarotUsedName: c.name });
   removeConsumableAt(index);
-  return { ok: true, message };
+  return { ok: true, message, targetCards: targetCardsResult.length > 0 ? targetCardsResult : undefined };
 }
 
 if (typeof window !== 'undefined') {

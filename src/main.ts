@@ -55,7 +55,7 @@ function getJokerFullDesc(j: JokerInstance): string {
   }
   if (j.id === 'deja_vu') {
     const prev = getState().previousHandTotal;
-    return `×1.5 Mult if your final hand total matches your final total from the previous hand. (${prev ? `Target: ${prev}` : 'No previous hand yet'})`;
+    return `×1.5 Mult if your final hand total matches your final total from the previous winning hand. (${prev ? `Target: ${prev}` : 'No previous winning hand yet'})`;
   }
   return j.desc;
 }
@@ -106,7 +106,7 @@ function getJokerMiniSubHTML(j: JokerInstance): string {
   if (j.id === 'loan_shark') return `+$15 Buy (-$1/Blind)`;
   if (j.id === 'deja_vu') {
     const prev = getState().previousHandTotal;
-    return `×1.5m (${prev ? `Match ${prev}` : 'Match Prev'})`;
+    return `×1.5m (${prev ? `Match ${prev}` : 'Match Prev Win'})`;
   }
   return j.desc;
 }
@@ -697,12 +697,28 @@ function inspectConsumable(index: number): void {
   if (!c) return;
   const isCheat = c.consumableType === 'cheat' || (typeof isCheatConsumable === 'function' && isCheatConsumable(c.id));
   const titleColor = isCheat ? '#fb7185' : '#d8b4fe';
-  let useLabel = isCheat ? 'Use Cheat Now' : 'Use Tarot Now';
-  let canUse = state.inHand && !state.isDealing;
+  const inHand = state.inHand && !state.isDealing;
+  const activePack = state.activePackOpening;
+  const hasPackDeckCards = !!(activePack && activePack.deckCards && activePack.deckCards.length > 0);
+  const isTargeted = isTarotCardTargeted(c.id);
 
   let displayName = c.name;
   let displayDesc = c.desc;
-  if (c.id === 'nostradamus') {
+  let useLabel = isCheat ? 'Use Cheat Now' : 'Use Tarot Now';
+  let canUse = false;
+
+  if (isCheat) {
+    canUse = inHand;
+    if (!inHand) useLabel = 'Deal a Hand to Use';
+  } else if (c.id === 'judgement') {
+    if (state.jokers.length >= state.maxJokers) {
+      canUse = false;
+      useLabel = 'Joker Slots Full';
+    } else {
+      canUse = true;
+      useLabel = 'Use Tarot Now';
+    }
+  } else if (c.id === 'nostradamus') {
     const lastUsedName = state.lastTarotUsedName;
     displayName = lastUsedName ? `Nostradamus (${lastUsedName})` : 'Nostradamus';
     displayDesc = lastUsedName
@@ -711,29 +727,62 @@ function inspectConsumable(index: number): void {
     if (!state.lastTarotUsedId || state.lastTarotUsedId === 'nostradamus') {
       canUse = false;
       useLabel = 'Cannot Use (No Valid Tarot)';
+    } else {
+      canUse = true;
+      useLabel = lastUsedName ? `Copy ${lastUsedName}` : 'Use Tarot Now';
     }
-  } else if (c.id === 'judgement') {
-    if (state.jokers.length >= state.maxJokers) {
+  } else if (isTargeted) {
+    if (inHand) {
+      canUse = true;
+      useLabel = 'Use Tarot Now';
+    } else if (hasPackDeckCards) {
+      const selectedUids = (activePack && activePack.selectedDeckCardUids) ? activePack.selectedDeckCardUids : (activePack && activePack.selectedDeckCardUid != null ? [activePack.selectedDeckCardUid] : []);
+      const max = getTarotMaxCards(c.id) || 1;
+      if (selectedUids.length === 0) {
+        canUse = true;
+        useLabel = 'Select a card(s) to use';
+      } else if (selectedUids.length > max) {
+        canUse = false;
+        useLabel = `Too Many Cards (Max ${max})`;
+      } else {
+        const pool = activePack!.deckCards!;
+        const targets = selectedUids.map(uid => pool.find(card => card.uid === uid)).filter(Boolean) as Card[];
+        const anyIneligible = targets.some(card => !isCardEligibleForTarot(c.id, card));
+        if (anyIneligible) {
+          canUse = false;
+          useLabel = 'Card Not Eligible';
+        } else {
+          canUse = true;
+          if (selectedUids.length === 1 && targets[0]) {
+            useLabel = `Use on ${targets[0].rank}${targets[0].suit}`;
+          } else {
+            useLabel = `Use on ${selectedUids.length} Cards`;
+          }
+        }
+      }
+    } else {
       canUse = false;
-      useLabel = 'Joker Slots Full';
+      useLabel = 'Deal a Hand to Use';
     }
   }
 
   const box = $('ui-inspect-content');
-  box.innerHTML = `
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-      <h3 style="color:${titleColor};">${displayName}</h3>
-      <button class="btn btn-secondary" onclick="closeInspector()">Close</button>
-    </div>
-    <div style="font-size:13px; color:#e2e8f0;">${displayDesc}</div>
-    <div style="display:flex; gap:8px;">
-      <button class="btn btn-double" style="flex:1; padding:10px;" onclick="uiUseConsumable(${index})" ${!canUse ? 'disabled' : ''}>
-        ${!state.inHand ? 'Deal a Hand to Use' : useLabel}
-      </button>
-      <button class="btn btn-redeal" style="padding:10px;" onclick="uiSellConsumable(${index})">Sell $1</button>
-    </div>
-  `;
-  $('ui-inspect-modal').classList.remove('hidden');
+  if (box) {
+    box.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h3 style="color:${titleColor};">${displayName}</h3>
+        <button class="btn btn-secondary" onclick="closeInspector()">Close</button>
+      </div>
+      <div style="font-size:13px; color:#e2e8f0;">${displayDesc}</div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-double" style="flex:1; padding:10px;" onclick="uiUseConsumable(${index})" ${!canUse ? 'disabled' : ''}>
+          ${useLabel}
+        </button>
+        <button class="btn btn-redeal" style="padding:10px;" onclick="uiSellConsumable(${index})">Sell $1</button>
+      </div>
+    `;
+  }
+  $('ui-inspect-modal')?.classList.remove('hidden');
 }
 
 function closeInspector(): void {
@@ -1174,11 +1223,21 @@ function renderShop() {
       } else if (item.shopType === 'tarot') {
         badgeHtml = `<span class="rarity-badge pack-badge-tarot">TAROT</span>`;
       }
+      let cardName = item.name;
+      let cardDesc = isJoker ? getJokerFullDesc(item) : item.desc;
+      if (item.id === 'nostradamus') {
+        const lastUsed = state.lastTarotUsedName;
+        cardName = lastUsed ? `Nostradamus (${lastUsed})` : 'Nostradamus (None)';
+        cardDesc = lastUsed
+          ? `Creates the last Tarot used (${lastUsed}).`
+          : 'Creates the last Tarot used. (No previous Tarot found)';
+      }
       const watermarkHtml = `<div class="shop-item-watermark">${icon}</div>`;
-      const titleHtml = `<span class="joker-icon-mini">${icon}</span> ${item.name}`;
+      const titleHtml = `<span class="joker-icon-mini">${icon}</span> ${cardName}`;
       const subLabel = isJoker ? 'Joker' : (isCheat ? 'Table Cheat' : 'Tarot');
+      const typeClass = isCheat ? 'type-cheat' : `type-${item.shopType}`;
       return `
-      <div class="shop-item type-${item.shopType} ${rarityClass} ${archClass} ${item.bought ? 'item-bought' : ''}">
+      <div class="shop-item ${typeClass} ${rarityClass} ${archClass} ${item.bought ? 'item-bought' : ''}">
         ${watermarkHtml}
         <div>
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
@@ -1186,7 +1245,7 @@ function renderShop() {
             ${badgeHtml}
           </div>
           <div class="shop-item-title">${titleHtml}</div>
-          <div class="shop-item-desc">${isJoker ? getJokerFullDesc(item) : item.desc}</div>
+          <div class="shop-item-desc">${cardDesc}</div>
         </div>
         <button class="btn btn-deal" style="padding:7px 10px; font-size:13px; font-weight:900;"
           onclick="uiBuyShopItem('shopJokers', ${idx})"
@@ -1288,7 +1347,7 @@ function updateAllUI() {
     }).join('');
   }
 
-  $('ui-consumable-slots').textContent = `TAROT ${state.consumables.length}/${state.maxConsumables}`;
+  $('ui-consumable-slots').textContent = `CAST ${state.consumables.length}/${state.maxConsumables}`;
   const cRow = $('ui-consumable-row');
   if (state.consumables.length === 0) {
     cRow.innerHTML = `<span style="font-size:12px; font-weight:700; color:#94a3b8;">Empty</span>`;
@@ -2559,7 +2618,7 @@ async function uiChoosePackOption(optIdx: number, targetCardUid?: number | strin
   const isHeadlessTest = typeof navigator !== 'undefined' && (/jsdom/i.test(navigator.userAgent) || !!(window as any).__TEST__);
   if (!isHeadlessTest) {
     isPlayfieldLocked = true;
-    await sleep(800);
+    await sleep(1500);
     isPlayfieldLocked = false;
   }
 
@@ -2794,12 +2853,8 @@ function handleTarotTargetingKeyDown(e: KeyboardEvent): void {
 
 function triggerCardTarotFeedback(cardUid: number | string, tarotId: string): void {
   const numUid = typeof cardUid === 'number' ? cardUid : Number(cardUid);
-  const cardEl = document.querySelector(`.playing-card[data-uid="${numUid}"]`) as HTMLElement | null;
-  if (!cardEl) return;
-
-  cardEl.classList.remove('scoring-pop');
-  void cardEl.offsetWidth;
-  cardEl.classList.add('scoring-pop');
+  const cardEls = document.querySelectorAll(`.playing-card[data-uid="${numUid}"]`);
+  if (!cardEls || cardEls.length === 0) return;
 
   let popText = '✨';
   if (tarotId === 'midas_touch') popText = '+GOLD ($3)';
@@ -2815,15 +2870,24 @@ function triggerCardTarotFeedback(cardUid: number | string, tarotId: string): vo
   else if (tarotId === 'card_forge') popText = '+1 RANK';
   else if (tarotId === 'the_guillotine') popText = '✂ CUT';
 
-  const pop = document.createElement('div');
-  pop.className = 'card-float-pop';
-  pop.textContent = popText;
-  cardEl.appendChild(pop);
+  cardEls.forEach(cardEl => {
+    (cardEl as HTMLElement).classList.remove('scoring-pop');
+    void (cardEl as HTMLElement).offsetWidth;
+    (cardEl as HTMLElement).classList.add('scoring-pop');
 
-  setTimeout(() => {
-    cardEl.classList.remove('scoring-pop');
-    pop.remove();
-  }, 1200);
+    // Remove any previous float pops to avoid overlaps
+    cardEl.querySelectorAll('.card-float-pop').forEach(p => p.remove());
+
+    const pop = document.createElement('div');
+    pop.className = 'card-float-pop';
+    pop.textContent = popText;
+    cardEl.appendChild(pop);
+
+    setTimeout(() => {
+      (cardEl as HTMLElement).classList.remove('scoring-pop');
+      pop.remove();
+    }, 1200);
+  });
 }
 
 function uiSelectCardForTarot(cardUid: number | string): void {
@@ -2892,22 +2956,52 @@ function uiConfirmTarotTargeting(): void {
   playCardDealSound();
   if (res.message) setBanner(res.message, '');
   updateAllUI();
-  uids.forEach(uid => triggerCardTarotFeedback(uid, selection.tarotId));
+  const targetUids = (res.targetCards && res.targetCards.length > 0) ? res.targetCards.map(c => c.uid) : uids;
+  targetUids.forEach(uid => triggerCardTarotFeedback(uid, selection.tarotId));
 }
 
-function uiUseConsumable(index: number, targetCardUid?: number | string): void {
+function uiUseConsumable(index: number, targetCardUid?: number | string | (number | string)[]): void {
   if (isPlayfieldLocked) return;
   const state = getState();
   const c = state.consumables[index];
   if (!c) return;
 
-  if (!state.inHand || state.isDealing) {
-    alert('You can only use Tarots while a hand is actively in progress!');
+  const inHand = state.inHand && !state.isDealing;
+  const activePack = state.activePackOpening;
+  const hasPackDeckCards = !!(activePack && activePack.deckCards && activePack.deckCards.length > 0);
+  const isTargeted = isTarotCardTargeted(c.id);
+
+  // If in pack opening with deck cards and this is a card-targeted tarot:
+  if (!inHand && hasPackDeckCards && isTargeted) {
+    const selectedUids = (activePack && activePack.selectedDeckCardUids) ? activePack.selectedDeckCardUids : (activePack && activePack.selectedDeckCardUid != null ? [activePack.selectedDeckCardUid] : []);
+    if (selectedUids.length === 0) {
+      closeInspector();
+      setBanner(`🔮 ${c.name}`, `Tap card(s) in the pack tray below to select, then tap ${c.name} to apply`);
+      return;
+    }
+    const res = useConsumable(index, selectedUids);
+    if (!res.ok) {
+      if (res.warning) alert(res.warning);
+      return;
+    }
+    playCardDealSound();
+    if (res.message) setBanner(res.message, '');
+    closeInspector();
+    renderPackDeckHand();
+    updateAllUI();
+    const targetUids = (res.targetCards && res.targetCards.length > 0) ? res.targetCards.map(c => c.uid) : selectedUids;
+    targetUids.forEach(uid => triggerCardTarotFeedback(uid, c.id));
     return;
   }
 
-  // If this tarot requires card targeting and no target card was explicitly provided:
-  if (isTarotCardTargeted(c.id) && targetCardUid === undefined) {
+  // Non-targeted tarots (Judgement, Nostradamus) can be used in shop or pack opening
+  if (!inHand && !['judgement', 'nostradamus'].includes(c.id)) {
+    alert('You can only use this card while a hand is actively in progress!');
+    return;
+  }
+
+  // If in active hand and this tarot requires card targeting and no target card was explicitly provided:
+  if (inHand && isTargeted && targetCardUid === undefined) {
     startTarotTargeting(index);
     return;
   }
@@ -2921,9 +3015,18 @@ function uiUseConsumable(index: number, targetCardUid?: number | string): void {
   if (res.message) setBanner(res.message, '');
   closeInspector();
   cancelTarotTargeting(false);
+  if (state.activePackOpening) {
+    renderPackDeckHand();
+  }
+  if (state.inShop) {
+    renderShop();
+  }
   updateAllUI();
-  if (targetCardUid !== undefined) {
-    triggerCardTarotFeedback(targetCardUid, c.id);
+  if (targetCardUid !== undefined || (res.targetCards && res.targetCards.length > 0)) {
+    const targetUids = (res.targetCards && res.targetCards.length > 0)
+      ? res.targetCards.map(c => c.uid)
+      : (Array.isArray(targetCardUid) ? targetCardUid.map(Number) : (targetCardUid !== undefined ? [Number(targetCardUid)] : []));
+    targetUids.forEach(uid => triggerCardTarotFeedback(uid, c.id));
   }
 }
 
@@ -3120,11 +3223,13 @@ async function resolveRound(): Promise<void> {
     updateAllUI();
   }
 
-  // Update hands won in blind & previous hand total
+  // Update hands won in blind & previous hand total (remembering last WINNING hand)
   if (res.isWin) {
-    patchState({ handsWonInBlind: (state.handsWonInBlind || 0) + 1 });
+    patchState({
+      handsWonInBlind: (state.handsWonInBlind || 0) + 1,
+      previousHandTotal: res.pTotal
+    });
   }
-  patchState({ previousHandTotal: res.pBust ? null : res.pTotal });
 
   skipScoringAnimation = false;
   cancelAllScoringAnimations();
