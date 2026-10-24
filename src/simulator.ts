@@ -873,9 +873,11 @@ function runBatchSimulationForBot(numRuns: number, botType: BotType, cfg: SimCon
         let dealsLeft = simRun.maxHands;
         if (bossBlind && bossBlind.id === 'the_cooler') dealsLeft = Math.max(1, dealsLeft - 1);
         if (simRun.jokers.some(j => j.id === 'the_banker') && simRun.money >= 25) dealsLeft += 1;
-        if (simRun.jokers.some(j => j.id === 'marked_deck') && simRun.consumables.length < simRun.maxConsumables) {
-          const c = CHEAT_CATALOG[Math.floor(Math.random() * CHEAT_CATALOG.length)];
-          simRun.consumables.push({ ...c, consumableType: 'cheat' });
+        for (const _ of simRun.jokers.filter(j => j.id === 'marked_deck')) {
+          if (simRun.consumables.length < simRun.maxConsumables) {
+            const c = CHEAT_CATALOG[Math.floor(Math.random() * CHEAT_CATALOG.length)];
+            simRun.consumables.push({ ...c, consumableType: 'cheat' });
+          }
         }
 
         let shoe = shuffle(simRun.deck.map(c => ({ ...c })));

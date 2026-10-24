@@ -2348,8 +2348,27 @@ function startNewRun(): void {
 function startBlindPlay(): void {
   stopConfetti();
   hideRoundCashBreakdown();
-  beginBlindState();
+  const res = beginBlindState();
   refreshBlindStartUI();
+
+  if (res) {
+    if (res.bankerTriggered) {
+      const bIdx = getState().jokers.findIndex(j => j.id === 'the_banker');
+      if (bIdx >= 0) popJokerCard(bIdx);
+    }
+    if (res.markedDeckCreatedCheats && res.markedDeckCreatedCheats.length > 0) {
+      const mdIdx = getState().jokers.findIndex(j => j.id === 'marked_deck');
+      if (mdIdx >= 0) popJokerCard(mdIdx);
+      if (typeof playCardSlideSound === 'function') {
+        playCardSlideSound();
+      }
+      const names = res.markedDeckCreatedCheats.map(c => c.name).join(', ');
+      const extraMsg = res.bankerTriggered ? ' (+1 Deal from The Banker)' : '';
+      setBanner(`Marked Deck created ${names}!${extraMsg}`, 'Tap DEAL to begin playing this Blind.');
+    } else if (res.bankerTriggered) {
+      setBanner('The Banker granted +1 extra Deal ($25+ ending cash)!', 'Tap DEAL to begin playing this Blind.');
+    }
+  }
 }
 
 function startNextBlindFromShop(): void {

@@ -411,6 +411,81 @@ const ck = (n, v) => {
     ck('The Banker correctly increases total payout earned', bankerPayout.totalEarned === normalPayout.totalEarned + 3);
   }
 
+  // Test Marked Deck at Blind Start
+  {
+    const markedJoker = w.JOKER_CATALOG.find(j => j.id === 'marked_deck');
+    w.patchState({
+      jokers: [{ ...markedJoker }],
+      consumables: [],
+      maxConsumables: 2,
+      money: 10
+    });
+
+    const res = w.beginBlindState();
+    ck('Marked Deck creates 1 cheat card at start of blind', w.getState().consumables.length === 1);
+    ck('Created card is marked as consumableType cheat', w.getState().consumables[0].consumableType === 'cheat');
+    ck('Created card id exists in CHEAT_CATALOG', w.CHEAT_CATALOG.some(c => c.id === w.getState().consumables[0].id));
+    ck('Marked Deck trigger recorded in runStats', w.getState().runStats.jokerTriggers.marked_deck?.count >= 1);
+    ck('beginBlindState returns markedDeckCreatedCheats', res.markedDeckCreatedCheats.length === 1);
+
+    // Full inventory - must not create card if no room
+    w.patchState({
+      consumables: [
+        { id: 'c1', name: 'Cheat 1', consumableType: 'cheat', cost: 3, desc: '' },
+        { id: 'c2', name: 'Cheat 2', consumableType: 'cheat', cost: 3, desc: '' }
+      ]
+    });
+    const resFull = w.beginBlindState();
+    ck('Marked Deck does not create cheat when inventory is full', w.getState().consumables.length === 2);
+    ck('beginBlindState markedDeckCreatedCheats is empty when full', resFull.markedDeckCreatedCheats.length === 0);
+
+    // No Marked Deck - should not create cheat
+    w.patchState({ jokers: [], consumables: [] });
+    const resNoMD = w.beginBlindState();
+    ck('No cheat card created when Marked Deck is not owned', w.getState().consumables.length === 0);
+    ck('beginBlindState markedDeckCreatedCheats is empty without Marked Deck', resNoMD.markedDeckCreatedCheats.length === 0);
+  }
+
+  // Test The Banker extra deal at Blind Start
+  {
+    const bankerJoker = w.JOKER_CATALOG.find(j => j.id === 'the_banker');
+    w.patchState({
+      jokers: [{ ...bankerJoker }],
+      money: 25,
+      maxHands: 7,
+      bossBlind: null
+    });
+    const res25 = w.beginBlindState();
+    ck('The Banker grants +1 Deal at blind start with $25+', w.getState().handsLeft === 8);
+    ck('The Banker trigger flag returned from beginBlindState', res25.bankerTriggered === true);
+
+    w.patchState({
+      jokers: [{ ...bankerJoker }],
+      money: 24,
+      maxHands: 7,
+      bossBlind: null
+    });
+    const res24 = w.beginBlindState();
+    ck('The Banker does NOT grant extra Deal when under $25', w.getState().handsLeft === 7);
+    ck('The Banker trigger flag is false when under $25', res24.bankerTriggered === false);
+  }
+
+  // Test Marked Deck UI banner and consumable tray via startBlindPlay
+  {
+    const markedJoker = w.JOKER_CATALOG.find(j => j.id === 'marked_deck');
+    w.patchState({
+      jokers: [{ ...markedJoker }],
+      consumables: [],
+      maxConsumables: 2,
+      money: 10
+    });
+    w.startNextBlindFromShop();
+    const cRow = d.getElementById('ui-consumable-row');
+    ck('UI consumable row renders cheat card after starting blind from shop', cRow && cRow.innerHTML.includes('cheat'));
+    const bannerEl = d.getElementById('ui-banner');
+    ck('Banner informs player Marked Deck created a cheat card', bannerEl && bannerEl.textContent.includes('Marked Deck created'));
+  }
+
   // Test Descriptions and Subtexts
   console.log('\n--- 4. UI TEXT & BADGES ---');
   for (const exp of expectedJokers) {

@@ -83,11 +83,18 @@ function configureBlindMetrics(): void {
 }
 
 /** Resets per-Blind play state and builds a fresh shoe. UI refresh is the caller's job. */
-function beginBlindState(): void {
+function beginBlindState(): { bankerTriggered: boolean; markedDeckCreatedCheats: TarotDef[] } {
   const s = getState();
   let handsLeft = s.maxHands;
   if (s.bossBlind && s.bossBlind.id === 'the_cooler') {
     handsLeft = Math.max(1, handsLeft - 1);
+  }
+  let bankerTriggered = false;
+  if (s.jokers.some(j => j.id === 'the_banker') && s.money >= 25) {
+    handsLeft += 1;
+    bankerTriggered = true;
+    recordJokerTrigger('the_banker', 'The Banker');
+    recordJokerTriggerStats('the_banker', 0, 0);
   }
   resetBlindOutcomeFlag();
   clearTarotsInHand();
@@ -110,14 +117,31 @@ function beginBlindState(): void {
     runningCount: 0
   });
   setShoe(buildShoeFromDeck());
+
+  const markedDeckCreatedCheats: TarotDef[] = [];
+  const markedDecks = s.jokers.filter(j => j.id === 'marked_deck');
+  for (const _ of markedDecks) {
+    const cur = getState();
+    if (cur.consumables.length < cur.maxConsumables) {
+      const cheat = CHEAT_CATALOG[Math.floor(Math.random() * CHEAT_CATALOG.length)];
+      const cheatCopy: TarotDef = { ...cheat, consumableType: 'cheat' };
+      addConsumable(cheatCopy);
+      recordTarotAcquired(cheat.id);
+      recordJokerTrigger('marked_deck', 'Marked Deck');
+      recordJokerTriggerStats('marked_deck', 0, 0);
+      markedDeckCreatedCheats.push(cheatCopy);
+    }
+  }
+
+  return { bankerTriggered, markedDeckCreatedCheats };
 }
 
 /** Full new-run reset: fresh uids + deck, first Blind configured and begun. */
-function startNewRunState(): void {
+function startNewRunState(): { bankerTriggered: boolean; markedDeckCreatedCheats: TarotDef[] } {
   resetCardUid();
   resetRunState(createStandardDeck());
   configureBlindMetrics();
-  beginBlindState();
+  return beginBlindState();
 }
 
 /* ---------- Cash-out & shop entry ---------- */
@@ -1177,4 +1201,9 @@ if (typeof window !== 'undefined') {
   (window as any).generateShopPacks = generateShopPacks;
   (window as any).generatePackOptions = generatePackOptions;
   (window as any).PACK_CATALOG = PACK_CATALOG;
+  (window as any).beginBlindState = beginBlindState;
+  (window as any).startNewRunState = startNewRunState;
+  (window as any).cashOutAndEnterShop = cashOutAndEnterShop;
+  (window as any).calcBlindPayout = calcBlindPayout;
+  (window as any).computeBlindPayout = computeBlindPayout;
 }
