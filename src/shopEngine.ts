@@ -50,12 +50,15 @@ function calcBlindPayout(
   unusedDealCashCap: number,
   maxInterest: number = INTEREST_CAP,
   interestPer: number = INTEREST_PER,
-  loanSharkFee: number = 0
+  hasBanker: boolean = false
 ): PendingPayout {
   const blindReward = BLIND_REWARDS[Math.min(blindIndex, 2)];
   const handBonus = Math.min(unusedDealCashCap, dealsLeft);
-  const interest = computeInterest(money, maxInterest, interestPer);
-  const totalEarned = Math.max(0, blindReward + handBonus + interest - loanSharkFee);
+  let interest = computeInterest(money, maxInterest, interestPer);
+  if (hasBanker) {
+    interest = Math.ceil(interest * 1.5);
+  }
+  const totalEarned = Math.max(0, blindReward + handBonus + interest);
   return { blindReward, handBonus, interest, totalEarned };
 }
 
@@ -64,8 +67,8 @@ function computeBlindPayout(): PendingPayout {
   const s = getState();
   const maxInterest = s.vouchersBought.includes('deep_pockets') ? 8 : INTEREST_CAP;
   const interestPer = s.vouchersBought.includes('liquidity_pass') ? 4 : INTEREST_PER;
-  const loanSharkFee = s.jokers.some(j => j.id === 'loan_shark') ? 1 : 0;
-  return calcBlindPayout(s.blindIndex, s.handsLeft, s.money, getBalanceConfig().unusedDealCashCap, maxInterest, interestPer, loanSharkFee);
+  const hasBanker = s.jokers.some(j => j.id === 'the_banker');
+  return calcBlindPayout(s.blindIndex, s.handsLeft, s.money, getBalanceConfig().unusedDealCashCap, maxInterest, interestPer, hasBanker);
 }
 
 /* ---------- Blind progression (state side only) ---------- */
@@ -133,10 +136,6 @@ function cashOutAndEnterShop(): PendingPayout | null {
   recordMoneyEarned('unusedDeals', payout.handBonus);
   recordMoneyEarned('interest', payout.interest);
 
-  if (s.jokers.some(j => j.id === 'loan_shark')) {
-    recordMoneySpent('loanSharkFees', 1);
-    recordJokerTrigger('loan_shark', 'Loan Shark');
-  }
 
   let blindIndex = s.blindIndex + 1;
   let ante = s.ante;
@@ -711,11 +710,6 @@ function pickPackOption(optIdx: number, targetCardUid?: number | string | (numbe
     }
     addJoker({ ...opt.data, bonusMult: 0, bonusChips: 0 });
     recordJokerAcquired(opt.data.id);
-    if (opt.data.id === 'loan_shark') {
-      addMoney(15);
-      recordMoneyEarned('loanShark', 15);
-      recordJokerTrigger('loan_shark', opt.data.name);
-    }
     resultMessage = `Added ${opt.data.name} to your Jokers!`;
   } else if (opt.kind === 'cheat') {
     if (s.consumables.length >= s.maxConsumables) {
@@ -863,11 +857,6 @@ function buyShopItem(listName: 'shopJokers' | 'shopExtras' | 'shopPacks', idx: n
     markShopItemBought(listName as any, idx);
     addJoker({ ...item, bonusMult: item.bonusMult || 0, bonusChips: item.bonusChips || 0 });
     recordJokerAcquired(item.id);
-    if (item.id === 'loan_shark') {
-      addMoney(15);
-      recordMoneyEarned('loanShark', 15);
-      recordJokerTrigger('loan_shark', item.name);
-    }
   } else if (item.shopType === 'tarot') {
     if (s.consumables.length >= s.maxConsumables) return { ok: false, reason: 'tarots_full' };
     spendMoney(item.cost);

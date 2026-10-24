@@ -428,18 +428,21 @@ function scoreJokerPriorityForBot(joker: JokerInstance, botType: BotType): numbe
   if (joker.id === 'daredevil') score += 6 + (joker.bonusMult || 0) * 1.0;
   if (joker.id === 'chip_stacker') score += 5 + (joker.bonusChips || 0) * 0.2;
   if (joker.id === 'hot_hand') score += 6 + (joker.bonusMult || 0) * 0.5;
+  if (joker.id === 'the_bullseye') score += 6 + (joker.bonusMult || 0) * 1.0;
+  if (joker.id === 'bad_beat_jackpot') score += 5 + (joker.bonusMult || 0) * 1.0;
+  if (joker.id === 'fortune_teller') score += 7;
 
   if (botType === 'expert') {
-    if (['bust_cushion', 'the_shark', 'blackjack_tycoon', 'card_sharp_joker', 'double_or_nothing', 'deja_vu', 'monochrome', 'rain_man', 'the_spotter'].includes(joker.id)) score += 6;
-    if (['golden_parachute', 'loan_shark', 'diamond_cutter', 'the_grinder', 'compound_edge'].includes(joker.id)) score += 4;
+    if (['bust_cushion', 'the_shark', 'blackjack_tycoon', 'card_sharp_joker', 'double_or_nothing', 'deja_vu', 'monochrome', 'rain_man', 'the_spotter', 'crown_jewel', 'the_banker', 'the_bullseye', 'marked_deck', 'street_magician'].includes(joker.id)) score += 6;
+    if (['golden_parachute', 'diamond_cutter', 'the_grinder', 'compound_edge'].includes(joker.id)) score += 4;
     if (['vip_high_roller', 'ace_up_sleeve', 'push_it_good', 'trips_ahoy', 'spade_slicer', 'crimson_heart', 'club_sandwich', 'slow_and_steady', 'sweet_16'].includes(joker.id)) score += 3;
     return score;
   }
 
   if (botType === 'charlie') {
-    if (['bust_cushion', 'safety_net', 'hit_me_baby', 'card_counter', 'even_steven', 'odd_ball', 'the_grinder', 'trips_ahoy'].includes(joker.id)) score += 8;
+    if (['bust_cushion', 'safety_net', 'hit_me_baby', 'card_counter', 'even_steven', 'odd_ball', 'the_grinder', 'trips_ahoy', 'small_fry', 'street_magician'].includes(joker.id)) score += 8;
   } else if (botType === 'highroller') {
-    if (['vip_high_roller', 'ace_up_sleeve', 'blackjack_tycoon', 'minimalist', 'double_or_nothing', 'the_shark', 'pocket_rockets', 'trips_ahoy', 'rain_man'].includes(joker.id)) score += 8;
+    if (['vip_high_roller', 'ace_up_sleeve', 'blackjack_tycoon', 'minimalist', 'double_or_nothing', 'the_shark', 'pocket_rockets', 'trips_ahoy', 'rain_man', 'crown_jewel', 'the_bullseye', 'tightrope_walker', 'side_bet'].includes(joker.id)) score += 8;
   } else if (botType === 'synergy') {
     if (['bust_cushion', 'daredevil', 'chip_stacker', 'the_shark', 'blackjack_tycoon', 'ace_up_sleeve', 'push_it_good', 'compound_edge', 'hot_hand', 'spade_slicer', 'crimson_heart', 'diamond_cutter', 'club_sandwich', 'monochrome', 'card_sharp_joker', 'slow_and_steady', 'the_spotter', 'rain_man'].includes(joker.id)) score += 6;
   }
@@ -562,7 +565,6 @@ function evaluateAndPickPackOption(
       simRun.jokers.push({ ...j, bonusMult: 0, bonusChips: 0 });
     }
     if (jokerStats[j.id]) jokerStats[j.id].bought++;
-    if (j.id === 'loan_shark') simRun.money += 15;
     // Keep XMult at the end so it multiplies after additive bonuses
     simRun.jokers.sort((a, b) => (a.isXMult ? 1 : 0) - (b.isXMult ? 1 : 0));
   } else if (chosen.kind === 'tarot') {
@@ -648,7 +650,6 @@ function simulateShopVisit(
             card.bought = true;
             simRun.jokers.push({ ...card, bonusMult: 0, bonusChips: 0 });
             if (jokerStats[card.id]) jokerStats[card.id].bought++;
-            if (card.id === 'loan_shark') simRun.money += 15;
             simRun.jokers.sort((a, b) => (a.isXMult ? 1 : 0) - (b.isXMult ? 1 : 0));
           }
         } else if (botType === 'expert' || botType === 'synergy') {
@@ -665,7 +666,6 @@ function simulateShopVisit(
             simRun.jokers[weakestIdx] = { ...card, bonusMult: 0, bonusChips: 0 };
             card.bought = true;
             if (jokerStats[card.id]) jokerStats[card.id].bought++;
-            if (card.id === 'loan_shark') simRun.money += 15;
             simRun.jokers.sort((a, b) => (a.isXMult ? 1 : 0) - (b.isXMult ? 1 : 0));
           }
         }
@@ -872,6 +872,11 @@ function runBatchSimulationForBot(numRuns: number, botType: BotType, cfg: SimCon
 
         let dealsLeft = simRun.maxHands;
         if (bossBlind && bossBlind.id === 'the_cooler') dealsLeft = Math.max(1, dealsLeft - 1);
+        if (simRun.jokers.some(j => j.id === 'the_banker') && simRun.money >= 25) dealsLeft += 1;
+        if (simRun.jokers.some(j => j.id === 'marked_deck') && simRun.consumables.length < simRun.maxConsumables) {
+          const c = CHEAT_CATALOG[Math.floor(Math.random() * CHEAT_CATALOG.length)];
+          simRun.consumables.push({ ...c, consumableType: 'cheat' });
+        }
 
         let shoe = shuffle(simRun.deck.map(c => ({ ...c })));
         let simRunningCount = 0;
@@ -999,7 +1004,10 @@ function runBatchSimulationForBot(numRuns: number, botType: BotType, cfg: SimCon
             vouchers: simRun.vouchers,
             handsLeft: dealsLeft,
             handsWonInBlind: simRun.handsWonInBlind || 0,
-            previousHandTotal: simRun.previousHandTotal
+            previousHandTotal: simRun.previousHandTotal,
+            runningCount: simRunningCount,
+            shoe,
+            tarotsUsed: simRun.usedTarots.size + simRun.usedCheats.size
           });
 
           outcomeCounters[res.rawOutcomeType]++;
@@ -1020,6 +1028,31 @@ function runBatchSimulationForBot(numRuns: number, botType: BotType, cfg: SimCon
             if (j.id === 'hot_hand') {
               if (res.isWin) j.bonusMult = Math.min(20, (j.bonusMult || 0) + 2);
               else if (res.rawOutcomeType === 'LOSS' || res.rawOutcomeType === 'BUST') j.bonusMult = 0;
+            }
+          }
+
+          // The Bullseye tracking
+          if (res.isWin && (res.outcomeType === 'EXACT21' || res.cushioned)) {
+            for (const j of simRun.jokers) {
+              if (j.id === 'the_bullseye') j.bonusMult = (j.bonusMult || 0) + 2;
+            }
+          }
+
+          // Bad Beat Jackpot tracking
+          if (res.rawOutcomeType === 'LOSS' && !res.pBust) {
+            for (const j of simRun.jokers) {
+              if (j.id === 'bad_beat_jackpot') {
+                j.bonusMult = (j.bonusMult || 0) + 1;
+                simRun.money += 4;
+              }
+            }
+          }
+
+          // Street Magician tracking
+          if (res.isWin && (res.outcomeType === 'EXACT21' || res.outcomeType === 'CHARLIE')) {
+            if (simRun.jokers.some(j => j.id === 'street_magician') && simRun.consumables.length < simRun.maxConsumables) {
+              const t = DECK_TAROT_CATALOG[Math.floor(Math.random() * DECK_TAROT_CATALOG.length)];
+              simRun.consumables.push({ ...t, consumableType: 'tarot' });
             }
           }
 
@@ -1058,8 +1091,8 @@ function runBatchSimulationForBot(numRuns: number, botType: BotType, cfg: SimCon
           bStat.cleared++;
           const maxInterest = simRun.vouchers.includes('deep_pockets') ? 8 : 5;
           const interestPer = simRun.vouchers.includes('liquidity_pass') ? 4 : 5;
-          const loanSharkFee = simRun.jokers.some(j => j.id === 'loan_shark') ? 1 : 0;
-          simRun.money += calcBlindPayout(b, dealsLeft, simRun.money, cfg.unusedDealCashCap, maxInterest, interestPer, loanSharkFee).totalEarned;
+          const hasBanker = simRun.jokers.some(j => j.id === 'the_banker');
+          simRun.money += calcBlindPayout(b, dealsLeft, simRun.money, cfg.unusedDealCashCap, maxInterest, interestPer, hasBanker).totalEarned;
           bStat.cashAfterSum += simRun.money;
 
           simulateShopVisit(simRun, botType, jokerStats, voucherStats, consumableStats, packStats, () => { totalRerolls++; });
@@ -1095,6 +1128,8 @@ function runBatchSimulationForBot(numRuns: number, botType: BotType, cfg: SimCon
         if (j.id === 'daredevil') jokerStats[j.id].scalingSum += (j.bonusMult || 0);
         if (j.id === 'chip_stacker') jokerStats[j.id].scalingSum += (j.bonusChips || 0);
         if (j.id === 'hot_hand') jokerStats[j.id].scalingSum += (j.bonusMult || 0);
+        if (j.id === 'the_bullseye') jokerStats[j.id].scalingSum += (j.bonusMult || 0);
+        if (j.id === 'bad_beat_jackpot') jokerStats[j.id].scalingSum += (j.bonusMult || 0);
       }
     }
     for (const vId of simRun.vouchers) {
@@ -1252,6 +1287,10 @@ function formatBotReportSection(simData: SimData): string {
     } else if (j.id === 'chip_stacker' && j.picks > 0) {
       scaleNote = `+${(j.scalingSum / j.picks).toFixed(1)} Chips`;
     } else if (j.id === 'hot_hand' && j.picks > 0) {
+      scaleNote = `+${(j.scalingSum / j.picks).toFixed(1)} Mult`;
+    } else if (j.id === 'the_bullseye' && j.picks > 0) {
+      scaleNote = `+${(j.scalingSum / j.picks).toFixed(1)} Mult`;
+    } else if (j.id === 'bad_beat_jackpot' && j.picks > 0) {
       scaleNote = `+${(j.scalingSum / j.picks).toFixed(1)} Mult`;
     }
     lines.push(

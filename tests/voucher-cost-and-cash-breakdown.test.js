@@ -150,12 +150,6 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   ck('Breakdown includes In-Hand Cash line when gold card/joker cash was earned', rcbEl.textContent.includes('In-Hand Cash'));
   ck('Breakdown displays +$3 for In-Hand Cash', rcbEl.textContent.includes('+$3'));
 
-  console.log('\n--- TEST 7: LOAN SHARK FEE SHOWN IN BREAKDOWN ---');
-  w.patchState({ jokers: [{ id: 'loan_shark', name: 'Loan Shark', rarity: 'common', cost: 4, desc: '+$15 upfront, -$1 per blind' }] });
-  const payoutWithLoanShark = w.computeBlindPayout();
-  w.renderRoundCashBreakdown(payoutWithLoanShark);
-  ck('Breakdown includes Loan Shark Fee line when Loan Shark is held', rcbEl.textContent.includes('Loan Shark Fee'));
-  ck('Breakdown displays -$1 for Loan Shark fee', rcbEl.textContent.includes('-$1'));
 
   console.log('\n--- TEST 8: BREAKDOWN HIDES ON NEXT BLIND OR NEW DEAL ---');
   w.hideRoundCashBreakdown();

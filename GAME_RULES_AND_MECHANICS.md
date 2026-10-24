@@ -287,7 +287,7 @@ Where:
 
 ---
 
-## 7. Catalog of Jokers (All 19)
+## 7. Catalog of Jokers (All 51)
 
 Player begins with **5 Joker slots** (expandable to 6 with VIP Lounge Pass).
 
@@ -314,6 +314,21 @@ Player begins with **5 Joker slots** (expandable to 6 with VIP Lounge Pass).
 | `minimalist` | **Minimalist** | $6 | $\times\text{Mult}$ | Win with 2 cards | Multiplies Mult by $\times 1.75$ if winning with exactly 2 cards. |
 | `rain_man` | **Rain Man** | $8 | $\times\text{Mult}$ + Utility | Running Count $\ge +2$ | Hi-Lo Count ($2\text{--}6: +1$, $7\text{--}9: 0$, $10\text{--}\text{A}: -1$ from $0$). When Count $\ge +2$: Double Down applies $\times 3\text{ Mult}$ and Blackjacks / Exact 21s grant $\times 1.5\text{ Mult}$ & $+\$2\text{ Cash}$. |
 | `the_spotter` | **The Spotter** | $8 | Scaling Chips & Mult | Scoring Hand | Shoe Count = $(\text{Remaining } 10\text{s \& Aces}) - (\text{Remaining } 2\text{--}6\text{s})$. Grants $+15\text{ Chips}$ & $+2\text{ Mult}$ per point of positive Shoe Count. |
+| `street_magician` | **Street Magician** | $6 | Utility | Exact 21 / Charlie Win | Creates a random Deck Tarot card (requires open consumable slot). |
+| `marked_deck` | **Marked Deck** | $6 | Utility | Start of Blind | Creates 1 random Table Cheat card in inventory (requires open consumable slot). |
+| `fortune_teller` | **Fortune Teller** | $5 | Mult & Chips | Scoring Hand | $+15\text{ Chips}$ & $+2\text{ Mult}$ for each Tarot or Table Cheat used during the run. |
+| `crown_jewel` | **Crown Jewel** | $7 | $\times\text{Mult}$ & Econ | Natural Blackjack | Multiplies Mult by $\times 2.2$ and grants $+\$4\text{ Cash}$ on Natural Blackjacks. |
+| `the_bullseye` | **The Bullseye** | $6 | Scaling Mult | Exact 21 Win | Permanently gains $+2\text{ Mult}$ for the rest of run on every Exact 21 or Cushioned 22 win. |
+| `blowout` | **Blowout** | $5 | Flat Chips & Mult | Total > Dealer Total | $+20\text{ Chips}$ and $+2\text{ Mult}$ for each point your final total beats the Dealer. |
+| `bounty_hunter` | **Bounty Hunter** | $5 | $\times\text{Mult}$ & Econ | Dealer Busts | Multiplies Mult by $\times 1.6$ and earns $+\$4\text{ Cash}$ ($+\$8\text{ Cash}$ if Dealer busts on $25+$). |
+| `push_the_limit` | **Push the Limit** | $5 | Utility & Econ | Push (Tie) | Grants $+80\text{ Chips}$, $+6\text{ Mult}$, and $+\$2\text{ Cash}$ on Pushes (stacks with Push It Good). |
+| `bad_beat_jackpot` | **Bad Beat Jackpot** | $6 | Scaling Mult & Econ | Loss without bust | Permanently gains $+1\text{ Mult}$ and earns $+\$4\text{ Cash}$ whenever Dealer beats player without player busting. |
+| `tightrope_walker` | **Tightrope Walker** | $6 | Flat Chips & Mult | Stand on 20, 21, or 22 | $+75\text{ Chips}$ and $+8\text{ Mult}$ if you stand on a final hand total of $20$, $21$, or $22$. |
+| `small_fry` | **Small Fry** | $4 | Mult, Chips & $\times\text{Mult}$ | Low Cards ($2\text{--}5$) in hand | $+15\text{ Chips}$ and $+2\text{ Mult}$ per low card ($2\text{--}5$). Multiplies Mult by $\times 1.5$ if hand has $\ge 3$ low cards. |
+| `kaleidoscope` | **Kaleidoscope** | $5 | Flat Chips & Mult | Hand has $\ge 3$ Suits | $+80\text{ Chips}$ and $+6\text{ Mult}$ if your scoring hand contains cards of $3$ or more different suits. |
+| `momentum` | **Momentum** | $5 | Scaling Hand Mult | Consecutive Blind Wins | $+20\text{ Chips}$ and $+3\text{ Mult}$ for each hand already won in current Blind (stacks up to $+100\text{c} / +15\text{m}$). |
+| `the_banker` | **The Banker** | $7 | Economy & Deals | Blind Payout / $25+ | Blind interest is increased by $+50\%$. If ending a Blind with $\$25+$, start the next Blind with $+1\text{ extra Deal}$. |
+| `side_bet` | **Side Bet** | $5 | Economy & Chips | Starting 2-card Pair | Starting pair grants $+\$4\text{ Cash}$ and $+40\text{ Chips}$ ($+\$8\text{ Cash}$ and $+80\text{ Chips}$ if same color). |
 
 ---
 

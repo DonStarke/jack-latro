@@ -48,6 +48,53 @@ function getJokerFullDesc(j: JokerInstance): string {
     const mult = Math.max(0, shoeAdv * 2);
     return `Shoe Count = (Remaining 10s & Aces) - (Remaining 2-6s). On scoring hands, grants +15 Chips & +2 Mult per point of positive Shoe Count. (Current Shoe Count: ${shoeAdv >= 0 ? '+' + shoeAdv : shoeAdv} — yielding +${chips}c / +${mult}m)`;
   }
+  if (j.id === 'the_bullseye') {
+    return `Permanently gains +2 Mult for the rest of run every time you score an Exact 21. (Currently: +${j.bonusMult || 0} Mult)`;
+  }
+  if (j.id === 'bad_beat_jackpot') {
+    return `+1 Mult permanently for the rest of run and earn +$4 Cash whenever you lose a hand to the Dealer (without busting). (Currently: +${j.bonusMult || 0} Mult)`;
+  }
+  if (j.id === 'fortune_teller') {
+    const used = getState().runStats.tarotsUsed || 0;
+    return `+15 Chips & +2 Mult for each Tarot or Table Cheat used this run. (Currently: ${used} used — yielding +${used * 15}c / +${used * 2}m)`;
+  }
+  if (j.id === 'momentum') {
+    const wins = Math.min(5, getState().handsWonInBlind || 0);
+    return `+20 Chips & +3 Mult for each hand already won in the current Blind (stacks up to +100c/+15m). (Current wins: ${wins} — yielding +${wins * 20}c / +${wins * 3}m)`;
+  }
+  if (j.id === 'the_banker') {
+    return 'Interest earned at the end of each Blind is increased by +50%. If you end a Blind with $25+, start the next Blind with +1 extra Deal.';
+  }
+  if (j.id === 'street_magician') {
+    return 'Exact 21 or 5-Card Charlie wins create a random Deck Tarot card (must have room in consumable inventory).';
+  }
+  if (j.id === 'marked_deck') {
+    return 'At the start of each Blind, create 1 random Table Cheat in your inventory (must have room).';
+  }
+  if (j.id === 'crown_jewel') {
+    return 'Natural Blackjacks grant +$4 Cash and apply ×2.2 Mult.';
+  }
+  if (j.id === 'blowout') {
+    return '+20 Chips & +2 Mult for each point your final total beats the Dealer.';
+  }
+  if (j.id === 'bounty_hunter') {
+    return 'When Dealer busts, earn +$4 Cash and apply ×1.6 Mult (+$8 Cash if Dealer busts on 25+).';
+  }
+  if (j.id === 'push_the_limit') {
+    return 'Ties (Pushes) grant +80 Chips, +6 Mult, and +$2 Cash.';
+  }
+  if (j.id === 'tightrope_walker') {
+    return '+75 Chips & +8 Mult if you stand on a final hand total of 20, 21, or 22.';
+  }
+  if (j.id === 'small_fry') {
+    return '+15 Chips & +2 Mult for each low card (2-5) in hand. Multiplies Mult by ×1.5 if hand has 3 or more low cards.';
+  }
+  if (j.id === 'kaleidoscope') {
+    return '+80 Chips & +6 Mult if your scoring hand contains cards of 3 or more different suits.';
+  }
+  if (j.id === 'side_bet') {
+    return 'If your starting 2 cards are a Pair, earn +$4 Cash & +40 Chips (+$8 Cash & +80 Chips if same color).';
+  }
   if (j.id === 'daredevil') {
     const cur = j.bonusMult || 0;
     return `Permanently gains +1 Mult on safe Hit on 15+ for the rest of run. (Currently: +${cur} Mult)`;
@@ -82,6 +129,53 @@ function getJokerMiniSubHTML(j: JokerInstance): string {
     const shoeAdv = typeof calculateShoeCount === 'function' ? calculateShoeCount(getState().shoe) : 0;
     const col = shoeAdv > 0 ? '#10b981' : '#cbd5e1';
     return `<span style="color:${col};font-weight:900;">Shoe ${shoeAdv >= 0 ? '+' + shoeAdv : shoeAdv}</span> ${shoeAdv > 0 ? `(+${shoeAdv * 15}c/+${shoeAdv * 2}m)` : '(0c/0m)'}`;
+  }
+  if (j.id === 'the_bullseye') {
+    return `<span style="color:var(--mult);font-weight:900;">+${j.bonusMult || 0}m</span> (+2m/21)`;
+  }
+  if (j.id === 'bad_beat_jackpot') {
+    return `<span style="color:var(--mult);font-weight:900;">+${j.bonusMult || 0}m</span> (+1m/Loss)`;
+  }
+  if (j.id === 'fortune_teller') {
+    const used = getState().runStats.tarotsUsed || 0;
+    return `<span style="color:#a855f7;font-weight:900;">${used} Used</span> (+${used * 15}c/+${used * 2}m)`;
+  }
+  if (j.id === 'momentum') {
+    const wins = Math.min(5, getState().handsWonInBlind || 0);
+    return `<span style="color:#eab308;font-weight:900;">${wins} Wins</span> (+${wins * 20}c/+${wins * 3}m)`;
+  }
+  if (j.id === 'the_banker') {
+    return '<span style="color:#eab308;font-weight:900;">+50% Interest</span> (+1 Deal@$25)';
+  }
+  if (j.id === 'street_magician') {
+    return '<span style="color:#d8b4fe;font-weight:900;">Tarot on 21/5c</span>';
+  }
+  if (j.id === 'marked_deck') {
+    return '<span style="color:#fb7185;font-weight:900;">Cheat on Blind</span>';
+  }
+  if (j.id === 'crown_jewel') {
+    return '<span style="color:#f59e0b;font-weight:900;">×2.2m/+$4</span> (Nat BJ)';
+  }
+  if (j.id === 'blowout') {
+    return '<span style="color:#38bdf8;font-weight:900;">+20c/+2m</span> (per Margin)';
+  }
+  if (j.id === 'bounty_hunter') {
+    return '<span style="color:#eab308;font-weight:900;">×1.6m</span> (dBust +$4)';
+  }
+  if (j.id === 'push_the_limit') {
+    return '<span style="color:#10b981;font-weight:900;">+80c/+6m</span> (+$2 Push)';
+  }
+  if (j.id === 'tightrope_walker') {
+    return '<span style="color:#ec4899;font-weight:900;">+75c/+8m</span> (on 20-22)';
+  }
+  if (j.id === 'small_fry') {
+    return '<span style="color:#f97316;font-weight:900;">+15c/+2m</span> (2-5 lows)';
+  }
+  if (j.id === 'kaleidoscope') {
+    return '<span style="color:#06b6d4;font-weight:900;">+80c/+6m</span> (≥3 Suits)';
+  }
+  if (j.id === 'side_bet') {
+    return '<span style="color:#eab308;font-weight:900;">+$4 to +$8</span> (Pair Bet)';
   }
   if (j.id === 'daredevil') {
     const cur = j.bonusMult || 0;
@@ -1097,7 +1191,6 @@ function renderRoundCashBreakdown(payout?: PendingPayout | null): void {
   const interestCap = state.vouchersBought.includes('deep_pockets') ? 8 : 5;
 
   const inHandCash = state.roundCashEarned || 0;
-  const hasLoanShark = state.jokers.some(j => j.id === 'loan_shark');
 
   const inHandRow = inHandCash > 0 ? `
     <div class="rcb-row">
@@ -1106,16 +1199,6 @@ function renderRoundCashBreakdown(payout?: PendingPayout | null): void {
         <span>In-Hand Cash <span class="rcb-sub">(Gold cards & Jokers)</span></span>
       </span>
       <span class="rcb-val gold-txt">+$${inHandCash}</span>
-    </div>
-  ` : '';
-
-  const loanSharkRow = hasLoanShark ? `
-    <div class="rcb-row rcb-fee">
-      <span class="rcb-label">
-        <span class="rcb-icon">🦈</span>
-        <span>Loan Shark Fee <span class="rcb-sub">(Debt interest)</span></span>
-      </span>
-      <span class="rcb-val red-txt">-$1</span>
     </div>
   ` : '';
 
@@ -1162,7 +1245,6 @@ function renderRoundCashBreakdown(payout?: PendingPayout | null): void {
         </div>
 
         ${inHandRow}
-        ${loanSharkRow}
       </div>
 
       <div class="rcb-footer">
@@ -2290,15 +2372,13 @@ function uiCashOut(): void {
   if (centerStage) centerStage.classList.add('hidden');
 
   const dealCap = getBalanceConfig().unusedDealCashCap;
-  const hasLoanShark = getState().jokers.some(j => j.id === 'loan_shark');
-  const loanSharkNote = hasLoanShark ? ' - $1 Loan Shark' : '';
   const breakdownParts = [`$${payout.blindReward} Blind`];
   if (dealCap > 0 && payout.handBonus > 0) {
     breakdownParts.push(`$${payout.handBonus} Deals`);
   }
   breakdownParts.push(`$${payout.interest} Interest`);
   $('ui-shop-payout-note').textContent =
-    `Earned +$${payout.totalEarned} (${breakdownParts.join(' + ')}${loanSharkNote}).`;
+    `Earned +$${payout.totalEarned} (${breakdownParts.join(' + ')}).`;
   renderShop();
   $('ui-shop-overlay').classList.remove('hidden');
   updateAllUI();
@@ -3639,7 +3719,8 @@ async function resolveRound(): Promise<void> {
     handsWonInBlind: state.handsWonInBlind || 0,
     previousHandTotal: state.previousHandTotal,
     runningCount: state.runningCount,
-    shoe: state.shoe
+    shoe: state.shoe,
+    tarotsUsed: state.runStats.tarotsUsed
   });
 
   // Hand outcome sound plays IMMEDIATELY after player and dealer finish playing, just before scoring
@@ -3677,6 +3758,41 @@ async function resolveRound(): Promise<void> {
       patchJoker('hot_hand', { bonusMult: 0 });
     }
     updateAllUI();
+  }
+
+  // The Bullseye tracking
+  if (res.isWin && (res.outcomeType === 'EXACT21' || res.cushioned)) {
+    const bullseye = state.jokers.find(j => j.id === 'the_bullseye');
+    if (bullseye) {
+      patchJoker('the_bullseye', { bonusMult: (bullseye.bonusMult || 0) + 2 });
+      const bIdx = state.jokers.findIndex(j => j.id === 'the_bullseye');
+      if (bIdx >= 0) popJokerCard(bIdx);
+      updateAllUI();
+    }
+  }
+
+  // Bad Beat Jackpot tracking
+  if (res.rawOutcomeType === 'LOSS' && !res.pBust) {
+    const bbj = state.jokers.find(j => j.id === 'bad_beat_jackpot');
+    if (bbj) {
+      patchJoker('bad_beat_jackpot', { bonusMult: (bbj.bonusMult || 0) + 1 });
+      addMoney(4);
+      recordMoneyEarned('inHandScoring', 4);
+      const bbIdx = state.jokers.findIndex(j => j.id === 'bad_beat_jackpot');
+      if (bbIdx >= 0) popJokerCard(bbIdx);
+      updateAllUI();
+    }
+  }
+
+  // Street Magician tarot creation
+  if (res.isWin && (res.outcomeType === 'EXACT21' || res.outcomeType === 'CHARLIE')) {
+    const sm = state.jokers.find(j => j.id === 'street_magician');
+    if (sm && state.consumables.length < state.maxConsumables) {
+      const tarot = DECK_TAROT_CATALOG[Math.floor(Math.random() * DECK_TAROT_CATALOG.length)];
+      addConsumable({ ...tarot, consumableType: 'tarot' });
+      recordJokerTrigger('street_magician', 'Street Magician');
+      updateAllUI();
+    }
   }
 
   // Update hands won in blind & previous hand total (remembering last WINNING hand)
