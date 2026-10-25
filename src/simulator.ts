@@ -693,8 +693,8 @@ function simulateShopVisit(
 ): void {
   if (botType === 'vanilla') return;
 
-  const maxInterest = simRun.vouchers.includes('deep_pockets') ? 8 : 5;
-  const interestPer = simRun.vouchers.includes('liquidity_pass') ? 4 : 5;
+  const maxInterest = simRun.vouchers.includes('deep_pockets_2') ? 20 : (simRun.vouchers.includes('deep_pockets') ? 10 : 5);
+  const interestPer = 5;
   const capCash = maxInterest * interestPer;
 
   // Staged bankroll targets: prioritize filling joker slots before hoarding interest
@@ -1192,8 +1192,8 @@ function runBatchSimulationForBot(numRuns: number, botType: BotType, cfg: SimCon
           }
         } else {
           bStat.cleared++;
-          const maxInterest = simRun.vouchers.includes('deep_pockets') ? 8 : 5;
-          const interestPer = simRun.vouchers.includes('liquidity_pass') ? 4 : 5;
+          const maxInterest = simRun.vouchers.includes('deep_pockets_2') ? 20 : (simRun.vouchers.includes('deep_pockets') ? 10 : 5);
+          const interestPer = 5;
           const hasBanker = simRun.jokers.some(j => j.id === 'the_banker');
           simRun.money += calcBlindPayout(b, dealsLeft, simRun.money, cfg.unusedDealCashCap, maxInterest, interestPer, hasBanker).totalEarned;
           bStat.cashAfterSum += simRun.money;

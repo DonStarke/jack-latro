@@ -51,8 +51,13 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   console.log('\n--- TEST 1: TAROT TARGETING ACTIVATION & OUTLINES ---');
 
   // Deal a hand
-  w.handlePrimaryDealBtn();
-  for (let i = 0; i < 60 && (w.getState().isDealing || !w.getState().inHand); i++) await sleep(50);
+  if (!w.getState().inHand) {
+    w.handlePrimaryDealBtn();
+  }
+  for (let i = 0; i < 100 && (w.getState().isDealing || !w.getState().inHand); i++) {
+    if (!w.getState().isDealing && !w.getState().inHand) w.handlePrimaryDealBtn();
+    await sleep(50);
+  }
   await sleep(50);
 
   const state = w.getState();

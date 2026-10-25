@@ -51,15 +51,14 @@
 * Passive Systems:
   * Blind structure: 8 Antes x 3 Blinds + Endless Mode (Ante 9+ scaling). Strictly monotonic targets `[300, 540, 960, 1720, 3050, 5450, 9700, 17200]` x (1.0 / 1.35 / 1.7 for Small/Big/Boss), then scaled by $2.2^{\text{ante}-8}$ in endless mode. A1 Boss ($255$) < A2 Small ($270$), eliminating prior target ties.
   * Config (`balanceConfig`): startingDeals 7, targetScalePct 50, unusedDealCashCap 0 (default $0 cash per unused deal), pushRefundsDeal true, anteHandScaling true.
-  * Economy: start $6; blind reward $4/$5/$6 (Small/Big/Boss); interest $1 per $5 held, max $5 (requires $25 saved, or $40 saved with High Roller Credit); shop reroll starts at $3 (reduced to $2 by Clearance Rack, $1 by Clearance Rack 2); shop starts with 1 booster pack (increased to 2 by Overstock Shelves, 3 by Overstock Shelves 2).
+  * Economy: start $6; blind reward $4/$5/$6 (Small/Big/Boss); interest $1 per $5 held, max $5 (requires $25 saved, or $50 with High Roller, $100 with High Roller 2); shop reroll starts at $3 (reduced to $2 by Clearance Rack, $1 by Clearance Rack 2); shop starts with 1 booster pack (increased to 2 by Overstock Shelves, 3 by Overstock Shelves 2).
   * Vouchers (10 Total with Prerequisite Progression Trees):
     * `Blank Voucher` ($10) -> Unlocks `VIP Lounge Pass` (+1 Max Joker Slot).
     * `Extra Cushion` ($10, +1 Deal) -> Unlocks `Extra Cushion 2` ($10, +1 additional Deal).
     * `Clearance Rack` ($10, Rerolls start at $2) -> Unlocks `Clearance Rack 2` ($10, Rerolls start at $1).
     * `Overstock Shelves` ($10, 2 pack slots) -> Unlocks `Overstock Shelves 2` ($10, 3 pack slots).
-    * `High Roller Credit` ($10, max interest $8 on $40 saved).
-    * `Liquid Assets` ($10, interest per $4 held).
-    * (Removed: Table Leverage, High Stakes Table, Precision Edge, Card Sharp License).
+    * `High Roller` ($10, max interest $10 on $50 saved) -> Unlocks `High Roller 2` ($10, max interest $20 on $100 saved).
+    * (Removed: Liquid Assets, Table Leverage, High Stakes Table, Precision Edge, Card Sharp License).
 
 ## 🛠️ Last Modification & Structural Changes
 * **Splash Screen Main Menu**: Created interactive splash overlay with glowing 3D fanned cards (Jack of Spades + Ace of Spades) featuring foil/holo sweep shimmer, floating neon suit particles, and options for "New Game" and "Settings".

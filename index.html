@@ -37,6 +37,10 @@
 
 <canvas id="confetti-canvas"></canvas>
 
+<!-- RETRO DISPLAY EFFECTS OVERLAYS -->
+<div id="ui-crt-overlay" class="crt-overlay"></div>
+<div id="ui-scanlines-overlay" class="scanlines-overlay hidden"></div>
+
 <!-- SPLASH SCREEN / MAIN MENU -->
 <div id="ui-splash-screen" class="splash-screen">
   <div class="splash-backdrop-fx">
@@ -322,6 +326,26 @@
   </div>
 </div>
 
+<!-- DEDICATED RUN VOUCHERS MODAL -->
+<div class="modal-backdrop hidden" id="ui-vouchers-modal" onclick="toggleVouchersModal(false)">
+  <div class="modal-box" onclick="event.stopPropagation()" style="max-width: 440px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid #1e293b;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="font-size:22px;">🎟️</span>
+        <div>
+          <h3 style="color:var(--gold); margin:0; font-size:16px; letter-spacing:0.5px;">ACTIVE RUN VOUCHERS</h3>
+          <div id="ui-vouchers-modal-count" style="font-size:11px; color:#94a3b8;">0 Active</div>
+        </div>
+      </div>
+      <button class="btn btn-secondary" onclick="toggleVouchersModal(false)">Close</button>
+    </div>
+
+    <div id="ui-vouchers-modal-list" style="display:flex; flex-direction:column; gap:8px; max-height:60vh; overflow-y:auto; padding-right:2px;">
+      <div style="font-size:12px; color:#64748b; font-style:italic; padding:12px 0; text-align:center;">No vouchers purchased yet this run.</div>
+    </div>
+  </div>
+</div>
+
 <!-- COG SETTINGS, RULES & SIMULATOR LAUNCHER MODAL -->
 <div class="modal-backdrop hidden" id="ui-cog-modal" onclick="toggleCogModal(false)">
   <div class="modal-box" onclick="event.stopPropagation()">
@@ -401,6 +425,37 @@
       </select>
     </div>
 
+    <!-- DISPLAY & RETRO EFFECTS (CRT & SCANLINES) -->
+    <div id="ui-display-effects-container" style="background:#111622; padding:9px 12px; border-radius:8px; border:1px solid #222938; margin: 6px 0; display:flex; flex-direction:column; gap:8px;">
+      <div style="font-size:12px; font-weight:bold; color:var(--gold); display:flex; align-items:center; gap:6px;">
+        <span>📺 DISPLAY & RETRO EFFECTS</span>
+      </div>
+
+      <!-- CRT SCREEN EFFECT TOGGLE -->
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:16px;">📺</span>
+          <div>
+            <div style="font-size:12px; font-weight:700; color:#e2e8f0;">CRT Screen Effect</div>
+            <div style="font-size:10px; color:#94a3b8;">Curved tube glass, vignette & phosphor glow</div>
+          </div>
+        </div>
+        <button class="btn btn-deal" id="btn-toggle-crt" onclick="toggleCrtSetting()" style="padding:4px 8px; font-size:11px; min-width:76px;">CRT: ON</button>
+      </div>
+
+      <!-- SCANLINES EFFECT TOGGLE -->
+      <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #1e293b; padding-top:8px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:16px;">📼</span>
+          <div>
+            <div style="font-size:12px; font-weight:700; color:#e2e8f0;">Retro Scanlines</div>
+            <div style="font-size:10px; color:#94a3b8;">Horizontal CRT line texture</div>
+          </div>
+        </div>
+        <button class="btn btn-secondary" id="btn-toggle-scanlines" onclick="toggleScanlinesSetting()" style="padding:4px 8px; font-size:11px; min-width:76px;">SCAN: OFF</button>
+      </div>
+    </div>
+
     <!-- ACTIVE RUN VOUCHERS PANEL -->
     <div id="ui-cog-vouchers-container" style="background:#111622; padding:9px 12px; border-radius:8px; border:1px solid #222938; margin: 6px 0;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
@@ -435,7 +490,7 @@
     <div style="font-size:12px; color:#94a3b8; line-height:1.4;">
       • <strong>Double Down:</strong> Initial 2 cards only. Draw 1 card, Stand, and multiply final score by <strong>×2</strong>.<br>
       • <strong>Push Deal Refund:</strong> Pushing against the Dealer refunds your deal counter.<br>
-      • <strong>Economy:</strong> Clear a Blind to earn Base Cash ($4 Small, $5 Big, $6 Boss) + $1 interest per $5 held (max $5, requiring $25 saved; or max $8 requiring $40 saved with High Roller Credit). Unused deals earn $0 cash by default.
+      • <strong>Economy:</strong> Clear a Blind to earn Base Cash ($4 Small, $5 Big, $6 Boss) + $1 interest per $5 held (max $5, requiring $25 saved; max $10 requiring $50 saved with High Roller; max $20 requiring $100 saved with High Roller 2). Unused deals earn $0 cash by default.
     </div>
 
     <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid #334155;">

@@ -126,6 +126,42 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   ck('playPackOpenBurstSound is exposed on window', typeof w.playPackOpenBurstSound === 'function');
   ck('stopPackRipSound is exposed on window', typeof w.stopPackRipSound === 'function');
 
+  console.log('\n--- TEST 7: RETRO DISPLAY EFFECTS (CRT & SCANLINES) ---');
+  const btnCrt = $('btn-toggle-crt');
+  const btnScanlines = $('btn-toggle-scanlines');
+  const overlayCrt = $('ui-crt-overlay');
+  const overlayScanlines = $('ui-scanlines-overlay');
+
+  ck('CRT toggle button #btn-toggle-crt exists in settings', !!btnCrt);
+  ck('CRT toggle defaults to ON', btnCrt && btnCrt.textContent.includes('CRT: ON'));
+  ck('CRT overlay #ui-crt-overlay exists in DOM', !!overlayCrt);
+  ck('CRT overlay is active by default (not hidden)', overlayCrt && !overlayCrt.classList.contains('hidden'));
+
+  ck('Scanlines toggle button #btn-toggle-scanlines exists in settings', !!btnScanlines);
+  ck('Scanlines toggle defaults to OFF', btnScanlines && btnScanlines.textContent.includes('SCAN: OFF'));
+  ck('Scanlines overlay #ui-scanlines-overlay exists in DOM', !!overlayScanlines);
+  ck('Scanlines overlay is hidden by default', overlayScanlines && overlayScanlines.classList.contains('hidden'));
+
+  // Test toggling scanlines ON
+  w.toggleScanlinesSetting();
+  ck('Toggling scanlines turns SCAN: ON', btnScanlines && btnScanlines.textContent.includes('SCAN: ON'));
+  ck('Scanlines overlay is visible when active', overlayScanlines && !overlayScanlines.classList.contains('hidden'));
+
+  // Test toggling scanlines back OFF
+  w.toggleScanlinesSetting();
+  ck('Toggling scanlines again reverts to SCAN: OFF', btnScanlines && btnScanlines.textContent.includes('SCAN: OFF'));
+  ck('Scanlines overlay is hidden when inactive', overlayScanlines && overlayScanlines.classList.contains('hidden'));
+
+  // Test toggling CRT OFF
+  w.toggleCrtSetting();
+  ck('Toggling CRT turns CRT: OFF', btnCrt && btnCrt.textContent.includes('CRT: OFF'));
+  ck('CRT overlay is hidden when inactive', overlayCrt && overlayCrt.classList.contains('hidden'));
+
+  // Test toggling CRT back ON
+  w.toggleCrtSetting();
+  ck('Toggling CRT again reverts to CRT: ON', btnCrt && btnCrt.textContent.includes('CRT: ON'));
+  ck('CRT overlay is active again', overlayCrt && !overlayCrt.classList.contains('hidden'));
+
   console.log('\n--- TEST SUMMARY ---');
   results.forEach(r => console.log(r));
   const failed = results.filter(r => r.startsWith('FAIL'));

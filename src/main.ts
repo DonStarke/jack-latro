@@ -289,6 +289,73 @@ function updateScoringSpeed(multiplier: number): void {
   }
 }
 
+/* ---------- Retro Display Effects (CRT & Scanlines) ---------- */
+let crtEnabled = true;
+let scanlinesEnabled = false;
+
+function initDisplaySettings(): void {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const savedCrt = localStorage.getItem('jacklatro_crt');
+      if (savedCrt !== null) {
+        crtEnabled = savedCrt !== 'false';
+      }
+      const savedScanlines = localStorage.getItem('jacklatro_scanlines');
+      if (savedScanlines !== null) {
+        scanlinesEnabled = savedScanlines === 'true';
+      }
+    }
+  } catch (e) {}
+  applyDisplaySettings();
+  if (typeof document !== 'undefined' && document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => applyDisplaySettings());
+  }
+}
+
+function applyDisplaySettings(): void {
+  const crtEl = document.getElementById('ui-crt-overlay');
+  const scanlinesEl = document.getElementById('ui-scanlines-overlay');
+  const btnCrt = document.getElementById('btn-toggle-crt');
+  const btnScanlines = document.getElementById('btn-toggle-scanlines');
+
+  if (crtEl) crtEl.classList.toggle('hidden', !crtEnabled);
+  if (scanlinesEl) scanlinesEl.classList.toggle('hidden', !scanlinesEnabled);
+
+  if (document.body) {
+    document.body.classList.toggle('has-crt', crtEnabled);
+    document.body.classList.toggle('has-scanlines', scanlinesEnabled);
+  }
+
+  if (btnCrt) {
+    btnCrt.textContent = crtEnabled ? 'CRT: ON' : 'CRT: OFF';
+    btnCrt.className = crtEnabled ? 'btn btn-deal' : 'btn btn-secondary';
+  }
+  if (btnScanlines) {
+    btnScanlines.textContent = scanlinesEnabled ? 'SCAN: ON' : 'SCAN: OFF';
+    btnScanlines.className = scanlinesEnabled ? 'btn btn-deal' : 'btn btn-secondary';
+  }
+}
+
+function toggleCrtSetting(override?: boolean): void {
+  crtEnabled = typeof override === 'boolean' ? override : !crtEnabled;
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('jacklatro_crt', crtEnabled ? 'true' : 'false');
+    }
+  } catch (e) {}
+  applyDisplaySettings();
+}
+
+function toggleScanlinesSetting(override?: boolean): void {
+  scanlinesEnabled = typeof override === 'boolean' ? override : !scanlinesEnabled;
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('jacklatro_scanlines', scanlinesEnabled ? 'true' : 'false');
+    }
+  } catch (e) {}
+  applyDisplaySettings();
+}
+
 function formatScoringVal(val: number): string {
   if (typeof val !== 'number' || isNaN(val)) return '0';
   const rounded = Math.round(val * 10) / 10;
@@ -508,6 +575,16 @@ function initJokerTouchGestures(): void {
     } else if (e.key === 'Escape') {
       e.preventDefault();
       closeJokerCarousel();
+    }
+  });
+
+  window.addEventListener('keydown', (e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      const vModal = $('ui-vouchers-modal');
+      if (vModal && !vModal.classList.contains('hidden')) {
+        e.preventDefault();
+        toggleVouchersModal(false);
+      }
     }
   });
 }
@@ -1197,8 +1274,8 @@ function renderRoundCashBreakdown(payout?: PendingPayout | null): void {
   const dealsText = dealsLeft === 1 ? '1 deal saved' : `${dealsLeft} deals saved`;
   const capNote = dealCap < dealsLeft ? `, cap $${dealCap}` : '';
 
-  const interestRate = state.vouchersBought.includes('liquidity_pass') ? 4 : 5;
-  const interestCap = state.vouchersBought.includes('deep_pockets') ? 8 : 5;
+  const interestRate = 5;
+  const interestCap = state.vouchersBought.includes('deep_pockets_2') ? 20 : (state.vouchersBought.includes('deep_pockets') ? 10 : 5);
 
   const inHandCash = state.roundCashEarned || 0;
 
@@ -1682,49 +1759,61 @@ function toggleCogModal(show: boolean): void {
       actionsGrid.style.gridTemplateColumns = isFromSplash ? '1fr' : '1fr 1fr 1fr';
     }
     renderActiveVouchers();
+    applyDisplaySettings();
   }
   modal.classList.toggle('hidden', !show);
 }
 
 function renderActiveVouchers(): void {
-  const container = document.getElementById('ui-cog-vouchers-list');
-  const countEl = document.getElementById('ui-cog-vouchers-count');
+  const cogContainer = document.getElementById('ui-cog-vouchers-list');
+  const cogCountEl = document.getElementById('ui-cog-vouchers-count');
+  const popupContainer = document.getElementById('ui-vouchers-modal-list');
+  const popupCountEl = document.getElementById('ui-vouchers-modal-count');
+
   const s = getState();
   const vouchers = s.vouchersBought || [];
 
-  if (countEl) {
-    countEl.textContent = `${vouchers.length} Active`;
+  if (cogCountEl) {
+    cogCountEl.textContent = `${vouchers.length} Active`;
+  }
+  if (popupCountEl) {
+    popupCountEl.textContent = `${vouchers.length} Active`;
   }
 
-  if (!container) return;
+  const emptyHtml = `<div style="font-size:12px; color:#64748b; font-style:italic; padding:12px 0; text-align:center;">No vouchers purchased yet this run.</div>`;
 
-  if (vouchers.length === 0) {
-    container.innerHTML = `<div style="font-size:12px; color:#64748b; font-style:italic; padding:4px 0;">No vouchers purchased yet this run.</div>`;
-    return;
-  }
-
-  container.innerHTML = vouchers.map(vId => {
+  const listHtml = vouchers.length === 0 ? emptyHtml : vouchers.map(vId => {
     const def = VOUCHER_CATALOG.find(x => x.id === vId);
     const name = def ? def.name : vId;
     const desc = def ? def.desc : '';
     return `
-      <div style="background:#0b0e14; border:1px solid #1e293b; border-left:3px solid var(--gold); border-radius:6px; padding:7px 10px; display:flex; flex-direction:column; gap:2px;">
+      <div style="background:#0b0e14; border:1px solid #1e293b; border-left:3px solid var(--gold); border-radius:6px; padding:8px 11px; display:flex; flex-direction:column; gap:3px;">
         <div style="display:flex; justify-content:space-between; align-items:center;">
-          <span style="font-size:12px; font-weight:bold; color:var(--gold);">🎟️ ${name}</span>
+          <span style="font-size:13px; font-weight:bold; color:var(--gold);">🎟️ ${name}</span>
           <span class="lib-tag-pill voucher-active-badge" style="font-size:10px; background:rgba(234,179,8,0.15); color:var(--gold); border-radius:999px; padding:1px 6px; font-weight:bold;">ACTIVE</span>
         </div>
-        <div style="font-size:11px; color:#cbd5e1; line-height:1.3;">${desc}</div>
+        <div style="font-size:11px; color:#cbd5e1; line-height:1.35;">${desc}</div>
       </div>
     `;
   }).join('');
+
+  if (cogContainer) cogContainer.innerHTML = listHtml;
+  if (popupContainer) popupContainer.innerHTML = listHtml;
+}
+
+function toggleVouchersModal(show: boolean): void {
+  if (isPlayfieldLocked && show) return;
+  const modal = document.getElementById('ui-vouchers-modal');
+  if (!modal) return;
+  if (show) {
+    renderActiveVouchers();
+    applyDisplaySettings();
+  }
+  modal.classList.toggle('hidden', !show);
 }
 
 function openRunVouchersModal(): void {
-  toggleCogModal(true);
-  const el = document.getElementById('ui-cog-vouchers-container');
-  if (el && typeof el.scrollIntoView === 'function') {
-    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }
+  toggleVouchersModal(true);
 }
 
 function uiConfirmResetStats(): void {
@@ -5475,9 +5564,14 @@ function renderRunStats(): void {
 (window as any).hideRoundCashBreakdown = hideRoundCashBreakdown;
 (window as any).renderActiveVouchers = renderActiveVouchers;
 (window as any).openRunVouchersModal = openRunVouchersModal;
+(window as any).toggleVouchersModal = toggleVouchersModal;
 (window as any).uiConfirmResetStats = uiConfirmResetStats;
 (window as any).uiCancelResetStats = uiCancelResetStats;
 (window as any).uiExecuteResetStats = uiExecuteResetStats;
+(window as any).toggleCrtSetting = toggleCrtSetting;
+(window as any).toggleScanlinesSetting = toggleScanlinesSetting;
+(window as any).initDisplaySettings = initDisplaySettings;
+(window as any).applyDisplaySettings = applyDisplaySettings;
 
 /* ==========================================================
    BOOT
@@ -5491,4 +5585,5 @@ $('ui-table-felt').addEventListener('click', () => {
   }
 });
 
+initDisplaySettings();
 startNewRun();

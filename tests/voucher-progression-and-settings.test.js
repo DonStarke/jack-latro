@@ -81,7 +81,8 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   const rulesText = cogModalBox.textContent;
   ck('Economy rule does NOT state $1 per unused deal', !rulesText.includes('+$1 per unused Deal') && !rulesText.includes('+ $1 per unused Deal'));
   ck('Economy rule mentions $25 saved for full $5 interest', rulesText.includes('$25 saved') || rulesText.includes('$25'));
-  ck('Economy rule mentions $40 saved with High Roller Credit', rulesText.includes('$40 saved') || rulesText.includes('$40'));
+  ck('Economy rule mentions $50 saved with High Roller', rulesText.includes('$50 saved') || rulesText.includes('$50'));
+  ck('Economy rule mentions $100 saved with High Roller 2', rulesText.includes('$100 saved') || rulesText.includes('$100'));
 
   // -------------------------------------------------------------
   // TEST 2: ACTIVE RUN VOUCHERS DISPLAY IN SETTINGS & HUD
@@ -91,26 +92,33 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   ck('Vouchers container #ui-cog-vouchers-container exists in settings', !!$('ui-cog-vouchers-container'));
   ck('Vouchers count element #ui-cog-vouchers-count exists', !!$('ui-cog-vouchers-count'));
   ck('Vouchers list container #ui-cog-vouchers-list exists', !!$('ui-cog-vouchers-list'));
+  ck('Dedicated vouchers popup modal #ui-vouchers-modal exists in DOM', !!$('ui-vouchers-modal'));
+  ck('Dedicated vouchers popup list #ui-vouchers-modal-list exists', !!$('ui-vouchers-modal-list'));
   ck('HUD active vouchers button #btn-vouchers-hud exists in header', !!$('btn-vouchers-hud'));
 
   // Initial state: 0 vouchers
   w.renderActiveVouchers();
   ck('Voucher count is initially 0 Active', text('ui-cog-vouchers-count') === '0 Active');
+  ck('Dedicated modal count is initially 0 Active', text('ui-vouchers-modal-count') === '0 Active');
   ck('Initial vouchers list shows empty placeholder', text('ui-cog-vouchers-list').includes('No vouchers purchased'));
+  ck('Initial dedicated modal list shows empty placeholder', text('ui-vouchers-modal-list').includes('No vouchers purchased'));
 
   // Add vouchers to state
   w.patchState({ vouchersBought: ['blank_voucher', 'extra_hand'] });
   w.renderActiveVouchers();
   ck('Voucher count updates to 2 Active', text('ui-cog-vouchers-count') === '2 Active');
+  ck('Dedicated modal count updates to 2 Active', text('ui-vouchers-modal-count') === '2 Active');
   ck('Vouchers list renders Blank Voucher card', text('ui-cog-vouchers-list').includes('Blank Voucher'));
   ck('Vouchers list renders Extra Cushion card', text('ui-cog-vouchers-list').includes('Extra Cushion'));
+  ck('Dedicated modal renders Blank Voucher card', text('ui-vouchers-modal-list').includes('Blank Voucher'));
+  ck('Dedicated modal renders Extra Cushion card', text('ui-vouchers-modal-list').includes('Extra Cushion'));
   ck('Vouchers list renders active badges', $('ui-cog-vouchers-list').querySelectorAll('.voucher-active-badge, .lib-tag-pill').length >= 2);
 
-  // Clicking HUD button opens run vouchers in settings
+  // Clicking HUD button opens dedicated vouchers popup modal
   w.openRunVouchersModal();
-  ck('openRunVouchersModal opens cog modal', !isHidden($('ui-cog-modal')));
-  w.toggleCogModal(false);
-  ck('Closing cog modal hides it', isHidden($('ui-cog-modal')));
+  ck('openRunVouchersModal opens dedicated vouchers modal', !isHidden($('ui-vouchers-modal')));
+  w.toggleVouchersModal(false);
+  ck('Closing vouchers modal hides it', isHidden($('ui-vouchers-modal')));
 
   // Reset vouchersBought
   w.patchState({ vouchersBought: [] });
@@ -166,10 +174,11 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   ck('Clearance Rack 2 exists in catalog', !!findV('clearance_sale_2'));
   ck('Overstock Shelves exists in catalog', !!findV('overstock'));
   ck('Overstock Shelves 2 exists in catalog', !!findV('overstock_2'));
-  ck('High Roller Credit exists in catalog', !!findV('deep_pockets'));
-  ck('Liquid Assets exists in catalog', !!findV('liquidity_pass'));
+  ck('High Roller exists in catalog', !!findV('deep_pockets') && findV('deep_pockets').name === 'High Roller');
+  ck('High Roller 2 exists in catalog', !!findV('deep_pockets_2') && findV('deep_pockets_2').name === 'High Roller 2');
 
   // Removed vouchers MUST NOT exist
+  ck('Liquid Assets removed from catalog', !findV('liquidity_pass'));
   ck('Table Leverage removed from catalog', !findV('table_leverage'));
   ck('High Stakes Table removed from catalog', !findV('base_boost'));
   ck('Precision Edge removed from catalog', !findV('card_sharp'));
@@ -204,6 +213,27 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   ck('Overstock Shelves is available initially', isAvail('overstock', []));
   ck('Overstock Shelves 2 is NOT available without Overstock Shelves', !isAvail('overstock_2', []));
   ck('Overstock Shelves 2 BECOMES available after buying Overstock Shelves', isAvail('overstock_2', ['overstock']));
+
+  // Tree 5: High Roller ($10 cap) -> High Roller 2 ($20 cap)
+  ck('High Roller is available initially', isAvail('deep_pockets', []));
+  ck('High Roller 2 is NOT available without High Roller', !isAvail('deep_pockets_2', []));
+  ck('High Roller 2 BECOMES available after buying High Roller', isAvail('deep_pockets_2', ['deep_pockets']));
+  ck('High Roller not available once bought', !isAvail('deep_pockets', ['deep_pockets']));
+  ck('High Roller 2 not available once bought', !isAvail('deep_pockets_2', ['deep_pockets', 'deep_pockets_2']));
+
+  // Test Interest Caps: Base $5 (on $25), High Roller $10 (on $50), High Roller 2 $20 (on $100)
+  w.patchState({ vouchersBought: [], money: 150, handsLeft: 0, blindIndex: 0 });
+  ck('Base interest at $150 held is capped at $5', w.computeBlindPayout().interest === 5);
+
+  w.patchState({ vouchersBought: ['deep_pockets'], money: 50 });
+  ck('High Roller earns $10 interest at $50 held', w.computeBlindPayout().interest === 10);
+  w.patchState({ money: 150 });
+  ck('High Roller interest at $150 held is capped at $10', w.computeBlindPayout().interest === 10);
+
+  w.patchState({ vouchersBought: ['deep_pockets', 'deep_pockets_2'], money: 100 });
+  ck('High Roller 2 earns $20 interest at $100 held', w.computeBlindPayout().interest === 20);
+  w.patchState({ money: 200 });
+  ck('High Roller 2 interest at $200 held is capped at $20', w.computeBlindPayout().interest === 20);
 
   // -------------------------------------------------------------
   // TEST 6: REROLL COSTS & SHOP PACK COUNTS

@@ -372,8 +372,8 @@ Vouchers appear in the shop extra slot. Once bought, they grant **permanent run-
 | `clearance_sale_2`| **Clearance Rack 2**| $10 | Clearance Rack | Shop Rerolls start at $1 | Reduces initial shop reroll cost from $\$2$ to $\$1$ permanently. |
 | `overstock` | **Overstock Shelves** | $10 | None | 2 Booster Pack Slots | Shop offers 2 booster pack slots instead of 1. |
 | `overstock_2` | **Overstock Shelves 2**| $10 | Overstock Shelves | 3 Booster Pack Slots | Shop offers 3 booster pack slots instead of 2. |
-| `deep_pockets` | **High Roller Credit**| $10 | None | Interest Cap raised to $8 | Increases max interest from $\$5$ to $\$8$ per blind (interest earned on up to $\$40$). |
-| `liquidity_pass` | **Liquid Assets** | $10 | None | Interest per $4 | Earn interest for every $4 held instead of every $5 permanently. |
+| `deep_pockets` | **High Roller** | $10 | None | Interest Cap raised to $10 | Increases max interest from $\$5$ to $\$10$ per blind (interest earned on up to $\$50$). |
+| `deep_pockets_2` | **High Roller 2** | $10 | High Roller | Interest Cap raised to $20 | Increases max interest from $\$10$ to $\$20$ per blind (interest earned on up to $\$100$). |
 
 ---
 
@@ -431,7 +431,7 @@ graph TD
 
 ### Strategic Rules of Thumb
 1. **The $25 Interest Rule**:
-   - Prioritize reaching and maintaining $\$25$ in cash. $\$25$ yields $\$5$ per blind in guaranteed passive interest ($\$15$ per Ante). Compound Edge converts this directly into $+100\text{ Chips}$ per hand. With High Roller Credit, interest compounds up to $\$8$ per blind ($\$40$ purse).
+   - Prioritize reaching and maintaining $\$25$ in cash. $\$25$ yields $\$5$ per blind in guaranteed passive interest ($\$15$ per Ante). Compound Edge converts this directly into $+100\text{ Chips}$ per hand. With High Roller, interest compounds up to $\$10$ per blind ($\$50$ purse); with High Roller 2, up to $\$20$ per blind ($\$100$ purse).
 2. **Joker Positioning Invariant**:
    - Arrange jokers in ascending order of operations:
      $$[\text{Scaling/Flat Chips}] \longrightarrow [\text{Flat }+Mult] \longrightarrow [\times Mult]$$

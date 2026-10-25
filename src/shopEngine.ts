@@ -32,6 +32,9 @@ function isVoucherAvailable(vId: string, vouchersBought: ReadonlyArray<string>):
   if (vId === 'overstock_2') {
     return vouchersBought.includes('overstock');
   }
+  if (vId === 'deep_pockets_2') {
+    return vouchersBought.includes('deep_pockets');
+  }
   return true;
 }
 
@@ -83,8 +86,8 @@ function calcBlindPayout(
 /** Payout for clearing the current Blind, from current state. Does not modify state. */
 function computeBlindPayout(): PendingPayout {
   const s = getState();
-  const maxInterest = s.vouchersBought.includes('deep_pockets') ? 8 : INTEREST_CAP;
-  const interestPer = s.vouchersBought.includes('liquidity_pass') ? 4 : INTEREST_PER;
+  const maxInterest = s.vouchersBought.includes('deep_pockets_2') ? 20 : (s.vouchersBought.includes('deep_pockets') ? 10 : INTEREST_CAP);
+  const interestPer = INTEREST_PER;
   const hasBanker = s.jokers.some(j => j.id === 'the_banker');
   return calcBlindPayout(s.blindIndex, s.handsLeft, s.money, getBalanceConfig().unusedDealCashCap, maxInterest, interestPer, hasBanker);
 }

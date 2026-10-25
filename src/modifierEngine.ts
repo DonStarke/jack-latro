@@ -137,8 +137,8 @@ const VOUCHER_CATALOG: ReadonlyArray<VoucherDef> = [
   { id: 'clearance_sale_2', name: 'Clearance Rack 2', cost: 10, desc: 'Shop rerolls start at $1 permanently.' },
   { id: 'overstock', name: 'Overstock Shelves', cost: 10, desc: 'Shop offers +1 Booster Pack slot permanently (2 packs instead of 1).' },
   { id: 'overstock_2', name: 'Overstock Shelves 2', cost: 10, desc: 'Shop offers +1 Booster Pack slot permanently (3 packs instead of 2).' },
-  { id: 'deep_pockets', name: 'High Roller Credit', cost: 10, desc: 'Raises interest cap from $5 to $8 (earn interest up to $40).' },
-  { id: 'liquidity_pass', name: 'Liquid Assets', cost: 10, desc: 'Earn interest for every $4 held instead of every $5 permanently.' }
+  { id: 'deep_pockets', name: 'High Roller', cost: 10, desc: 'Raises interest cap to $10 (earn interest up to $50).' },
+  { id: 'deep_pockets_2', name: 'High Roller 2', cost: 10, desc: 'Raises interest cap to $20 (earn interest up to $100).' }
 ];
 
 const BOSS_BLINDS: ReadonlyArray<BossBlindDef> = [
