@@ -429,22 +429,22 @@ function scoreJokerPriorityForBot(joker: JokerInstance, botType: BotType): numbe
   if (joker.id === 'chip_stacker') score += 5 + (joker.bonusChips || 0) * 0.2;
   if (joker.id === 'hot_hand') score += 6 + (joker.bonusMult || 0) * 0.5;
   if (joker.id === 'the_bullseye') score += 6 + (joker.bonusMult || 0) * 1.0;
-  if (joker.id === 'bad_beat_jackpot') score += 5 + (joker.bonusMult || 0) * 1.0;
-  if (joker.id === 'fortune_teller') score += 7;
+  if (joker.id === 'bad_beat_jackpot') score += 5 + (joker.bonusMult || 0) * 0.8;
+  if (joker.id === 'fortune_teller') score += 5;
 
   if (botType === 'expert') {
-    if (['bust_cushion', 'the_shark', 'blackjack_tycoon', 'card_sharp_joker', 'double_or_nothing', 'deja_vu', 'monochrome', 'rain_man', 'the_spotter', 'crown_jewel', 'the_banker', 'the_bullseye', 'marked_deck', 'street_magician'].includes(joker.id)) score += 6;
-    if (['golden_parachute', 'diamond_cutter', 'the_grinder', 'compound_edge'].includes(joker.id)) score += 4;
-    if (['vip_high_roller', 'ace_up_sleeve', 'push_it_good', 'trips_ahoy', 'spade_slicer', 'crimson_heart', 'club_sandwich', 'slow_and_steady', 'sweet_16'].includes(joker.id)) score += 3;
+    if (['bust_cushion', 'the_shark', 'blackjack_tycoon', 'card_sharp_joker', 'double_or_nothing', 'deja_vu', 'monochrome', 'rain_man', 'the_spotter', 'crown_jewel', 'the_banker', 'the_bullseye', 'marked_deck', 'street_magician', 'tightrope_walker', 'pocket_rockets'].includes(joker.id)) score += 6;
+    if (['golden_parachute', 'diamond_cutter', 'the_grinder', 'compound_edge', 'side_bet', 'bounty_hunter'].includes(joker.id)) score += 4;
+    if (['vip_high_roller', 'ace_up_sleeve', 'push_it_good', 'trips_ahoy', 'spade_slicer', 'crimson_heart', 'club_sandwich', 'slow_and_steady', 'sweet_16', 'card_counter', 'even_steven', 'odd_ball', 'red_velvet', 'dark_knight', 'kaleidoscope', 'momentum', 'blowout'].includes(joker.id)) score += 4;
     return score;
   }
 
   if (botType === 'charlie') {
-    if (['bust_cushion', 'safety_net', 'hit_me_baby', 'card_counter', 'even_steven', 'odd_ball', 'the_grinder', 'trips_ahoy', 'small_fry', 'street_magician'].includes(joker.id)) score += 8;
+    if (['bust_cushion', 'safety_net', 'hit_me_baby', 'card_counter', 'even_steven', 'odd_ball', 'the_grinder', 'trips_ahoy', 'small_fry', 'street_magician', 'kaleidoscope', 'momentum'].includes(joker.id)) score += 8;
   } else if (botType === 'highroller') {
-    if (['vip_high_roller', 'ace_up_sleeve', 'blackjack_tycoon', 'minimalist', 'double_or_nothing', 'the_shark', 'pocket_rockets', 'trips_ahoy', 'rain_man', 'crown_jewel', 'the_bullseye', 'tightrope_walker', 'side_bet'].includes(joker.id)) score += 8;
+    if (['vip_high_roller', 'ace_up_sleeve', 'blackjack_tycoon', 'minimalist', 'double_or_nothing', 'the_shark', 'pocket_rockets', 'trips_ahoy', 'rain_man', 'crown_jewel', 'the_bullseye', 'tightrope_walker', 'side_bet', 'blowout'].includes(joker.id)) score += 8;
   } else if (botType === 'synergy') {
-    if (['bust_cushion', 'daredevil', 'chip_stacker', 'the_shark', 'blackjack_tycoon', 'ace_up_sleeve', 'push_it_good', 'compound_edge', 'hot_hand', 'spade_slicer', 'crimson_heart', 'diamond_cutter', 'club_sandwich', 'monochrome', 'card_sharp_joker', 'slow_and_steady', 'the_spotter', 'rain_man'].includes(joker.id)) score += 6;
+    if (['bust_cushion', 'daredevil', 'chip_stacker', 'the_shark', 'blackjack_tycoon', 'ace_up_sleeve', 'push_it_good', 'compound_edge', 'hot_hand', 'spade_slicer', 'crimson_heart', 'diamond_cutter', 'club_sandwich', 'monochrome', 'card_sharp_joker', 'slow_and_steady', 'the_spotter', 'rain_man', 'kaleidoscope', 'momentum', 'pocket_rockets', 'trips_ahoy', 'even_steven', 'odd_ball', 'card_counter', 'dark_knight', 'red_velvet', 'tightrope_walker', 'safety_net'].includes(joker.id)) score += 6;
   }
   return score;
 }
@@ -1044,8 +1044,8 @@ function runBatchSimulationForBot(numRuns: number, botType: BotType, cfg: SimCon
           if (res.rawOutcomeType === 'LOSS' && !res.pBust) {
             for (const j of simRun.jokers) {
               if (j.id === 'bad_beat_jackpot') {
-                j.bonusMult = (j.bonusMult || 0) + 1;
-                simRun.money += 4;
+                j.bonusMult = Math.min(10, (j.bonusMult || 0) + 1);
+                simRun.money += 2;
               }
             }
           }

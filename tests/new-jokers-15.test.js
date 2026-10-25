@@ -54,7 +54,7 @@ const ck = (n, v) => {
   const expectedJokers = [
     { id: 'street_magician', rarity: 'uncommon', cost: 6, isX: false },
     { id: 'marked_deck', rarity: 'uncommon', cost: 6, isX: false },
-    { id: 'fortune_teller', rarity: 'common', cost: 5, isX: false },
+    { id: 'fortune_teller', rarity: 'uncommon', cost: 6, isX: false },
     { id: 'crown_jewel', rarity: 'rare', cost: 7, isX: true },
     { id: 'the_bullseye', rarity: 'uncommon', cost: 6, isX: false },
     { id: 'blowout', rarity: 'common', cost: 5, isX: false },
@@ -85,7 +85,7 @@ const ck = (n, v) => {
     const res = w.scoreHand({
       playerHand: [{ rank: '10', suit: '♠' }, { rank: '9', suit: '♥' }],
       dealerHand: [{ rank: '10', suit: '♦' }, { rank: '7', suit: '♣' }],
-      jokers: [{ id: 'fortune_teller', name: 'Fortune Teller', cost: 5, rarity: 'common', isXMult: false, archetype: 'mult' }],
+      jokers: [{ id: 'fortune_teller', name: 'Fortune Teller', cost: 6, rarity: 'uncommon', isXMult: false, archetype: 'mult' }],
       bossBlind: null,
       ante: 1,
       money: 10,
@@ -96,9 +96,9 @@ const ck = (n, v) => {
       anteHandScaling: false,
       tarotsUsed: 4
     });
-    // Base Win: 50c x 2m. Cards: 10 + 9 = 19c. Fortune Teller: 4 * 15 = 60c, 4 * 2 = 8m.
-    // Total Chips: 50 + 19 + 60 = 129c. Total Mult: 2 + 8 = 10m.
-    ck('Fortune Teller adds +60c and +8m for 4 tarots used', res.chips === 129 && res.mult === 10);
+    // Base Win: 50c x 2m. Cards: 10 + 9 = 19c. Fortune Teller: 4 * 6 = 24c, 4 * 1 = 4m.
+    // Total Chips: 50 + 19 + 24 = 93c. Total Mult: 2 + 4 = 6m.
+    ck('Fortune Teller adds +24c and +4m for 4 tarots used', res.chips === 93 && res.mult === 6);
     ck('Fortune Teller step appears in scoring steps', res.steps.some(s => s.jokerId === 'fortune_teller'));
   }
 
@@ -158,9 +158,9 @@ const ck = (n, v) => {
       doubledDown: false,
       anteHandScaling: false
     });
-    // Margin = 3. Blowout adds 3 * 20 = 60c, 3 * 2 = 6m.
-    // Base Win: 50c x 2m. Cards: 10 + 10 = 20c. Total chips = 50 + 20 + 60 = 130c. Total mult = 2 + 6 = 8m.
-    ck('Blowout adds +60c and +6m for 3-point victory margin', res.chips === 130 && res.mult === 8);
+    // Margin = 3. Blowout adds 3 * 25 = 75c, 3 * 3 = 9m.
+    // Base Win: 50c x 2m. Cards: 10 + 10 = 20c. Total chips = 50 + 20 + 75 = 145c. Total mult = 2 + 9 = 11m.
+    ck('Blowout adds +75c and +9m for 3-point victory margin', res.chips === 145 && res.mult === 11);
   }
 
   // Test Bounty Hunter
@@ -251,12 +251,12 @@ const ck = (n, v) => {
       doubledDown: false,
       anteHandScaling: false
     });
-    // Exact 21: 85c x 3m. Cards: 9 + 7 + 5 = 21c. Tightrope: +75c, +8m.
-    ck('Tightrope Walker triggers on 21 (+75c/+8m)', res21.steps.some(s => s.jokerId === 'tightrope_walker' && s.deltaChips === 75 && s.deltaMult === 8));
+    // Exact 21: 85c x 3m. Cards: 9 + 7 + 5 = 21c. Tightrope: +80c, +8m.
+    ck('Tightrope Walker triggers on 21 (+80c/+8m)', res21.steps.some(s => s.jokerId === 'tightrope_walker' && s.deltaChips === 80 && s.deltaMult === 8));
 
-    const res19 = w.scoreHand({
-      playerHand: [{ rank: '10', suit: '♠' }, { rank: '9', suit: '♥' }], // 19
-      dealerHand: [{ rank: '10', suit: '♦' }, { rank: '8', suit: '♣' }],
+    const res18 = w.scoreHand({
+      playerHand: [{ rank: '10', suit: '♠' }, { rank: '8', suit: '♥' }], // 18
+      dealerHand: [{ rank: '10', suit: '♦' }, { rank: '7', suit: '♣' }],
       jokers: [{ id: 'tightrope_walker', name: 'Tightrope Walker', cost: 6, rarity: 'uncommon', isXMult: false, archetype: 'chips' }],
       bossBlind: null,
       ante: 1,
@@ -267,7 +267,7 @@ const ck = (n, v) => {
       doubledDown: false,
       anteHandScaling: false
     });
-    ck('Tightrope Walker does not trigger on 19', !res19.steps.some(s => s.jokerId === 'tightrope_walker'));
+    ck('Tightrope Walker does not trigger on 18', !res18.steps.some(s => s.jokerId === 'tightrope_walker'));
   }
 
   // Test Small Fry
@@ -325,7 +325,7 @@ const ck = (n, v) => {
       doubledDown: false,
       anteHandScaling: false
     });
-    ck('Kaleidoscope triggers on 3 different suits (+80c/+6m)', res3Suits.steps.some(s => s.jokerId === 'kaleidoscope' && s.deltaChips === 80 && s.deltaMult === 6));
+    ck('Kaleidoscope triggers on 3 different suits (+90c/+8m)', res3Suits.steps.some(s => s.jokerId === 'kaleidoscope' && s.deltaChips === 90 && s.deltaMult === 8));
 
     // 2 suits (♠, ♠, ♥)
     const res2Suits = w.scoreHand({
@@ -341,7 +341,23 @@ const ck = (n, v) => {
       doubledDown: false,
       anteHandScaling: false
     });
-    ck('Kaleidoscope does not trigger on only 2 suits', !res2Suits.steps.some(s => s.jokerId === 'kaleidoscope'));
+    ck('Kaleidoscope triggers on 2 different suits (+40c/+4m)', res2Suits.steps.some(s => s.jokerId === 'kaleidoscope' && s.deltaChips === 40 && s.deltaMult === 4));
+
+    // 1 suit (all ♠)
+    const res1Suit = w.scoreHand({
+      playerHand: [{ rank: '6', suit: '♠' }, { rank: '8', suit: '♠' }, { rank: '5', suit: '♠' }],
+      dealerHand: [{ rank: '10', suit: '♦' }, { rank: '7', suit: '♣' }],
+      jokers: [{ id: 'kaleidoscope', name: 'Kaleidoscope', cost: 5, rarity: 'common', isXMult: false, archetype: 'mult' }],
+      bossBlind: null,
+      ante: 1,
+      money: 10,
+      baseWinChipBonus: 0,
+      baseWinMultBonus: 0,
+      tempBonusChips: 0,
+      doubledDown: false,
+      anteHandScaling: false
+    });
+    ck('Kaleidoscope does not trigger on only 1 suit', !res1Suit.steps.some(s => s.jokerId === 'kaleidoscope'));
   }
 
   // Test Momentum
@@ -360,8 +376,8 @@ const ck = (n, v) => {
       anteHandScaling: false,
       handsWonInBlind: 2
     });
-    // 2 wins in blind = +40c, +6m
-    ck('Momentum scales with handsWonInBlind (+40c/+6m on 2 wins)', res2Wins.steps.some(s => s.jokerId === 'momentum' && s.deltaChips === 40 && s.deltaMult === 6));
+    // Baseline 25c + 2 * 30 = 85c, 3m + 2 * 4 = 11m
+    ck('Momentum scales with handsWonInBlind (+85c/+11m on 2 prior wins)', res2Wins.steps.some(s => s.jokerId === 'momentum' && s.deltaChips === 85 && s.deltaMult === 11));
   }
 
   // Test Side Bet
@@ -380,7 +396,7 @@ const ck = (n, v) => {
       doubledDown: false,
       anteHandScaling: false
     });
-    ck('Side Bet awards +80c and +$8 Cash for same-color pair', resColorPair.steps.some(s => s.jokerId === 'side_bet' && s.deltaChips === 80 && s.deltaMoney === 8));
+    ck('Side Bet awards +100c and +$10 Cash for same-color pair', resColorPair.steps.some(s => s.jokerId === 'side_bet' && s.deltaChips === 100 && s.deltaMoney === 10));
 
     // Mixed color pair (♠ and ♥)
     const resMixedPair = w.scoreHand({
@@ -396,7 +412,23 @@ const ck = (n, v) => {
       doubledDown: false,
       anteHandScaling: false
     });
-    ck('Side Bet awards +40c and +$4 Cash for mixed-color pair', resMixedPair.steps.some(s => s.jokerId === 'side_bet' && s.deltaChips === 40 && s.deltaMoney === 4));
+    ck('Side Bet awards +50c and +$5 Cash for mixed-color pair', resMixedPair.steps.some(s => s.jokerId === 'side_bet' && s.deltaChips === 50 && s.deltaMoney === 5));
+
+    // Suited starting cards (♠ and ♠, not pair)
+    const resSuited = w.scoreHand({
+      playerHand: [{ rank: '10', suit: '♠' }, { rank: '7', suit: '♠' }],
+      dealerHand: [{ rank: '10', suit: '♦' }, { rank: '6', suit: '♣' }],
+      jokers: [{ id: 'side_bet', name: 'Side Bet', cost: 5, rarity: 'common', isXMult: false, archetype: 'econ' }],
+      bossBlind: null,
+      ante: 1,
+      money: 10,
+      baseWinChipBonus: 0,
+      baseWinMultBonus: 0,
+      tempBonusChips: 0,
+      doubledDown: false,
+      anteHandScaling: false
+    });
+    ck('Side Bet awards +25c and +$2 Cash for suited cards', resSuited.steps.some(s => s.jokerId === 'side_bet' && s.deltaChips === 25 && s.deltaMoney === 2));
   }
 
   // 3. STATE & PROGRESSION HOOKS

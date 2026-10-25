@@ -52,15 +52,19 @@ function getJokerFullDesc(j: JokerInstance): string {
     return `Permanently gains +2 Mult for the rest of run every time you score an Exact 21. (Currently: +${j.bonusMult || 0} Mult)`;
   }
   if (j.id === 'bad_beat_jackpot') {
-    return `+1 Mult permanently for the rest of run and earn +$4 Cash whenever you lose a hand to the Dealer (without busting). (Currently: +${j.bonusMult || 0} Mult)`;
+    return `+1 Mult permanently (max +10 Mult) and earn +$2 Cash whenever you lose a hand to the Dealer (without busting). (Currently: +${j.bonusMult || 0} Mult)`;
   }
   if (j.id === 'fortune_teller') {
     const used = getState().runStats.tarotsUsed || 0;
-    return `+15 Chips & +2 Mult for each Tarot or Table Cheat used this run. (Currently: ${used} used — yielding +${used * 15}c / +${used * 2}m)`;
+    const addC = Math.min(60, used * 6);
+    const addM = Math.min(10, used * 1);
+    return `+6 Chips & +1 Mult for each Tarot or Table Cheat used this run (max +60c/+10m). (Currently: ${used} used — yielding +${addC}c / +${addM}m)`;
   }
   if (j.id === 'momentum') {
-    const wins = Math.min(5, getState().handsWonInBlind || 0);
-    return `+20 Chips & +3 Mult for each hand already won in the current Blind (stacks up to +100c/+15m). (Current wins: ${wins} — yielding +${wins * 20}c / +${wins * 3}m)`;
+    const wins = Math.min(4, getState().handsWonInBlind || 0);
+    const addC = 25 + wins * 30;
+    const addM = 3 + wins * 4;
+    return `+25 Chips & +3 Mult baseline on a Win, plus +30 Chips & +4 Mult for each prior win in the current Blind (stacks up to +145c/+19m). (Current prior wins: ${wins} — yielding +${addC}c / +${addM}m)`;
   }
   if (j.id === 'the_banker') {
     return 'Interest earned at the end of each Blind is increased by +50%. If you end a Blind with $25+, start the next Blind with +1 extra Deal.';
@@ -134,15 +138,19 @@ function getJokerMiniSubHTML(j: JokerInstance): string {
     return `<span style="color:var(--mult);font-weight:900;">+${j.bonusMult || 0}m</span> (+2m/21)`;
   }
   if (j.id === 'bad_beat_jackpot') {
-    return `<span style="color:var(--mult);font-weight:900;">+${j.bonusMult || 0}m</span> (+1m/Loss)`;
+    return `<span style="color:var(--mult);font-weight:900;">+${j.bonusMult || 0}m</span> (+1m/Loss, max 10)`;
   }
   if (j.id === 'fortune_teller') {
     const used = getState().runStats.tarotsUsed || 0;
-    return `<span style="color:#a855f7;font-weight:900;">${used} Used</span> (+${used * 15}c/+${used * 2}m)`;
+    const addC = Math.min(60, used * 6);
+    const addM = Math.min(10, used * 1);
+    return `<span style="color:#a855f7;font-weight:900;">${used} Used</span> (+${addC}c/+${addM}m)`;
   }
   if (j.id === 'momentum') {
-    const wins = Math.min(5, getState().handsWonInBlind || 0);
-    return `<span style="color:#eab308;font-weight:900;">${wins} Wins</span> (+${wins * 20}c/+${wins * 3}m)`;
+    const wins = Math.min(4, getState().handsWonInBlind || 0);
+    const addC = 25 + wins * 30;
+    const addM = 3 + wins * 4;
+    return `<span style="color:#eab308;font-weight:900;">${wins} Wins</span> (+${addC}c/+${addM}m)`;
   }
   if (j.id === 'the_banker') {
     return '<span style="color:#eab308;font-weight:900;">+50% Interest</span> (+1 Deal@$25)';
@@ -157,7 +165,7 @@ function getJokerMiniSubHTML(j: JokerInstance): string {
     return '<span style="color:#f59e0b;font-weight:900;">×2.2m/+$4</span> (Nat BJ)';
   }
   if (j.id === 'blowout') {
-    return '<span style="color:#38bdf8;font-weight:900;">+20c/+2m</span> (per Margin)';
+    return '<span style="color:#38bdf8;font-weight:900;">+25c/+3m</span> (per Margin)';
   }
   if (j.id === 'bounty_hunter') {
     return '<span style="color:#eab308;font-weight:900;">×1.6m</span> (dBust +$4)';
@@ -166,16 +174,16 @@ function getJokerMiniSubHTML(j: JokerInstance): string {
     return '<span style="color:#10b981;font-weight:900;">+80c/+6m</span> (+$2 Push)';
   }
   if (j.id === 'tightrope_walker') {
-    return '<span style="color:#ec4899;font-weight:900;">+75c/+8m</span> (on 20-22)';
+    return '<span style="color:#ec4899;font-weight:900;">+80c/+8m</span> (on 19-22)';
   }
   if (j.id === 'small_fry') {
     return '<span style="color:#f97316;font-weight:900;">+15c/+2m</span> (2-5 lows)';
   }
   if (j.id === 'kaleidoscope') {
-    return '<span style="color:#06b6d4;font-weight:900;">+80c/+6m</span> (≥3 Suits)';
+    return '<span style="color:#06b6d4;font-weight:900;">+40c/+4m</span> (≥2 Suits)';
   }
   if (j.id === 'side_bet') {
-    return '<span style="color:#eab308;font-weight:900;">+$4 to +$8</span> (Pair Bet)';
+    return '<span style="color:#eab308;font-weight:900;">+$2 to +$10</span> (Pair/Suit Bet)';
   }
   if (j.id === 'daredevil') {
     const cur = j.bonusMult || 0;
@@ -190,7 +198,7 @@ function getJokerMiniSubHTML(j: JokerInstance): string {
     return `<span style="color:var(--chips);font-weight:900;">+${sets * 10}c</span> (+10c/$5, max 150)`;
   }
   if (j.id === 'bust_cushion') return `22 = 21! (Bust 23+)`;
-  if (j.id === 'card_counter') return `+40c / low (2-6)`;
+  if (j.id === 'card_counter') return `+45c, +2m / low (2-6)`;
   if (j.id === 'vip_high_roller') return `+10c, +5m / Face`;
   if (j.id === 'ace_up_sleeve') return `+50c, +5m on Ace`;
   if (j.id === 'sweet_16') return `+50c, +15m (≤16 Stand)`;
@@ -198,27 +206,27 @@ function getJokerMiniSubHTML(j: JokerInstance): string {
   if (j.id === 'hit_me_baby') return `+5m / card > 2`;
   if (j.id === 'golden_parachute') return `+$3, +40c on dBust`;
   if (j.id === 'push_it_good') return `Push = Win (+50c,+4m)`;
-  if (j.id === 'blackjack_tycoon') return `×2m, +$2 on 21`;
-  if (j.id === 'the_shark') return `×1.5m (Win ≥3/dBust)`;
-  if (j.id === 'safety_net') return `Bust = 40c × 2m (Salvage)`;
-  if (j.id === 'even_steven') return `+10c, +4m / Even`;
-  if (j.id === 'red_velvet') return `+35c / ♥♦`;
-  if (j.id === 'dark_knight') return `+10c, +3m / ♠♣`;
+  if (j.id === 'blackjack_tycoon') return `×1.6m, +$2 on 21`;
+  if (j.id === 'the_shark') return `×1.35m (Win ≥3/dBust)`;
+  if (j.id === 'safety_net') return `Bust = (40×Ante)c × 2m`;
+  if (j.id === 'even_steven') return `+15c, +5m / Even`;
+  if (j.id === 'red_velvet') return `+35c, +2m / ♥♦`;
+  if (j.id === 'dark_knight') return `+15c, +4m / ♠♣`;
   if (j.id === 'minimalist') return `×1.8m 2-Card Win`;
   if (j.id === 'hot_hand') return `<span style="color:var(--mult);font-weight:900;">+${j.bonusMult || 0}m</span> (+2m/Streak)`;
   if (j.id === 'snake_eyes') return `×2.2m (Win ≤13)`;
-  if (j.id === 'pocket_rockets') return `+50c, +25m (AA Pair)`;
-  if (j.id === 'trips_ahoy') return `+100c, +10m (3-Kind)`;
+  if (j.id === 'pocket_rockets') return `+30c, +8m (Ace) / +75c,+20m (AA)`;
+  if (j.id === 'trips_ahoy') return `+60c, +8m (3-card 19-21/3-Kind)`;
   if (j.id === 'spade_slicer') return `+15c, +5m / ♠`;
   if (j.id === 'crimson_heart') return `+40c, +2m / ♥`;
   if (j.id === 'diamond_cutter') return `+30c, +$1 / ♦ Win`;
   if (j.id === 'club_sandwich') return `+6m / ♣ Win`;
   if (j.id === 'monochrome') return `×1.6m Flush (≥3)`;
-  if (j.id === 'odd_ball') return `+15c, +3m / Odd`;
+  if (j.id === 'odd_ball') return `+20c, +4m / Odd`;
   if (j.id === 'the_grinder') return `+15c, +$1 / Safe Hit`;
   if (j.id === 'double_or_nothing') return `Double Down = ×3m`;
   if (j.id === 'slow_and_steady') return `+20c / Deal Left`;
-  if (j.id === 'card_sharp_joker') return `×1.75m on 2nd+ Win`;
+  if (j.id === 'card_sharp_joker') return `×1.5m on 2nd+ Win`;
   if (j.id === 'loan_shark') return `+$15 Buy (-$1/Blind)`;
   if (j.id === 'deja_vu') {
     const prev = getState().previousHandTotal;
@@ -3794,9 +3802,12 @@ async function resolveRound(): Promise<void> {
   if (res.rawOutcomeType === 'LOSS' && !res.pBust) {
     const bbj = state.jokers.find(j => j.id === 'bad_beat_jackpot');
     if (bbj) {
-      patchJoker('bad_beat_jackpot', { bonusMult: (bbj.bonusMult || 0) + 1 });
-      addMoney(4);
-      recordMoneyEarned('inHandScoring', 4);
+      const cur = bbj.bonusMult || 0;
+      if (cur < 10) {
+        patchJoker('bad_beat_jackpot', { bonusMult: cur + 1 });
+      }
+      addMoney(2);
+      recordMoneyEarned('inHandScoring', 2);
       const bbIdx = state.jokers.findIndex(j => j.id === 'bad_beat_jackpot');
       if (bbIdx >= 0) popJokerCard(bbIdx);
       updateAllUI();

@@ -11,7 +11,7 @@ const JOKER_CATALOG: ReadonlyArray<JokerDef> = [
   { id: 'bust_cushion', name: 'Bust Cushion', cost: 6, rarity: 'uncommon', isXMult: false, icon: '🛡️', archetype: 'utility', desc: 'Rubber Table: You only bust on 23+ (a total of 22 is treated as a valid 21!).' },
   { id: 'daredevil', name: 'Daredevil', cost: 6, rarity: 'uncommon', isXMult: false, bonusMult: 0, icon: '⚡', archetype: 'mult', desc: 'Permanently gains +1 Mult on safe Hit on 15+ for the rest of run.' },
   { id: 'chip_stacker', name: 'Chip Stacker', cost: 6, rarity: 'uncommon', isXMult: false, bonusChips: 0, icon: '💰', archetype: 'chips', desc: 'Permanently gains +10 Chips for the rest of run every time you win with a Double Down or Exact 21.' },
-  { id: 'card_counter', name: 'Card Counter', cost: 4, rarity: 'common', isXMult: false, icon: '🧮', archetype: 'chips', desc: '+40 Chips for each low card (2-6) in your hand.' },
+  { id: 'card_counter', name: 'Card Counter', cost: 4, rarity: 'common', isXMult: false, icon: '🧮', archetype: 'chips', desc: '+45 Chips & +2 Mult for each low card (2-6) in your hand.' },
   { id: 'vip_high_roller', name: 'VIP High Roller', cost: 5, rarity: 'common', isXMult: false, icon: '👑', archetype: 'mult', desc: '+10 Chips & +5 Mult for each Face Card (J, Q, K) in your hand.' },
   { id: 'ace_up_sleeve', name: 'Ace Up Sleeve', cost: 5, rarity: 'common', isXMult: false, icon: '🎴', archetype: 'chips', desc: '+50 Chips & +5 Mult if your hand contains an Ace.' },
   { id: 'sweet_16', name: 'Sweet Sixteen', cost: 5, rarity: 'uncommon', isXMult: false, icon: '🎂', archetype: 'mult', desc: 'Standing on 16 or less grants +50 Chips & +15 Mult on a Win or Push.' },
@@ -19,46 +19,46 @@ const JOKER_CATALOG: ReadonlyArray<JokerDef> = [
   { id: 'hit_me_baby', name: 'Hit Me Baby', cost: 5, rarity: 'common', isXMult: false, icon: '🥊', archetype: 'mult', desc: '+5 Mult for every card in your hand beyond 2.' },
   { id: 'golden_parachute', name: 'Gold Parachute', cost: 4, rarity: 'common', isXMult: false, icon: '🪂', archetype: 'econ', desc: 'Earn +$3 and gain +40 Chips whenever the Dealer busts.' },
   { id: 'push_it_good', name: 'Push It Good', cost: 5, rarity: 'uncommon', isXMult: false, icon: '🤝', archetype: 'utility', desc: 'Ties (Pushes) count as Wins and grant +50 Chips & +4 Mult.' },
-  { id: 'blackjack_tycoon', name: 'BJ Tycoon', cost: 8, rarity: 'rare', isXMult: true, icon: '🎩', archetype: 'mult', desc: 'Scoring 21 or Natural BJ applies ×2 Mult and grants +$2.' },
-  { id: 'the_shark', name: 'The Shark', cost: 8, rarity: 'rare', isXMult: true, icon: '🦈', archetype: 'mult', desc: '×1.5 Mult if your final total beats the Dealer by 3 or more, or if the Dealer busts.' },
-  { id: 'safety_net', name: 'Safety Net', cost: 5, rarity: 'uncommon', isXMult: false, icon: '🕸️', archetype: 'utility', desc: 'Busting still scores a salvage of 40 Chips × 2 Mult (other Jokers and enhancements do not trigger on a bust).' },
-  { id: 'even_steven', name: 'Even Steven', cost: 4, rarity: 'common', isXMult: false, icon: '⚖️', archetype: 'chips', desc: '+10 Chips & +4 Mult for each even-numbered card (2,4,6,8,10) in hand.' },
-  { id: 'red_velvet', name: 'Red Velvet', cost: 5, rarity: 'common', isXMult: false, icon: '🌹', archetype: 'suit', suitTheme: '♥', desc: '+35 Chips for each ♥ or ♦ in your hand.' },
-  { id: 'dark_knight', name: 'Dark Knight', cost: 5, rarity: 'common', isXMult: false, icon: '♞', archetype: 'suit', suitTheme: '♠', desc: '+10 Chips & +3 Mult for each ♠ or ♣ in your hand.' },
+  { id: 'blackjack_tycoon', name: 'BJ Tycoon', cost: 8, rarity: 'rare', isXMult: true, icon: '🎩', archetype: 'mult', desc: 'Scoring 21 or Natural BJ applies ×1.6 Mult and grants +$2.' },
+  { id: 'the_shark', name: 'The Shark', cost: 8, rarity: 'rare', isXMult: true, icon: '🦈', archetype: 'mult', desc: '×1.35 Mult if your final total beats the Dealer by 3 or more, or if the Dealer busts.' },
+  { id: 'safety_net', name: 'Safety Net', cost: 5, rarity: 'uncommon', isXMult: false, icon: '🕸️', archetype: 'utility', desc: 'Busting still scores a salvage of (40 × Ante) Chips × 2 Mult (other Jokers and enhancements do not trigger on a bust).' },
+  { id: 'even_steven', name: 'Even Steven', cost: 4, rarity: 'common', isXMult: false, icon: '⚖️', archetype: 'chips', desc: '+15 Chips & +5 Mult for each even-numbered card (2,4,6,8,10) in hand.' },
+  { id: 'red_velvet', name: 'Red Velvet', cost: 5, rarity: 'common', isXMult: false, icon: '🌹', archetype: 'suit', suitTheme: '♥', desc: '+35 Chips & +2 Mult for each ♥ or ♦ in your hand.' },
+  { id: 'dark_knight', name: 'Dark Knight', cost: 5, rarity: 'common', isXMult: false, icon: '♞', archetype: 'suit', suitTheme: '♠', desc: '+15 Chips & +4 Mult for each ♠ or ♣ in your hand.' },
   { id: 'compound_edge', name: 'Compound Edge', cost: 6, rarity: 'uncommon', isXMult: false, icon: '📈', archetype: 'chips', desc: '+10 Chips for every $5 you currently hold (max +150 Chips).' },
   { id: 'minimalist', name: 'Minimalist', cost: 7, rarity: 'rare', isXMult: true, icon: '⭕', archetype: 'mult', desc: '×1.8 Mult if you Win with exactly 2 cards.' },
   { id: 'hot_hand', name: 'Hot Hand', cost: 6, rarity: 'uncommon', isXMult: false, bonusMult: 0, icon: '🔥', archetype: 'mult', desc: 'Gains +2 Mult per consecutive winning hand (up to +20 Mult max). Resets to 0 on a loss or bust.' },
   { id: 'snake_eyes', name: 'Snake Eyes', cost: 6, rarity: 'uncommon', isXMult: true, icon: '🎲', archetype: 'mult', desc: '×2.2 Mult if you Win standing on a total of 13 or less.' },
-  { id: 'pocket_rockets', name: 'Pocket Rockets', cost: 6, rarity: 'uncommon', isXMult: false, icon: '🚀', archetype: 'mult', desc: '+50 Chips & +25 Mult if your starting 2 cards are both Aces.' },
-  { id: 'trips_ahoy', name: 'Trips Ahoy', cost: 5, rarity: 'common', isXMult: false, icon: '⚓', archetype: 'chips', desc: '+100 Chips & +10 Mult if your hand contains three cards of the same rank.' },
+  { id: 'pocket_rockets', name: 'Pocket Rockets', cost: 6, rarity: 'uncommon', isXMult: false, icon: '🚀', archetype: 'mult', desc: '+30 Chips & +8 Mult if starting hand contains an Ace (doubled to +75c/+20m for a Pair of Aces).' },
+  { id: 'trips_ahoy', name: 'Trips Ahoy', cost: 5, rarity: 'common', isXMult: false, icon: '⚓', archetype: 'chips', desc: '+60 Chips & +8 Mult if you win with 3+ cards totaling 19-21 (doubled to +120c/+15m for 3-of-a-Kind).' },
   { id: 'spade_slicer', name: 'Spade Slicer', cost: 5, rarity: 'common', isXMult: false, icon: '🗡️', archetype: 'suit', suitTheme: '♠', desc: '+15 Chips & +5 Mult for each ♠ in your hand.' },
   { id: 'crimson_heart', name: 'Crimson Heart', cost: 5, rarity: 'common', isXMult: false, icon: '❤️', archetype: 'suit', suitTheme: '♥', desc: '+40 Chips & +2 Mult for each ♥ in your hand.' },
   { id: 'diamond_cutter', name: 'Diamond Cutter', cost: 5, rarity: 'common', isXMult: false, icon: '💎', archetype: 'suit', suitTheme: '♦', desc: '+30 Chips and earn +$1 for each ♦ in your hand on a Win.' },
   { id: 'club_sandwich', name: 'Club Sandwich', cost: 5, rarity: 'common', isXMult: false, icon: '🥪', archetype: 'suit', suitTheme: '♣', desc: '+6 Mult for each ♣ in your hand on a Win.' },
   { id: 'monochrome', name: 'Monochrome', cost: 6, rarity: 'uncommon', isXMult: true, icon: '🏁', archetype: 'mult', desc: '×1.6 Mult if all cards in your hand share the same suit (minimum 3 cards).' },
-  { id: 'odd_ball', name: 'Odd Ball', cost: 4, rarity: 'common', isXMult: false, icon: '🎱', archetype: 'chips', desc: '+15 Chips & +3 Mult for each odd-numbered card (3, 5, 7, 9) in hand.' },
+  { id: 'odd_ball', name: 'Odd Ball', cost: 4, rarity: 'common', isXMult: false, icon: '🎱', archetype: 'chips', desc: '+20 Chips & +4 Mult for each odd-numbered card (3, 5, 7, 9) in hand.' },
   { id: 'the_grinder', name: 'The Grinder', cost: 4, rarity: 'common', isXMult: false, icon: '⚙️', archetype: 'econ', desc: 'Earn +$1 and +15 Chips for every safe Hit in the round.' },
   { id: 'double_or_nothing', name: 'Double or Nothing', cost: 8, rarity: 'rare', isXMult: true, icon: '💥', archetype: 'mult', desc: 'Doubling Down multiplies Mult by ×3 instead of ×2.' },
   { id: 'slow_and_steady', name: 'Slow & Steady', cost: 5, rarity: 'common', isXMult: false, icon: '🐢', archetype: 'chips', desc: '+20 Chips for each Deal remaining in the current Blind when you Win.' },
-  { id: 'card_sharp_joker', name: 'Card Sharp', cost: 8, rarity: 'rare', isXMult: true, icon: '🪒', archetype: 'mult', desc: '×1.75 Mult if you have already won a hand in this Blind.' },
+  { id: 'card_sharp_joker', name: 'Card Sharp', cost: 8, rarity: 'rare', isXMult: true, icon: '🪒', archetype: 'mult', desc: '×1.5 Mult if you have already won a hand in this Blind.' },
   { id: 'deja_vu', name: 'Deja Vu', cost: 8, rarity: 'rare', isXMult: true, icon: '🌀', archetype: 'mult', desc: '×1.5 Mult if your final hand total matches your final total from the previous winning hand.' },
   { id: 'rain_man', name: 'Rain Man', cost: 8, rarity: 'rare', isXMult: true, icon: '🧠', archetype: 'mult', desc: 'Hi-Lo Count (2-6: +1, 7-9: 0, 10-A: -1 from 0). When Count ≥ +2: Double Down applies ×3 Mult & Blackjacks/21s grant ×1.5 Mult & +$2.' },
   { id: 'the_spotter', name: 'The Spotter', cost: 8, rarity: 'rare', isXMult: false, icon: '🔭', archetype: 'chips', desc: 'Shoe Count = (Remaining 10s & Aces) - (Remaining 2-6s). On scoring hands, grants +15 Chips & +2 Mult per point of positive Shoe Count.' },
   { id: 'street_magician', name: 'Street Magician', cost: 6, rarity: 'uncommon', isXMult: false, icon: '🎩', archetype: 'utility', desc: 'Exact 21 or 5-Card Charlie wins create a random Tarot card (must have room).' },
   { id: 'marked_deck', name: 'Marked Deck', cost: 6, rarity: 'uncommon', isXMult: false, icon: '🎴', archetype: 'utility', desc: 'At the start of each Blind, create 1 random Table Cheat in your inventory (must have room).' },
-  { id: 'fortune_teller', name: 'Fortune Teller', cost: 5, rarity: 'common', isXMult: false, icon: '🔮', archetype: 'mult', desc: '+15 Chips & +2 Mult for each Tarot or Table Cheat used this run.' },
+  { id: 'fortune_teller', name: 'Fortune Teller', cost: 6, rarity: 'uncommon', isXMult: false, icon: '🔮', archetype: 'mult', desc: '+6 Chips & +1 Mult for each Tarot or Table Cheat used this run (max +60c/+10m).' },
   { id: 'crown_jewel', name: 'Crown Jewel', cost: 7, rarity: 'rare', isXMult: true, icon: '👑', archetype: 'mult', desc: 'Natural Blackjacks grant +$4 Cash and apply ×2.2 Mult.' },
   { id: 'the_bullseye', name: 'The Bullseye', cost: 6, rarity: 'uncommon', isXMult: false, bonusMult: 0, icon: '🎯', archetype: 'mult', desc: 'Permanently gains +2 Mult for the rest of run every time you score an Exact 21.' },
-  { id: 'blowout', name: 'Blowout', cost: 5, rarity: 'common', isXMult: false, icon: '🥊', archetype: 'chips', desc: '+20 Chips & +2 Mult for each point your final total beats the Dealer.' },
+  { id: 'blowout', name: 'Blowout', cost: 5, rarity: 'common', isXMult: false, icon: '🥊', archetype: 'chips', desc: '+25 Chips & +3 Mult for each point your final total beats the Dealer.' },
   { id: 'bounty_hunter', name: 'Bounty Hunter', cost: 5, rarity: 'common', isXMult: true, icon: '🤠', archetype: 'econ', desc: 'When Dealer busts, earn +$4 Cash and apply ×1.6 Mult (+$8 Cash if Dealer busts on 25+).' },
   { id: 'push_the_limit', name: 'Push the Limit', cost: 5, rarity: 'uncommon', isXMult: false, icon: '🤝', archetype: 'utility', desc: 'Ties (Pushes) grant +80 Chips, +6 Mult, and +$2 Cash.' },
-  { id: 'bad_beat_jackpot', name: 'Bad Beat Jackpot', cost: 6, rarity: 'uncommon', isXMult: false, bonusMult: 0, icon: '🩹', archetype: 'mult', desc: '+1 Mult permanently for the rest of run and earn +$4 Cash whenever you lose a hand to the Dealer (without busting).' },
-  { id: 'tightrope_walker', name: 'Tightrope Walker', cost: 6, rarity: 'uncommon', isXMult: false, icon: '🎪', archetype: 'chips', desc: '+75 Chips & +8 Mult if you stand on a final hand total of 20, 21, or 22.' },
+  { id: 'bad_beat_jackpot', name: 'Bad Beat Jackpot', cost: 6, rarity: 'uncommon', isXMult: false, bonusMult: 0, icon: '🩹', archetype: 'mult', desc: '+1 Mult permanently (max +10 Mult) and earn +$2 Cash whenever you lose a hand to the Dealer (without busting).' },
+  { id: 'tightrope_walker', name: 'Tightrope Walker', cost: 6, rarity: 'uncommon', isXMult: false, icon: '🎪', archetype: 'chips', desc: '+80 Chips & +8 Mult if you stand on a final hand total of 19, 20, 21, or 22.' },
   { id: 'small_fry', name: 'Small Fry', cost: 4, rarity: 'common', isXMult: true, icon: '🍟', archetype: 'mult', desc: '+15 Chips & +2 Mult for each low card (2-5) in hand. Multiplies Mult by ×1.5 if hand has 3 or more low cards.' },
-  { id: 'kaleidoscope', name: 'Kaleidoscope', cost: 5, rarity: 'common', isXMult: false, icon: '🎨', archetype: 'mult', desc: '+80 Chips & +6 Mult if your scoring hand contains cards of 3 or more different suits.' },
-  { id: 'momentum', name: 'Momentum', cost: 5, rarity: 'common', isXMult: false, icon: '⚡', archetype: 'mult', desc: '+20 Chips & +3 Mult for each hand already won in the current Blind (stacks up to +100c/+15m).' },
+  { id: 'kaleidoscope', name: 'Kaleidoscope', cost: 5, rarity: 'common', isXMult: false, icon: '🎨', archetype: 'mult', desc: '+40 Chips & +4 Mult if hand has 2 different suits (boosted to +90c/+8m for 3+ suits).' },
+  { id: 'momentum', name: 'Momentum', cost: 5, rarity: 'common', isXMult: false, icon: '⚡', archetype: 'mult', desc: '+25 Chips & +3 Mult baseline on a Win, plus +30 Chips & +4 Mult for each prior win in the current Blind (stacks up to +145c/+19m).' },
   { id: 'the_banker', name: 'The Banker', cost: 7, rarity: 'rare', isXMult: false, icon: '🏦', archetype: 'econ', desc: 'Interest earned at the end of each Blind is increased by +50%. If you end a Blind with $25+, start the next Blind with +1 extra Deal.' },
-  { id: 'side_bet', name: 'Side Bet', cost: 5, rarity: 'common', isXMult: false, icon: '🎰', archetype: 'econ', desc: 'If your starting 2 cards are a Pair, earn +$4 Cash & +40 Chips (+$8 Cash & +80 Chips if same color).' }
+  { id: 'side_bet', name: 'Side Bet', cost: 5, rarity: 'common', isXMult: false, icon: '🎰', archetype: 'econ', desc: 'Starting Pair grants +$5 Cash & +50 Chips (+10/$100 if same color). Starting Suited cards grant +$2 Cash & +25 Chips.' }
 ];
 
 const DECK_TAROT_CATALOG: ReadonlyArray<TarotDef> = [
@@ -287,9 +287,10 @@ function scoreHand(ctx: ScoreContext): ScoreResult {
 
   if (outcomeType === 'BUST' && owns('safety_net')) {
     isScoring = true;
-    baseChips = 40; baseMult = 2;
+    baseChips = 40 * Math.max(1, ctx.ante);
+    baseMult = 2;
     outcomeLabel = 'SAVED BY SAFETY NET!';
-    logs.push('Safety Net (40×2 Salvage)');
+    logs.push(`Safety Net (${baseChips}×2 Salvage)`);
     safetyNetSaved = true;
   }
 
@@ -395,7 +396,7 @@ function scoreHand(ctx: ScoreContext): ScoreResult {
       }
       case 'card_counter': {
         const lows = hand.filter(c => ['2', '3', '4', '5', '6'].includes(c.rank)).length;
-        if (lows > 0) { chips += lows * 40; logs.push(`Counter +${lows * 40}c`); triggered = true; }
+        if (lows > 0) { chips += lows * 45; mult += lows * 2; logs.push(`Counter +${lows * 45}c/+${lows * 2}m`); triggered = true; }
         break;
       }
       case 'vip_high_roller': {
@@ -427,24 +428,24 @@ function scoreHand(ctx: ScoreContext): ScoreResult {
         // Tie bonus is applied in base scoring on PUSH hands
         break;
       case 'blackjack_tycoon':
-        if (pTotal === 21) { mult = round1(mult * 2); money += 2; logs.push('Tycoon ×2m/+$2'); triggered = true; }
+        if (pTotal === 21) { mult = round1(mult * 1.6); money += 2; logs.push('Tycoon ×1.6m/+$2'); triggered = true; }
         break;
       case 'the_shark':
-        if (!pBust && (dBust || (pTotal - dTotal >= 3))) { mult = round1(mult * 1.5); logs.push('Shark ×1.5m'); triggered = true; }
+        if (!pBust && (dBust || (pTotal - dTotal >= 3))) { mult = round1(mult * 1.35); logs.push('Shark ×1.35m'); triggered = true; }
         break;
       case 'even_steven': {
         const evens = hand.filter(c => ['2', '4', '6', '8', '10'].includes(c.rank)).length;
-        if (evens > 0) { mult += evens * 4; chips += evens * 10; logs.push(`Even +${evens * 10}c/+${evens * 4}m`); triggered = true; }
+        if (evens > 0) { mult += evens * 5; chips += evens * 15; logs.push(`Even +${evens * 15}c/+${evens * 5}m`); triggered = true; }
         break;
       }
       case 'red_velvet': {
         const reds = hand.filter(c => c.suit === '♥' || c.suit === '♦' || c.suit === '★').length;
-        if (reds > 0) { chips += reds * 35; logs.push(`Red +${reds * 35}c`); triggered = true; }
+        if (reds > 0) { chips += reds * 35; mult += reds * 2; logs.push(`Red +${reds * 35}c/+${reds * 2}m`); triggered = true; }
         break;
       }
       case 'dark_knight': {
         const blacks = hand.filter(c => c.suit === '♠' || c.suit === '♣' || c.suit === '★').length;
-        if (blacks > 0) { mult += blacks * 3; chips += blacks * 10; logs.push(`Dark +${blacks * 10}c/+${blacks * 3}m`); triggered = true; }
+        if (blacks > 0) { mult += blacks * 4; chips += blacks * 15; logs.push(`Dark +${blacks * 15}c/+${blacks * 4}m`); triggered = true; }
         break;
       }
       case 'compound_edge': {
@@ -463,16 +464,27 @@ function scoreHand(ctx: ScoreContext): ScoreResult {
       case 'snake_eyes':
         if (isWin && pTotal <= 13 && !pBust) { mult = round1(mult * 2.2); logs.push('Snake Eyes ×2.2m'); triggered = true; }
         break;
-      case 'pocket_rockets':
-        if (hand.length >= 2 && hand[0].rank === 'A' && hand[1].rank === 'A') {
-          chips += 50; mult += 25; logs.push('Pocket Rockets +50c/+25m'); triggered = true;
+      case 'pocket_rockets': {
+        if (hand.length >= 2) {
+          const a1 = hand[0].rank === 'A';
+          const a2 = hand[1].rank === 'A';
+          if (a1 && a2) {
+            chips += 75; mult += 20; logs.push('Pocket Rockets (AA) +75c/+20m'); triggered = true;
+          } else if (a1 || a2) {
+            chips += 30; mult += 8; logs.push('Pocket Rockets (Ace) +30c/+8m'); triggered = true;
+          }
         }
         break;
+      }
       case 'trips_ahoy': {
         const counts: Record<string, number> = {};
         hand.forEach(c => { counts[c.rank] = (counts[c.rank] || 0) + 1; });
-        if (Object.values(counts).some(cnt => cnt >= 3)) {
-          chips += 100; mult += 10; logs.push('Trips Ahoy +100c/+10m'); triggered = true;
+        const hasTrips = Object.values(counts).some(cnt => cnt >= 3);
+        const has3Card19to21 = isWin && hand.length >= 3 && pTotal >= 19 && pTotal <= 21;
+        if (hasTrips) {
+          chips += 120; mult += 15; logs.push('Trips Ahoy (3-Kind) +120c/+15m'); triggered = true;
+        } else if (has3Card19to21) {
+          chips += 60; mult += 8; logs.push(`Trips Ahoy (${pTotal}) +60c/+8m`); triggered = true;
         }
         break;
       }
@@ -532,7 +544,7 @@ function scoreHand(ctx: ScoreContext): ScoreResult {
       }
       case 'card_sharp_joker':
         if ((ctx.handsWonInBlind || 0) > 0) {
-          mult = round1(mult * 1.75); logs.push('Card Sharp ×1.75m'); triggered = true;
+          mult = round1(mult * 1.5); logs.push('Card Sharp ×1.5m'); triggered = true;
         }
         break;
       case 'deja_vu':
@@ -565,9 +577,11 @@ function scoreHand(ctx: ScoreContext): ScoreResult {
       case 'fortune_teller': {
         const used = ctx.tarotsUsed || 0;
         if (used > 0) {
-          chips += used * 15;
-          mult += used * 2;
-          logs.push(`Fortune Teller (${used}) +${used * 15}c/+${used * 2}m`);
+          const addC = Math.min(60, used * 6);
+          const addM = Math.min(10, used * 1);
+          chips += addC;
+          mult += addM;
+          logs.push(`Fortune Teller (${used}) +${addC}c/+${addM}m`);
           triggered = true;
         }
         break;
@@ -592,9 +606,9 @@ function scoreHand(ctx: ScoreContext): ScoreResult {
       case 'blowout':
         if (isWin && !pBust && !dBust && pTotal > dTotal) {
           const margin = pTotal - dTotal;
-          chips += margin * 20;
-          mult += margin * 2;
-          logs.push(`Blowout (+${margin}) +${margin * 20}c/+${margin * 2}m`);
+          chips += margin * 25;
+          mult += margin * 3;
+          logs.push(`Blowout (+${margin}) +${margin * 25}c/+${margin * 3}m`);
           triggered = true;
         }
         break;
@@ -626,10 +640,10 @@ function scoreHand(ctx: ScoreContext): ScoreResult {
         break;
       }
       case 'tightrope_walker':
-        if (!pBust && (pTotal === 20 || pTotal === 21 || pTotal === 22)) {
-          chips += 75;
+        if (!pBust && (pTotal === 19 || pTotal === 20 || pTotal === 21 || pTotal === 22)) {
+          chips += 80;
           mult += 8;
-          logs.push(`Tightrope (${pTotal}) +75c/+8m`);
+          logs.push(`Tightrope (${pTotal}) +80c/+8m`);
           triggered = true;
         }
         break;
@@ -653,19 +667,26 @@ function scoreHand(ctx: ScoreContext): ScoreResult {
         const wildCount = hand.filter(c => c.suit === '★').length;
         const distinctCount = baseSuits.size + wildCount;
         if (distinctCount >= 3) {
-          chips += 80;
-          mult += 6;
-          logs.push(`Kaleidoscope (${distinctCount} suits) +80c/+6m`);
+          chips += 90;
+          mult += 8;
+          logs.push(`Kaleidoscope (${distinctCount} suits) +90c/+8m`);
+          triggered = true;
+        } else if (distinctCount >= 2) {
+          chips += 40;
+          mult += 4;
+          logs.push(`Kaleidoscope (${distinctCount} suits) +40c/+4m`);
           triggered = true;
         }
         break;
       }
       case 'momentum': {
-        const wins = Math.min(5, ctx.handsWonInBlind || 0);
-        if (wins > 0) {
-          chips += wins * 20;
-          mult += wins * 3;
-          logs.push(`Momentum (${wins} wins) +${wins * 20}c/+${wins * 3}m`);
+        if (isWin) {
+          const priorWins = Math.min(4, ctx.handsWonInBlind || 0);
+          const addC = 25 + priorWins * 30;
+          const addM = 3 + priorWins * 4;
+          chips += addC;
+          mult += addM;
+          logs.push(`Momentum (${priorWins} prior wins) +${addC}c/+${addM}m`);
           triggered = true;
         }
         break;
@@ -676,24 +697,31 @@ function scoreHand(ctx: ScoreContext): ScoreResult {
         // Handled in blind progression / round resolution
         break;
       case 'side_bet': {
-        if (hand.length >= 2 && hand[0].rank === hand[1].rank) {
-          const c1 = hand[0];
-          const c2 = hand[1];
-          const isRed1 = c1.suit === '♥' || c1.suit === '♦' || c1.suit === '★';
-          const isRed2 = c2.suit === '♥' || c2.suit === '♦' || c2.suit === '★';
-          const isBlack1 = c1.suit === '♠' || c1.suit === '♣' || c1.suit === '★';
-          const isBlack2 = c2.suit === '♠' || c2.suit === '♣' || c2.suit === '★';
-          const isSameColor = (isRed1 && isRed2) || (isBlack1 && isBlack2);
-          if (isSameColor) {
-            chips += 80;
-            money += 8;
-            logs.push(`Side Bet (Color Pair ${c1.rank}) +80c/+$8`);
-          } else {
-            chips += 40;
-            money += 4;
-            logs.push(`Side Bet (Pair ${c1.rank}) +40c/+$4`);
+        if (hand.length >= 2) {
+          if (hand[0].rank === hand[1].rank) {
+            const c1 = hand[0];
+            const c2 = hand[1];
+            const isRed1 = c1.suit === '♥' || c1.suit === '♦' || c1.suit === '★';
+            const isRed2 = c2.suit === '♥' || c2.suit === '♦' || c2.suit === '★';
+            const isBlack1 = c1.suit === '♠' || c1.suit === '♣' || c1.suit === '★';
+            const isBlack2 = c2.suit === '♠' || c2.suit === '♣' || c2.suit === '★';
+            const isSameColor = (isRed1 && isRed2) || (isBlack1 && isBlack2);
+            if (isSameColor) {
+              chips += 100;
+              money += 10;
+              logs.push(`Side Bet (Color Pair ${c1.rank}) +100c/+$10`);
+            } else {
+              chips += 50;
+              money += 5;
+              logs.push(`Side Bet (Pair ${c1.rank}) +50c/+$5`);
+            }
+            triggered = true;
+          } else if (hand[0].suit === hand[1].suit || hand[0].suit === '★' || hand[1].suit === '★') {
+            chips += 25;
+            money += 2;
+            logs.push(`Side Bet (Suited ${hand[0].suit}) +25c/+$2`);
+            triggered = true;
           }
-          triggered = true;
         }
         break;
       }
