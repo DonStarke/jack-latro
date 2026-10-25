@@ -8,14 +8,32 @@
 ========================================================== */
 
 /* ---------- Constants ---------- */
-const ANTE_TARGETS: ReadonlyArray<number> = [300, 600, 1380, 2750, 4500, 8500, 15000, 25000];
+const ANTE_TARGETS: ReadonlyArray<number> = [300, 540, 960, 1720, 3050, 5450, 9700, 17200];
 /** Target multiplier per Blind (Small, Big, Boss). */
-const BLIND_TARGET_MULTS: ReadonlyArray<number> = [1.0, 1.45, 2.0];
+const BLIND_TARGET_MULTS: ReadonlyArray<number> = [1.0, 1.35, 1.7];
 /** Cash reward per Blind (Small, Big, Boss). */
 const BLIND_REWARDS: ReadonlyArray<number> = [4, 5, 6];
 const INTEREST_PER = 5;
 const INTEREST_CAP = 5;
-const SHOP_BASE_REROLL = 2;
+const SHOP_BASE_REROLL = 3;
+
+/** Helper to determine if a voucher is available in the pool (enforcing prerequisite trees). */
+function isVoucherAvailable(vId: string, vouchersBought: ReadonlyArray<string>): boolean {
+  if (vouchersBought.includes(vId)) return false;
+  if (vId === 'joker_slot') {
+    return vouchersBought.includes('blank_voucher');
+  }
+  if (vId === 'extra_hand_2') {
+    return vouchersBought.includes('extra_hand');
+  }
+  if (vId === 'clearance_sale_2') {
+    return vouchersBought.includes('clearance_sale');
+  }
+  if (vId === 'overstock_2') {
+    return vouchersBought.includes('overstock');
+  }
+  return true;
+}
 
 /* ---------- Pure economy helpers (shared with simulator) ---------- */
 function computeBlindTarget(ante: number, blindIndex: number, targetScalePct: number): number {
@@ -23,8 +41,8 @@ function computeBlindTarget(ante: number, blindIndex: number, targetScalePct: nu
   if (ante <= ANTE_TARGETS.length) {
     rawBase = ANTE_TARGETS[ante - 1];
   } else {
-    const maxBase = ANTE_TARGETS[ANTE_TARGETS.length - 1]; // 25,000
-    rawBase = Math.round(maxBase * Math.pow(1.6, ante - ANTE_TARGETS.length));
+    const maxBase = ANTE_TARGETS[ANTE_TARGETS.length - 1]; // 17,200
+    rawBase = Math.round(maxBase * Math.pow(2.2, ante - ANTE_TARGETS.length));
   }
   const base = Math.round(rawBase * (targetScalePct / 100));
   return Math.round(base * BLIND_TARGET_MULTS[Math.min(blindIndex, 2)]);
@@ -167,7 +185,7 @@ function cashOutAndEnterShop(): PendingPayout | null {
     blindIndex = 0;
     ante++;
   }
-  const rerollCost = s.vouchersBought.includes('clearance_sale') ? 1 : SHOP_BASE_REROLL;
+  const rerollCost = s.vouchersBought.includes('clearance_sale_2') ? 1 : (s.vouchersBought.includes('clearance_sale') ? 2 : SHOP_BASE_REROLL);
   patchState({ blindClearedReady: false, blindIndex, ante, inShop: true, rerollCost });
   configureBlindMetrics();
   generateShopStock();
@@ -447,8 +465,19 @@ function applyTarotToDeckCard(tarot: TarotDef, targetCard: Card): { ok: boolean;
 }
 
 /** Pure helper to generate packs for a shop visit (shared with simulator). */
-function generateShopPacks(ante: number, jokersCount: number, hasOverstock: boolean): PackDef[] {
-  const numPacks = hasOverstock ? 3 : 2;
+function generateShopPacks(ante: number, jokersCount: number, vouchersBoughtOrOverstock?: ReadonlyArray<string> | boolean): PackDef[] {
+  let numPacks = 1;
+  if (Array.isArray(vouchersBoughtOrOverstock)) {
+    if (vouchersBoughtOrOverstock.includes('overstock_2')) {
+      numPacks = 3;
+    } else if (vouchersBoughtOrOverstock.includes('overstock')) {
+      numPacks = 2;
+    } else {
+      numPacks = 1;
+    }
+  } else if (typeof vouchersBoughtOrOverstock === 'boolean') {
+    numPacks = vouchersBoughtOrOverstock ? 2 : 1;
+  }
   const packsOffered: PackDef[] = [];
   const chosenIds: string[] = [];
 
@@ -533,8 +562,7 @@ function generateShopSingleCards(ante: number, jokersCount: number, ownedJokerId
 /* ---------- Shop stock ---------- */
 function generateShopStock(): void {
   const s = getState();
-  const hasOverstock = s.vouchersBought.includes('overstock');
-  const packs = generateShopPacks(s.ante, s.jokers.length, hasOverstock);
+  const packs = generateShopPacks(s.ante, s.jokers.length, s.vouchersBought);
   const packsOffered: ShopPackSlot[] = packs.map(p => ({ ...p, shopType: 'pack', bought: false }));
 
   // Generate single cards (Jokers and Tarots)
@@ -544,7 +572,7 @@ function generateShopStock(): void {
   let voucherOffer: ShopVoucher[] = [];
   if (s.voucherAnte !== s.ante) {
     // New ante! Refresh voucher offer
-    const availVouchers = VOUCHER_CATALOG.filter(v => !s.vouchersBought.includes(v.id));
+    const availVouchers = VOUCHER_CATALOG.filter(v => isVoucherAvailable(v.id, s.vouchersBought));
     if (availVouchers.length > 0) {
       const rolled = shuffle(availVouchers)[0];
       const newVoucher: ShopVoucher = { ...rolled, shopType: 'voucher' as const, bought: false };
@@ -592,7 +620,10 @@ function rerollShop(): ShopActionResult {
   if (s.money < s.rerollCost) return { ok: false, reason: 'too_poor' };
   spendMoney(s.rerollCost);
   recordMoneySpent('rerolls', s.rerollCost);
-  if (s.vouchersBought.includes('clearance_sale')) {
+  if (s.vouchersBought.includes('clearance_sale_2')) {
+    recordVoucherValue('clearance_sale_2', 1);
+    recordVoucherValue('clearance_sale', 1);
+  } else if (s.vouchersBought.includes('clearance_sale')) {
     recordVoucherValue('clearance_sale', 1);
   }
   patchState({ rerollCost: s.rerollCost + 1 });
@@ -619,11 +650,8 @@ interface VoucherDeltas {
 
 /** Pure description of what a Voucher grants (shared with simulator). */
 function getVoucherDeltas(id: string): VoucherDeltas {
-  if (id === 'extra_hand') return { maxHands: 1 };
-  if (id === 'table_leverage') return { baseWinMultBonus: 1 };
+  if (id === 'extra_hand' || id === 'extra_hand_2') return { maxHands: 1 };
   if (id === 'joker_slot') return { maxJokers: 1 };
-  if (id === 'base_boost') return { baseWinChipBonus: 30 };
-  if (id === 'card_shark_voucher') return { maxHands: 1, baseWinChipBonus: 20 };
   return {};
 }
 
@@ -639,7 +667,14 @@ function applyVoucher(id: string): void {
     baseWinChipBonus: s.baseWinChipBonus + (d.baseWinChipBonus || 0)
   };
   if (id === 'clearance_sale') {
-    patch.rerollCost = 1;
+    patch.rerollCost = Math.min(s.rerollCost, 2);
+  } else if (id === 'clearance_sale_2') {
+    patch.rerollCost = Math.min(s.rerollCost, 1);
+  } else if (id === 'overstock' || id === 'overstock_2') {
+    if (s.inShop) {
+      const updatedPacks = generateShopPacks(s.ante, s.jokers.length, [...s.vouchersBought, id]);
+      patch.shopPacks = updatedPacks.map(p => ({ ...p, shopType: 'pack', bought: false }));
+    }
   }
   patchState(patch);
 }
@@ -1206,4 +1241,8 @@ if (typeof window !== 'undefined') {
   (window as any).cashOutAndEnterShop = cashOutAndEnterShop;
   (window as any).calcBlindPayout = calcBlindPayout;
   (window as any).computeBlindPayout = computeBlindPayout;
+  (window as any).isVoucherAvailable = isVoucherAvailable;
+  (window as any).ANTE_TARGETS = ANTE_TARGETS;
+  (window as any).BLIND_TARGET_MULTS = BLIND_TARGET_MULTS;
+  (window as any).SHOP_BASE_REROLL = SHOP_BASE_REROLL;
 }

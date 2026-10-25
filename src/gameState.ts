@@ -347,7 +347,7 @@ let _state: GameState = {
   consumables: [],
   vouchersBought: [],
 
-  rerollCost: 2,
+  rerollCost: 3,
   shopJokers: [],
   shopExtras: [],
   shopPacks: [],
@@ -1192,6 +1192,7 @@ function resetRunState(freshDeck: Card[]): void {
   _state.consumables = [];
   _state.vouchersBought = [];
   _state.deck = freshDeck;
+  _state.rerollCost = 3;
   _state.inShop = false;
   _state.isDealing = false;
   _state.endlessMode = false;

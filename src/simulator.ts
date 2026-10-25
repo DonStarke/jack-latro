@@ -704,7 +704,7 @@ function simulateShopVisit(
   if (simRun.voucherAnte !== simRun.ante) {
     simRun.voucherAnte = simRun.ante;
     simRun.anteVoucherBought = false;
-    const avail = VOUCHER_CATALOG.filter(v => !simRun.vouchers.includes(v.id));
+    const avail = VOUCHER_CATALOG.filter(v => isVoucherAvailable(v.id, simRun.vouchers));
     simRun.anteVoucher = avail.length > 0 ? shuffle(avail)[0] : null;
     if (simRun.anteVoucher && voucherStats[simRun.anteVoucher.id]) {
       voucherStats[simRun.anteVoucher.id].offered++;
@@ -713,8 +713,10 @@ function simulateShopVisit(
 
   if (simRun.anteVoucher && !simRun.anteVoucherBought) {
     const v = simRun.anteVoucher;
+    const isBlank = (v.id === 'blank_voucher');
+    const minJokersForVoucher = isBlank ? 2 : 0;
     const reserve = (simRun.jokers.length < 3) ? 0 : Math.floor(interestReserve * 0.5);
-    if (simRun.money >= v.cost + reserve) {
+    if (simRun.jokers.length >= minJokersForVoucher && simRun.money >= v.cost + reserve) {
       simRun.money -= v.cost;
       simRun.vouchers.push(v.id);
       simRun.anteVoucherBought = true;
@@ -820,12 +822,11 @@ function simulateShopVisit(
   let currentSingleCards = generateShopSingleCards(simRun.ante, simRun.jokers.length, simRun.jokers.map(j => j.id), simRun.consumables.map(c => c.id));
   processSingleCards(currentSingleCards);
 
-  const hasOverstock = simRun.vouchers.includes('overstock');
-  const packs = generateShopPacks(simRun.ante, simRun.jokers.length, hasOverstock);
+  const packs = generateShopPacks(simRun.ante, simRun.jokers.length, simRun.vouchers);
   processPacks(packs);
 
   // 4. Shop Rerolls (Clearance Rack aware)
-  const rerollCost = simRun.vouchers.includes('clearance_sale') ? 1 : 2;
+  const rerollCost = simRun.vouchers.includes('clearance_sale_2') ? 1 : (simRun.vouchers.includes('clearance_sale') ? 2 : 3);
   const maxRerolls = (botType === 'expert') ? 2 : 1;
   let rerollsDone = 0;
 

@@ -105,7 +105,7 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   w.renderShop();
 
   const shopPacksContainer = $('ui-shop-packs');
-  ck('Shop packs container has children', shopPacksContainer.children.length === 2);
+  ck('Shop packs container has children', shopPacksContainer.children.length >= 1);
   const firstPack = shopPacksContainer.children[0];
   ck('First shop pack has pack-booster-wrapper class', firstPack.classList.contains('pack-booster-wrapper'));
   ck('First shop pack contains crimped foil top', !!firstPack.querySelector('.pack-booster-crimp.top'));

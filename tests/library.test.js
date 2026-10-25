@@ -186,7 +186,7 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   ck('Opening Voucher detail displays enlarged voucher', !isHidden(detailModal));
   ck('Voucher detail title shows Clearance Rack', detailTitle.textContent.includes('Clearance Rack'));
   ck('Voucher detail stage renders enlarged voucher stage', detailStage && !!detailStage.querySelector('.lib-stage-voucher-card'));
-  ck('Voucher description indicates shop rerolls discount', detailDesc.textContent.includes('$1'));
+  ck('Voucher description indicates shop rerolls discount', detailDesc.textContent.includes('$2'));
   ck('Voucher telemetry includes Times Redeemed metric', statsGrid.textContent.includes('Times Redeemed'));
 
   w.closeLibraryDetail();

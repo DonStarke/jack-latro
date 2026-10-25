@@ -1645,6 +1645,7 @@ function updateAllUI() {
   standBtn.disabled = !state.inHand || state.isDealing || isPlayfieldLocked;
   const anchorBoss = state.bossBlind && state.bossBlind.id === 'the_anchor';
   doubleBtn.disabled = !state.inHand || state.isDealing || state.playerHand.length !== 2 || !!anchorBoss || isPlayfieldLocked;
+  renderActiveVouchers();
 }
 
 /* ---------- Modals ---------- */
@@ -1680,8 +1681,80 @@ function toggleCogModal(show: boolean): void {
     if (actionsGrid) {
       actionsGrid.style.gridTemplateColumns = isFromSplash ? '1fr' : '1fr 1fr 1fr';
     }
+    renderActiveVouchers();
   }
   modal.classList.toggle('hidden', !show);
+}
+
+function renderActiveVouchers(): void {
+  const container = document.getElementById('ui-cog-vouchers-list');
+  const countEl = document.getElementById('ui-cog-vouchers-count');
+  const s = getState();
+  const vouchers = s.vouchersBought || [];
+
+  if (countEl) {
+    countEl.textContent = `${vouchers.length} Active`;
+  }
+
+  if (!container) return;
+
+  if (vouchers.length === 0) {
+    container.innerHTML = `<div style="font-size:12px; color:#64748b; font-style:italic; padding:4px 0;">No vouchers purchased yet this run.</div>`;
+    return;
+  }
+
+  container.innerHTML = vouchers.map(vId => {
+    const def = VOUCHER_CATALOG.find(x => x.id === vId);
+    const name = def ? def.name : vId;
+    const desc = def ? def.desc : '';
+    return `
+      <div style="background:#0b0e14; border:1px solid #1e293b; border-left:3px solid var(--gold); border-radius:6px; padding:7px 10px; display:flex; flex-direction:column; gap:2px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:12px; font-weight:bold; color:var(--gold);">🎟️ ${name}</span>
+          <span class="lib-tag-pill voucher-active-badge" style="font-size:10px; background:rgba(234,179,8,0.15); color:var(--gold); border-radius:999px; padding:1px 6px; font-weight:bold;">ACTIVE</span>
+        </div>
+        <div style="font-size:11px; color:#cbd5e1; line-height:1.3;">${desc}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function openRunVouchersModal(): void {
+  toggleCogModal(true);
+  const el = document.getElementById('ui-cog-vouchers-container');
+  if (el && typeof el.scrollIntoView === 'function') {
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+function uiConfirmResetStats(): void {
+  const modal = document.getElementById('ui-confirm-reset-stats-modal');
+  if (modal) modal.classList.remove('hidden');
+}
+
+function uiCancelResetStats(): void {
+  const modal = document.getElementById('ui-confirm-reset-stats-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
+function uiExecuteResetStats(): void {
+  resetLifetimeTelemetry();
+  _state.runStats = createInitialRunStats();
+  uiCancelResetStats();
+  renderActiveVouchers();
+  renderRunStats();
+  const btn = document.getElementById('btn-modal-reset-stats');
+  if (btn) {
+    const orig = btn.innerHTML;
+    btn.innerHTML = '✓ All Stats Reset!';
+    btn.style.color = 'var(--green)';
+    btn.style.borderColor = 'var(--green)';
+    setTimeout(() => {
+      btn.innerHTML = orig;
+      btn.style.color = '#f87171';
+      btn.style.borderColor = '#7f1d1d';
+    }, 1500);
+  }
 }
 
 function toggleSimModal(show: boolean): void {
@@ -4296,9 +4369,7 @@ async function resolveRound(): Promise<void> {
 
     // Record voucher estimated values
     for (const vId of state.vouchersBought) {
-      if (vId === 'extra_hand') recordVoucherValue('extra_hand', 1);
-      else if (vId === 'table_leverage') recordVoucherValue('table_leverage', 1);
-      else if (vId === 'base_boost') recordVoucherValue('base_boost', 30);
+      if (vId === 'extra_hand' || vId === 'extra_hand_2') recordVoucherValue(vId, 1);
     }
 
     const isAnte8Victory = (state.ante === 8 && state.blindIndex === 2 && !state.endlessMode);
@@ -5402,6 +5473,11 @@ function renderRunStats(): void {
 (window as any).CARD_EFFECTS_CATALOG = CARD_EFFECTS_CATALOG;
 (window as any).renderRoundCashBreakdown = renderRoundCashBreakdown;
 (window as any).hideRoundCashBreakdown = hideRoundCashBreakdown;
+(window as any).renderActiveVouchers = renderActiveVouchers;
+(window as any).openRunVouchersModal = openRunVouchersModal;
+(window as any).uiConfirmResetStats = uiConfirmResetStats;
+(window as any).uiCancelResetStats = uiCancelResetStats;
+(window as any).uiExecuteResetStats = uiExecuteResetStats;
 
 /* ==========================================================
    BOOT

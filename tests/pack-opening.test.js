@@ -48,22 +48,27 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   const s1 = w.getState();
 
   ck('Shop offers booster packs array', Array.isArray(s1.shopPacks));
-  ck('Default shop offers 2 packs', s1.shopPacks.length === 2);
+  ck('Default shop offers 1 pack', s1.shopPacks.length === 1);
   ck('Ante 1 Blind 0 offers at least one Joker pack', s1.shopPacks.some(p => p.packType === 'joker'));
   ck('Shop extras contains the Ante voucher', s1.shopExtras.some(e => e.shopType === 'voucher'));
   ck('Shop offers single cards (Jokers & Tarots)', s1.shopJokers.length === 2);
   ck('Shop jokers contain valid shop types', s1.shopJokers.every(item => item.shopType === 'joker' || item.shopType === 'tarot'));
 
   w.renderShop();
-  ck('Packs grid renders in shop UI', $('ui-shop-packs').children.length === 2);
+  ck('Packs grid renders in shop UI', $('ui-shop-packs').children.length === 1);
   ck('Cards grid renders in shop UI', $('ui-shop-jokers').children.length === 2);
   ck('Vouchers grid renders in shop UI', $('ui-shop-extras').children.length >= 1);
 
-  console.log('\n--- TEST 2: OVERSTOCK VOUCHER EXPANDS SHOP TO 3 PACKS ---');
+  console.log('\n--- TEST 2: OVERSTOCK VOUCHERS EXPAND SHOP PACK SLOTS ---');
   w.applyVoucher('overstock');
   w.generateShopStock();
   const sOverstock = w.getState();
-  ck('Overstock increases packs offered to 3', sOverstock.shopPacks.length === 3);
+  ck('Overstock increases packs offered to 2', sOverstock.shopPacks.length === 2);
+
+  w.applyVoucher('overstock_2');
+  w.generateShopStock();
+  const sOverstock2 = w.getState();
+  ck('Overstock 2 increases packs offered to 3', sOverstock2.shopPacks.length === 3);
 
   console.log('\n--- TEST 3: BUYING A JOKER PACK & OPENING SCREEN ---');
   // Give cash

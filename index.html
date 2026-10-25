@@ -124,6 +124,7 @@
         <div class="stat-pill stat-cash" id="ui-money">$6</div>
         <div class="stat-pill stat-ante" id="ui-ante">Ante 1/8</div>
         <button class="cog-btn music-btn" id="btn-music-toggle" onclick="toggleMusic()" title="Toggle Background Music">🎵</button>
+        <button class="cog-btn" id="btn-vouchers-hud" onclick="openRunVouchersModal()" title="View Active Run Vouchers">🎟️</button>
         <button class="cog-btn" onclick="toggleCogModal(true)" title="Menu, Rules & Simulator">⚙️</button>
       </div>
     </div>
@@ -386,6 +387,31 @@
       </div>
     </div>
 
+    <!-- SCORING ANIMATION PACE SETTING (DIRECTLY BELOW MUSIC & AUDIO SLIDERS) -->
+    <div style="background:#111622; padding:9px 12px; border-radius:8px; border:1px solid #222938; margin: 6px 0;">
+      <label style="font-size: 12px; color: var(--gold); font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
+        <span>Scoring Animation Pace</span>
+        <span id="ui-lbl-anim-speed" style="font-size:12px; color:#38bdf8;">1.00× (Brisk / Original)</span>
+      </label>
+      <select id="setting-anim-speed" style="width:100%; margin-top:4px; padding:6px; background:#0b0e14; color:#fff; border:1px solid #334155; border-radius:4px; font-size:12px;" onchange="updateScoringSpeed(parseFloat(this.value))">
+        <option value="0.10">0.10× (Slow / Educational - 10% Speed)</option>
+        <option value="0.25">0.25× (Relaxed - 25% Speed)</option>
+        <option value="0.50">0.50× (Medium - 50% Speed)</option>
+        <option value="1.00" selected>1.00× (Brisk / Original)</option>
+      </select>
+    </div>
+
+    <!-- ACTIVE RUN VOUCHERS PANEL -->
+    <div id="ui-cog-vouchers-container" style="background:#111622; padding:9px 12px; border-radius:8px; border:1px solid #222938; margin: 6px 0;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <span style="font-size:12px; font-weight:bold; color:var(--gold);">🎟️ ACTIVE RUN VOUCHERS</span>
+        <span id="ui-cog-vouchers-count" style="font-size:11px; color:#94a3b8;">0 Active</span>
+      </div>
+      <div id="ui-cog-vouchers-list" style="display:flex; flex-direction:column; gap:6px;">
+        <div style="font-size:12px; color:#64748b; font-style:italic;">No vouchers purchased yet this run.</div>
+      </div>
+    </div>
+
     <p style="font-size:13px; color:#cbd5e1; line-height:1.4;">
       You get <strong id="ui-rules-deals-count">7</strong> Deals per Blind. Every card in your final hand adds its Blackjack value to your <strong>Chips</strong> (2–10 = face value, J/Q/K = 10, Ace = 11), plus Enhancements and Jokers. Tap any Joker to reorder it!
     </p>
@@ -409,20 +435,28 @@
     <div style="font-size:12px; color:#94a3b8; line-height:1.4;">
       • <strong>Double Down:</strong> Initial 2 cards only. Draw 1 card, Stand, and multiply final score by <strong>×2</strong>.<br>
       • <strong>Push Deal Refund:</strong> Pushing against the Dealer refunds your deal counter.<br>
-      • <strong>Economy:</strong> Clear a Blind to earn Base Cash + $1 per unused Deal + $1 interest per $5 held (max $5, or $8 with High Roller Credit).
+      • <strong>Economy:</strong> Clear a Blind to earn Base Cash ($4 Small, $5 Big, $6 Boss) + $1 interest per $5 held (max $5, requiring $25 saved; or max $8 requiring $40 saved with High Roller Credit). Unused deals earn $0 cash by default.
     </div>
 
     <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid #334155;">
-      <label style="font-size: 12px; color: var(--gold); font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
-        <span>Scoring Animation Pace</span>
-        <span id="ui-lbl-anim-speed" style="font-size:12px; color:#38bdf8;">1.00× (Brisk / Original)</span>
-      </label>
-      <select id="setting-anim-speed" style="width:100%; margin-top:4px; padding:6px; background:#0b0e14; color:#fff; border:1px solid #334155; border-radius:4px; font-size:12px;" onchange="updateScoringSpeed(parseFloat(this.value))">
-        <option value="0.10">0.10× (Slow / Educational - 10% Speed)</option>
-        <option value="0.25">0.25× (Relaxed - 25% Speed)</option>
-        <option value="0.50">0.50× (Medium - 50% Speed)</option>
-        <option value="1.00" selected>1.00× (Brisk / Original)</option>
-      </select>
+      <button class="btn btn-secondary" id="btn-modal-reset-stats" style="width:100%; padding:8px 12px; font-size:12px; font-weight:700; color:#f87171; border-color:#7f1d1d; background:rgba(127,29,29,0.15);" onclick="uiConfirmResetStats()">
+        ⚠️ Reset Recorded Stats
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM RESET STATS POP-UP MODAL -->
+<div class="modal-backdrop hidden" id="ui-confirm-reset-stats-modal" style="z-index:9999;" onclick="uiCancelResetStats()">
+  <div class="modal-box" style="max-width:360px; text-align:center;" onclick="event.stopPropagation()">
+    <div style="font-size:32px; margin-bottom:8px;">⚠️</div>
+    <h3 style="color:#f87171; margin-bottom:8px;">RESET ALL STATS?</h3>
+    <p style="font-size:13px; color:#cbd5e1; line-height:1.4; margin-bottom:16px;">
+      Are you sure you want to reset your recorded stats and library telemetry? All lifetime item discoveries, win rates, and trigger history will be permanently erased.
+    </p>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+      <button class="btn btn-secondary" id="btn-reset-stats-cancel" onclick="uiCancelResetStats()">Cancel</button>
+      <button class="btn" id="btn-reset-stats-confirm" style="background:#dc2626; color:#fff; font-weight:bold;" onclick="uiExecuteResetStats()">Yes, Reset</button>
     </div>
   </div>
 </div>

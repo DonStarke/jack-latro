@@ -129,16 +129,16 @@ function isCardEligibleForTarot(tarotId: string, card: Card): boolean {
 }
 
 const VOUCHER_CATALOG: ReadonlyArray<VoucherDef> = [
-  { id: 'extra_hand', name: 'Extra Cushion', cost: 10, desc: '+1 Max Deal per Blind permanently.' },
-  { id: 'table_leverage', name: 'Table Leverage', cost: 10, desc: '+1 Base Mult on all Winning & Push hands permanently.' },
+  { id: 'blank_voucher', name: 'Blank Voucher', cost: 10, desc: 'Does nothing? (Unlocks VIP Lounge Pass in future shops).' },
   { id: 'joker_slot', name: 'VIP Lounge Pass', cost: 10, desc: '+1 Max Joker Slot permanently.' },
-  { id: 'base_boost', name: 'High Stakes Table', cost: 10, desc: '+30 Base Chips on all Winning & Push hands.' },
+  { id: 'extra_hand', name: 'Extra Cushion', cost: 10, desc: '+1 Max Deal per Blind permanently.' },
+  { id: 'extra_hand_2', name: 'Extra Cushion 2', cost: 10, desc: '+1 Max Deal per Blind permanently (stacks with Extra Cushion).' },
+  { id: 'clearance_sale', name: 'Clearance Rack', cost: 10, desc: 'Shop rerolls start at $2 permanently.' },
+  { id: 'clearance_sale_2', name: 'Clearance Rack 2', cost: 10, desc: 'Shop rerolls start at $1 permanently.' },
+  { id: 'overstock', name: 'Overstock Shelves', cost: 10, desc: 'Shop offers +1 Booster Pack slot permanently (2 packs instead of 1).' },
+  { id: 'overstock_2', name: 'Overstock Shelves 2', cost: 10, desc: 'Shop offers +1 Booster Pack slot permanently (3 packs instead of 2).' },
   { id: 'deep_pockets', name: 'High Roller Credit', cost: 10, desc: 'Raises interest cap from $5 to $8 (earn interest up to $40).' },
-  { id: 'card_sharp', name: 'Precision Edge', cost: 10, desc: '+30 Chips & +2 Mult on all Natural Blackjacks and Exact 21s.' },
-  { id: 'clearance_sale', name: 'Clearance Rack', cost: 10, desc: 'Shop rerolls start at $1 permanently.' },
-  { id: 'liquidity_pass', name: 'Liquid Assets', cost: 10, desc: 'Earn interest for every $4 held instead of every $5 permanently.' },
-  { id: 'card_shark_voucher', name: 'Card Sharp License', cost: 10, desc: '+1 Max Deal and +20 Base Chips on all hands permanently.' },
-  { id: 'overstock', name: 'Overstock Shelves', cost: 10, desc: 'Shop offers +1 Booster Pack slot permanently (3 packs instead of 2).' }
+  { id: 'liquidity_pass', name: 'Liquid Assets', cost: 10, desc: 'Earn interest for every $4 held instead of every $5 permanently.' }
 ];
 
 const BOSS_BLINDS: ReadonlyArray<BossBlindDef> = [
@@ -333,13 +333,6 @@ function scoreHand(ctx: ScoreContext): ScoreResult {
   let chips = Math.round(baseChips + ctx.baseWinChipBonus + ctx.tempBonusChips);
   let mult = round1(baseMult + ctx.baseWinMultBonus);
   let money = ctx.money;
-
-  // Precision Edge voucher bonus on Natural & Exact 21
-  if (ctx.vouchers && ctx.vouchers.includes('card_sharp') && (outcomeType === 'NATURAL' || outcomeType === 'EXACT21')) {
-    chips += 30;
-    mult = round1(mult + 2);
-    logs.push('Precision Edge (+30c, +2m)');
-  }
 
   steps.push({ kind: 'base', chips, mult, deltaChips: chips, deltaMult: mult, sourceName: outcomeLabel });
 

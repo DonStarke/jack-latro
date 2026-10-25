@@ -245,13 +245,13 @@ $$\text{Total Payout} = \text{Blind Reward} + \text{Unused Deals Bonus} + \text{
 - **Joker Purchase**: Costs listed catalog price ($\$4\text{--}\$7$).
 - **Tarot Purchase**: Costs listed catalog price ($\$3\text{--}\$4$).
 - **Shoe Card Purchase**: Enhanced card added to deck ($\$4$ for Foil/Holo/Gold, $\$5$ for Poly).
-- **Voucher Purchase**: Permanent perk ($\$10$).
+- **Voucher Purchase**: Permanent perk ($\$10$). Exactly 1 voucher offered per Ante.
 - **Shop Reroll**:
-  - Starts at **$\$2$** per shop visit.
-  - Increases by **$+\$1$** with every reroll in that visit ($\$2 \to \$3 \to \$4 \dots$).
-  - Resets to **$\$2$** on the next Blind cleared.
+  - Starts at **$\$3$** per shop visit (reduced to **$\$2$** with *Clearance Rack*, and **$\$1$** with *Clearance Rack 2*).
+  - Increases by **$+\$1$** with every reroll in that visit ($\$3 \to \$4 \to \$5 \dots$).
+  - Resets to base reroll cost on the next Blind cleared.
 - **Selling Inventory**:
-  - Jokers: $\max(1, \lfloor \text{Cost} / 2 \rfloor)$ (Sell values: $\$2\text{--}\$3$).
+  - Jokers: $\max(1, \lfloor \text{Cost} / 2 \rfloor)$ (Sell values: $\$2\text{--}\$4$).
   - Consumables (Tarots): Flat **$\$1$**.
 
 ---
@@ -259,8 +259,8 @@ $$\text{Total Payout} = \text{Blind Reward} + \text{Unused Deals Bonus} + \text{
 ## 6. Ante & Blind Progression Targets
 
 ### Target Formula
-Base ante targets:
-$$\text{ANTE\_TARGETS} = [300, 600, 1200, 2400, 4500, 8500, 15000, 25000]$$
+Base ante targets (monotonically increasing across all 24 campaign blinds):
+$$\text{ANTE\_TARGETS} = [300, 560, 1050, 1950, 3600, 6600, 12000, 21600]$$
 
 For Ante $A \in [1, 8]$ and Blind index $B \in [0, 2]$:
 $$\text{rawBase} = \text{ANTE\_TARGETS}[A - 1]$$
@@ -269,21 +269,25 @@ $$\text{targetScore} = \left\lfloor \text{base} \times \text{BLIND\_TARGET\_MULT
 
 Where:
 - $\text{BLIND\_TARGET\_MULTS}[0] = 1.0$ (Small Blind)
-- $\text{BLIND\_TARGET\_MULTS}[1] = 1.45$ (Big Blind)
-- $\text{BLIND\_TARGET\_MULTS}[2] = 2.0$ (Boss Blind)
+- $\text{BLIND\_TARGET\_MULTS}[1] = 1.35$ (Big Blind)
+- $\text{BLIND\_TARGET\_MULTS}[2] = 1.7$ (Boss Blind)
 
-### Target Score Matrix (100% Target Scale)
+In **Endless Mode** ($\text{Ante} > 8$), targets scale exponentially by $2.2^{\text{Ante} - 8}$, creating a steep endgame wall similar to Balatro.
 
-| Ante | Small Blind ($\times 1.0$) | Big Blind ($\times 1.45$) | Boss Blind ($\times 2.0$) | Boss Assigned |
+### Target Score Matrix (50% Default Scale / Normal Mode)
+
+| Ante | Small Blind ($\times 1.0$) | Big Blind ($\times 1.35$) | Boss Blind ($\times 1.7$) | Boss Assigned |
 | :---: | :---: | :---: | :---: | :--- |
-| **Ante 1** | 300 | 435 | 600 | The House |
-| **Ante 2** | 600 | 870 | 1,200 | The Pit Boss |
-| **Ante 3** | 1,200 | 1,740 | 2,400 | The Cooler |
-| **Ante 4** | 2,400 | 3,480 | 4,800 | The Anchor |
-| **Ante 5** | 4,500 | 6,525 | 9,000 | The House |
-| **Ante 6** | 8,500 | 12,325 | 17,000 | The Pit Boss |
-| **Ante 7** | 15,000 | 21,750 | 30,000 | The Cooler |
-| **Ante 8** | 25,000 | 36,250 | 50,000 | The Anchor |
+| **Ante 1** | 150 | 203 | 255 | The House |
+| **Ante 2** | 280 | 378 | 476 | The Pit Boss |
+| **Ante 3** | 525 | 709 | 893 | The Cooler |
+| **Ante 4** | 975 | 1,316 | 1,658 | The Anchor |
+| **Ante 5** | 1,800 | 2,430 | 3,060 | The House |
+| **Ante 6** | 3,300 | 4,455 | 5,610 | The Pit Boss |
+| **Ante 7** | 6,000 | 8,100 | 10,200 | The Cooler |
+| **Ante 8** | 10,800 | 14,580 | 18,360 | The Anchor |
+
+*(Every single blind has a strictly higher target score than the previous blind: A1 Boss $255 <$ A2 Small $280$, A2 Boss $476 <$ A3 Small $525$, etc.)*
 
 ---
 
@@ -358,18 +362,18 @@ Player has **2 Consumable slots**.
 
 Vouchers appear in the shop extra slot. Once bought, they grant **permanent run-long passive upgrades**.
 
-| ID | Name | Cost | Permanent Benefit | Mathematical Impact |
-| :--- | :--- | :---: | :--- | :--- |
-| `extra_hand` | **Extra Cushion** | $10 | $+1$ Deal per Blind | Increases `maxHands` from 7 to 8. Yields more score chances or $+\$1$ cash bonus if unused. |
-| `table_leverage` | **Table Leverage** | $10 | $+1$ Base Mult on Win/Push | Increases `baseWinMultBonus` by $+1$. Applies to all scoring hands permanently. |
-| `joker_slot` | **VIP Lounge Pass**| $10 | $+1$ Joker Slot | Increases `maxJokers` from 5 to 6. Massive late-game scaling headroom. |
-| `base_boost` | **High Stakes Table** | $10 | $+30$ Base Chips on Win/Push | Increases `baseWinChipBonus` by $+30$. Elevates the baseline of all hands. |
-| `deep_pockets` | **High Roller Credit**| $10 | Interest Cap raised to $8 | Increases max interest from $\$5$ to $\$8$ per blind (interest earned on up to $\$40$). |
-| `card_sharp` | **Precision Edge** | $10 | $+30\text{ Chips}$ & $+2\text{ Mult}$ on 21s | Adds $+30\text{ Chips}$ and $+2\text{ Mult}$ on all Natural Blackjacks and Exact 21s. |
-| `clearance_sale` | **Clearance Rack** | $10 | Shop Rerolls start at $1 | Shop rerolls start at $1 permanently. |
-| `liquidity_pass` | **Liquid Assets** | $10 | Interest per $4 | Earn interest for every $4 held instead of every $5 permanently. |
-| `card_shark_voucher` | **Card Sharp License** | $10 | +1 Deal & +20 Chips | +1 Max Deal and +20 Base Chips on all hands permanently. |
-| `overstock` | **Overstock Shelves** | $10 | +1 Shop Slot | Shop offers +1 additional card/item slot permanently. |
+| ID | Name | Cost | Prerequisite | Permanent Benefit | Mathematical Impact |
+| :--- | :--- | :---: | :--- | :--- | :--- |
+| `blank_voucher` | **Blank Voucher** | $10 | None | Does nothing? | Unlocks VIP Lounge Pass in future shops. |
+| `joker_slot` | **VIP Lounge Pass**| $10 | Blank Voucher | $+1$ Joker Slot | Increases `maxJokers` from 5 to 6. Massive late-game scaling headroom. |
+| `extra_hand` | **Extra Cushion** | $10 | None | $+1$ Deal per Blind | Increases `maxHands` by $+1$ permanently. |
+| `extra_hand_2` | **Extra Cushion 2** | $10 | Extra Cushion | $+1$ Deal per Blind | Increases `maxHands` by an additional $+1$ permanently (stacks). |
+| `clearance_sale` | **Clearance Rack** | $10 | None | Shop Rerolls start at $2 | Reduces initial shop reroll cost from $\$3$ to $\$2$ permanently. |
+| `clearance_sale_2`| **Clearance Rack 2**| $10 | Clearance Rack | Shop Rerolls start at $1 | Reduces initial shop reroll cost from $\$2$ to $\$1$ permanently. |
+| `overstock` | **Overstock Shelves** | $10 | None | 2 Booster Pack Slots | Shop offers 2 booster pack slots instead of 1. |
+| `overstock_2` | **Overstock Shelves 2**| $10 | Overstock Shelves | 3 Booster Pack Slots | Shop offers 3 booster pack slots instead of 2. |
+| `deep_pockets` | **High Roller Credit**| $10 | None | Interest Cap raised to $8 | Increases max interest from $\$5$ to $\$8$ per blind (interest earned on up to $\$40$). |
+| `liquidity_pass` | **Liquid Assets** | $10 | None | Interest per $4 | Earn interest for every $4 held instead of every $5 permanently. |
 
 ---
 

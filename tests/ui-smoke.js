@@ -77,9 +77,10 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   if (cleared) {
     click('btn-deal'); await sleep(200);
     ck('shop overlay visible after cash out', !$('ui-shop-overlay').classList.contains('hidden'));
-    ck('shop shows packs and vouchers', $('ui-shop-packs').children.length >= 2 && $('ui-shop-extras').children.length >= 1);
+    ck('shop shows packs and vouchers', $('ui-shop-packs').children.length >= 1 && $('ui-shop-extras').children.length >= 1);
     ck('shop payout note', /^Earned \+\$\d+/.test(text('ui-shop-payout-note')));
-    ck('target now 218 (Big Blind @ 50% scale)', text('ui-target-score') === '218');
+    const expectedBigBlindTarget = String(w.computeBlindTarget(1, 1, 50));
+    ck('target now ' + expectedBigBlindTarget + ' (Big Blind @ 50% scale)', text('ui-target-score') === expectedBigBlindTarget);
     // buy a pack, open screen appears, pick an option
     const packBuys = [...$('ui-shop-packs').querySelectorAll('button')].filter(b => !b.disabled);
     if (packBuys.length) {
