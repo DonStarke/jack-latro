@@ -291,6 +291,7 @@ function updateScoringSpeed(multiplier: number): void {
 
 /* ---------- Retro Display Effects (CRT & Scanlines) ---------- */
 let crtEnabled = true;
+let crtIntensity = 65;
 let scanlinesEnabled = false;
 
 function initDisplaySettings(): void {
@@ -299,6 +300,11 @@ function initDisplaySettings(): void {
       const savedCrt = localStorage.getItem('jacklatro_crt');
       if (savedCrt !== null) {
         crtEnabled = savedCrt !== 'false';
+      }
+      const savedIntensity = localStorage.getItem('jacklatro_crt_intensity');
+      if (savedIntensity !== null) {
+        const parsed = parseFloat(savedIntensity);
+        if (!isNaN(parsed)) crtIntensity = Math.max(0, Math.min(100, Math.round(parsed)));
       }
       const savedScanlines = localStorage.getItem('jacklatro_scanlines');
       if (savedScanlines !== null) {
@@ -317,6 +323,10 @@ function applyDisplaySettings(): void {
   const scanlinesEl = document.getElementById('ui-scanlines-overlay');
   const btnCrt = document.getElementById('btn-toggle-crt');
   const btnScanlines = document.getElementById('btn-toggle-scanlines');
+  const sliderEl = document.getElementById('setting-crt-intensity') as HTMLInputElement | null;
+  const lblIntensity = document.getElementById('ui-lbl-crt-intensity');
+  const intensityRow = document.getElementById('ui-crt-intensity-row');
+  const feDisp = document.getElementById('crt-fe-disp');
 
   if (crtEl) crtEl.classList.toggle('hidden', !crtEnabled);
   if (scanlinesEl) scanlinesEl.classList.toggle('hidden', !scanlinesEnabled);
@@ -324,6 +334,15 @@ function applyDisplaySettings(): void {
   if (document.body) {
     document.body.classList.toggle('has-crt', crtEnabled);
     document.body.classList.toggle('has-scanlines', scanlinesEnabled);
+  }
+
+  if (document.documentElement) {
+    document.documentElement.style.setProperty('--crt-intensity', (crtIntensity / 100).toFixed(2));
+  }
+
+  if (feDisp) {
+    const dispScale = crtEnabled ? Math.round(35 * (crtIntensity / 100)) : 0;
+    feDisp.setAttribute('scale', String(dispScale));
   }
 
   if (btnCrt) {
@@ -334,6 +353,28 @@ function applyDisplaySettings(): void {
     btnScanlines.textContent = scanlinesEnabled ? 'SCAN: ON' : 'SCAN: OFF';
     btnScanlines.className = scanlinesEnabled ? 'btn btn-deal' : 'btn btn-secondary';
   }
+
+  if (sliderEl) {
+    sliderEl.value = String(Math.round(crtIntensity));
+    sliderEl.disabled = !crtEnabled;
+  }
+  if (lblIntensity) {
+    lblIntensity.textContent = `${Math.round(crtIntensity)}%`;
+  }
+  if (intensityRow) {
+    intensityRow.style.opacity = crtEnabled ? '1' : '0.45';
+  }
+}
+
+function uiSetCrtIntensity(val: number): void {
+  if (typeof val !== 'number' || isNaN(val)) return;
+  crtIntensity = Math.max(0, Math.min(100, Math.round(val)));
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('jacklatro_crt_intensity', String(crtIntensity));
+    }
+  } catch (e) {}
+  applyDisplaySettings();
 }
 
 function toggleCrtSetting(override?: boolean): void {
@@ -5569,6 +5610,7 @@ function renderRunStats(): void {
 (window as any).uiCancelResetStats = uiCancelResetStats;
 (window as any).uiExecuteResetStats = uiExecuteResetStats;
 (window as any).toggleCrtSetting = toggleCrtSetting;
+(window as any).uiSetCrtIntensity = uiSetCrtIntensity;
 (window as any).toggleScanlinesSetting = toggleScanlinesSetting;
 (window as any).initDisplaySettings = initDisplaySettings;
 (window as any).applyDisplaySettings = applyDisplaySettings;

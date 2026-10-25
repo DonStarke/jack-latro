@@ -131,11 +131,33 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   const btnScanlines = $('btn-toggle-scanlines');
   const overlayCrt = $('ui-crt-overlay');
   const overlayScanlines = $('ui-scanlines-overlay');
+  const sliderIntensity = $('setting-crt-intensity');
+  const lblIntensity = $('ui-lbl-crt-intensity');
+  const feDisp = $('crt-fe-disp');
 
   ck('CRT toggle button #btn-toggle-crt exists in settings', !!btnCrt);
   ck('CRT toggle defaults to ON', btnCrt && btnCrt.textContent.includes('CRT: ON'));
   ck('CRT overlay #ui-crt-overlay exists in DOM', !!overlayCrt);
   ck('CRT overlay is active by default (not hidden)', overlayCrt && !overlayCrt.classList.contains('hidden'));
+  ck('CRT phosphor grid layer exists', !!overlayCrt && !!overlayCrt.querySelector('.crt-phosphor-grid'));
+  ck('CRT vignette layer exists', !!overlayCrt && !!overlayCrt.querySelector('.crt-vignette'));
+  ck('CRT bezel layer exists', !!overlayCrt && !!overlayCrt.querySelector('.crt-bezel'));
+  ck('CRT glare layer exists', !!overlayCrt && !!overlayCrt.querySelector('.crt-glare'));
+  ck('SVG displacement filter element #crt-fe-disp exists', !!feDisp);
+
+  ck('CRT intensity slider #setting-crt-intensity exists in settings', !!sliderIntensity);
+  ck('CRT intensity label #ui-lbl-crt-intensity exists in settings', !!lblIntensity);
+  ck('CRT intensity defaults to 65%', lblIntensity && lblIntensity.textContent.includes('65%'));
+  ck('CRT intensity slider default value is 65', sliderIntensity && sliderIntensity.value === '65');
+
+  // Test adjusting CRT intensity via uiSetCrtIntensity
+  w.uiSetCrtIntensity(40);
+  ck('uiSetCrtIntensity(40) updates label to 40%', lblIntensity && lblIntensity.textContent === '40%');
+  ck('uiSetCrtIntensity(40) updates slider value to 40', sliderIntensity && sliderIntensity.value === '40');
+  ck('SVG displacement scale updates with intensity', feDisp && feDisp.getAttribute('scale') === '14');
+
+  // Restore intensity to 65
+  w.uiSetCrtIntensity(65);
 
   ck('Scanlines toggle button #btn-toggle-scanlines exists in settings', !!btnScanlines);
   ck('Scanlines toggle defaults to OFF', btnScanlines && btnScanlines.textContent.includes('SCAN: OFF'));
@@ -156,11 +178,13 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   w.toggleCrtSetting();
   ck('Toggling CRT turns CRT: OFF', btnCrt && btnCrt.textContent.includes('CRT: OFF'));
   ck('CRT overlay is hidden when inactive', overlayCrt && overlayCrt.classList.contains('hidden'));
+  ck('SVG displacement scale is 0 when CRT is OFF', feDisp && feDisp.getAttribute('scale') === '0');
 
   // Test toggling CRT back ON
   w.toggleCrtSetting();
   ck('Toggling CRT again reverts to CRT: ON', btnCrt && btnCrt.textContent.includes('CRT: ON'));
   ck('CRT overlay is active again', overlayCrt && !overlayCrt.classList.contains('hidden'));
+  ck('SVG displacement scale is restored when CRT is ON', feDisp && feDisp.getAttribute('scale') === '23');
 
   console.log('\n--- TEST SUMMARY ---');
   results.forEach(r => console.log(r));

@@ -85,34 +85,27 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   ck('Economy rule mentions $100 saved with High Roller 2', rulesText.includes('$100 saved') || rulesText.includes('$100'));
 
   // -------------------------------------------------------------
-  // TEST 2: ACTIVE RUN VOUCHERS DISPLAY IN SETTINGS & HUD
+  // TEST 2: ACTIVE RUN VOUCHERS DISPLAY IN HUD & DEDICATED POP-UP (REMOVED FROM COG SETTINGS)
   // -------------------------------------------------------------
-  console.log('\n--- TEST 2: ACTIVE RUN VOUCHERS DISPLAY IN SETTINGS & HUD ---');
+  console.log('\n--- TEST 2: ACTIVE RUN VOUCHERS DISPLAY IN HUD & DEDICATED POP-UP ---');
 
-  ck('Vouchers container #ui-cog-vouchers-container exists in settings', !!$('ui-cog-vouchers-container'));
-  ck('Vouchers count element #ui-cog-vouchers-count exists', !!$('ui-cog-vouchers-count'));
-  ck('Vouchers list container #ui-cog-vouchers-list exists', !!$('ui-cog-vouchers-list'));
+  ck('Vouchers container #ui-cog-vouchers-container is removed from settings', !$('ui-cog-vouchers-container'));
   ck('Dedicated vouchers popup modal #ui-vouchers-modal exists in DOM', !!$('ui-vouchers-modal'));
   ck('Dedicated vouchers popup list #ui-vouchers-modal-list exists', !!$('ui-vouchers-modal-list'));
   ck('HUD active vouchers button #btn-vouchers-hud exists in header', !!$('btn-vouchers-hud'));
 
   // Initial state: 0 vouchers
   w.renderActiveVouchers();
-  ck('Voucher count is initially 0 Active', text('ui-cog-vouchers-count') === '0 Active');
   ck('Dedicated modal count is initially 0 Active', text('ui-vouchers-modal-count') === '0 Active');
-  ck('Initial vouchers list shows empty placeholder', text('ui-cog-vouchers-list').includes('No vouchers purchased'));
   ck('Initial dedicated modal list shows empty placeholder', text('ui-vouchers-modal-list').includes('No vouchers purchased'));
 
   // Add vouchers to state
   w.patchState({ vouchersBought: ['blank_voucher', 'extra_hand'] });
   w.renderActiveVouchers();
-  ck('Voucher count updates to 2 Active', text('ui-cog-vouchers-count') === '2 Active');
   ck('Dedicated modal count updates to 2 Active', text('ui-vouchers-modal-count') === '2 Active');
-  ck('Vouchers list renders Blank Voucher card', text('ui-cog-vouchers-list').includes('Blank Voucher'));
-  ck('Vouchers list renders Extra Cushion card', text('ui-cog-vouchers-list').includes('Extra Cushion'));
   ck('Dedicated modal renders Blank Voucher card', text('ui-vouchers-modal-list').includes('Blank Voucher'));
   ck('Dedicated modal renders Extra Cushion card', text('ui-vouchers-modal-list').includes('Extra Cushion'));
-  ck('Vouchers list renders active badges', $('ui-cog-vouchers-list').querySelectorAll('.voucher-active-badge, .lib-tag-pill').length >= 2);
+  ck('Dedicated modal renders active badges', $('ui-vouchers-modal-list').querySelectorAll('.voucher-active-badge, .lib-tag-pill').length >= 2);
 
   // Clicking HUD button opens dedicated vouchers popup modal
   w.openRunVouchersModal();

@@ -38,7 +38,20 @@
 <canvas id="confetti-canvas"></canvas>
 
 <!-- RETRO DISPLAY EFFECTS OVERLAYS -->
-<div id="ui-crt-overlay" class="crt-overlay"></div>
+<svg id="crt-warp-svg" style="position:absolute; width:0; height:0; pointer-events:none;" aria-hidden="true">
+  <defs>
+    <filter id="crt-barrel-warp" x="-10%" y="-10%" width="120%" height="120%">
+      <feImage id="crt-disp-image" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAJ1UlEQVR4nJWXy08Vdt6H+RNm152rdmM3NWlMGttE05Y4MMF6QQeLKApFROBwOXDu5zn3A4fLAUSkoChSGcVLJQNjaBtJrW1jTOiiNU3adGFX7rqb5fNy3japmeTNm1l8tr/nWXx/v9/3U6X427/x+W/47AU++RU3f8F//Yj3vsd/bOG1pzj3LV78Gice4ciXWNzE7CayibFNDG1i/5fY/QjPfY2t3+LJp/j3LTz4Pf71R9z7C+7+FXe+wB2/4V/+jVX//g1fvMCfnuPWz/j4GX72Ha4+xZVvcOkRXtnES1/g1AaOP8DSOhbWMLuG/BNjaxhew+A69jzAzg08+wWe3sTGR1j/DdY9xfe/wz3PcNfP+NpzfOUFVv32HJ//hD/8gE+28OETXH+Mdzdx+XO8+gDn1vDiKk58iqN3cfg25lcws4KsYHwFIys4cBv77mL3p3huFVvX8NQDbPgcD21izWPct33+7i18/Qfc8RNWvXiGP2/h1hP86ivceIj3N/DWOl5fxcv38NJtnLqJ48tY+gSLS5i7jplFZBHjixi9jqElDH6CPcvYeRPP3sYz9/DEKh5dxwMbWP0Q3/4Kdz3BV7ew6tcn+OwxPnmIDzdwfR3v3Mcbd3DhFn68jNNLOHENRxdw+AoW5jE3j+k5ZA4Tcxidx/A8DlzBvgXsvoYdS/jRMjbfwuN38PB9rFnHfduc3Q9x52Os+mUTv/sMH6/jxn28fwdv3sTFGzi/iDNXcfIyjs9haRaLM5i/iNlpTE8j05iYxtg0Ri5iaAaDs9gzh12Xsf0qtixi0w08dhMP3MHq+7hnHd/4DKt+/Bc+XcXNu7h+C+/cwBuLuLCAs/N4YRbLMzg6jcNTWJjE3ARmypguI2VMlDFexugEhidxYAr7pjEwg+dnsW0emxfw+CIevoE1t3DvXXxzFau+v4ffrODny7h6HW8t4OI8zs/izAxOXsCxSSyVsTiO+THMjmJmBFMlpITJEsZHMDaKkTEMjWOwjL2T2HUB22ewZRab5vHoAtZdx/eW8a3tIa7a+gc+WsIHV/HeZVz+GK/O4OwFvDCJ5TKOjOHQCBZKmBvGzBCmi5gqIkVMFjFRxPgQRocxXMLBEewfw0AZz09i2wU8NYMNH+PBy7j/Kr6zhFVPr+HmFVybw9uXcGkaL0/iTBknx3BsBEslLA5hvojZAmbymM5jKofkMJnDRB7jeYwVMFLE0BAGS9g7gl1j2F7GM5PYOI1HLmHtHO69glXfzuEXl3D1It6cwmsTODeO06NYLuHIEA4VsVDAXB4zOUxnMVVJBslgspIsJrIYz2E0j+ECDhaxfwgDJewYxdZxPDmBx6aw7iK+ewmrvr6IG1P46QQuj+PCKM6WcGoYx4tYKmAxj/kcZrOYyWA6g6k08lKSaUxkMJ7BWBYjOQzlMVjAniJ2DmNbCZtHsWEcP5jA6imsejSBD8bx7ih+UsIrwzhTxMkCjuVxOIeFLOYyf8DTv8NTKeSlJFN/SKR/l4hmMJzFgRz25rGrgO1FPD2MH5bw0CjuH8eqL0dwvYS3h3GpiPMFvJjHiRyOZnEog/kMZtOYSWM69RKcl/KHRCKF8TTG0hjJ4GAG+7LYncNzeWwpYGMRjwxjzfYtqtos4loBV/J4PYfzOZzOYjmDIxkspjGfxmzqT3iK/4D/kSR/SsRSGEljKI39GQxksCOLLTk8kcP6PNYWKgJZXMviSgYXMziXxuk0ltNYSmExhbkUZioC/N/wlyUSYDyF0RSGUhhMYSCNHWlsTWNTBuszWJutCID/BFfARXAOnAbLYAksgjkww38pAEbBEBgEA2AH2Ao2gfXg36gIxHAthitxXIzjXAKnE1hOYCmJxSTmkphJ/pcCSYwmMZTEYBIDCexIYGsCm+JYH8faWEUghGthXIng9SjOR3E6huU4jsSxmMB8ArMVgSSmkv/PDCQxkcRYEiMJDCWwP46BOHbEsCWKJ6JYH8HacOUW9ON6EG8P4FII58N4MYITURyN4VAc83HMJjCT+FOC5H8IJP+ExxMYS2AkjoNx7IthdxTPRbAljI0hPDKANcHKO9CND3rwbh9+EsQrAzgTwskwjkVwOIqFGObimIljOoGpxEsSyT/hyQQmEhiPYzSO4RgORLE3gl1hbA/h6QH8MIiH+nB/T+UlPIcbnfhpNy734EIfzgZxagDHQ1gKYzGC+ShmY39IxH+X4KX8Lzz+OzwWw0gUQxEMhrEnhJ0D2BbE5j5s6MEPurG6s/IXtOIXZ3H1HN7sxGvdONeD031YDuLIIA6FsBDGXAQzUUzHMFVJHIljspIYJmIYj2I0guEwDoawfxADQezow9YePNmNxzqx7hy+e7byG57EzdO41oq3z+JSB17uwpkATvbiWD+WglgcxHwIs2HMRDAdwVQUiWIyiokIxiMYC2MkhKFBDAaxtx+7erE9gGe6sLEDj5zF2lbce7qyD/wdHzXig1N47wwuf4RX23H2PF7ownIAR3pxqB8LQcwNYGYQ0yFMhZAQJkOYCGF8EKMDGA7iYD/292IggOe7sO08nmrHho/w4BncfwrfaaxsRAfxm3r8vAFXT+CtZlxswfk2nGnHyfM41oWlABZ7MN+L2T7M9GNqe4oJYjKI8X6M9WGkF0M9GAxgbxd2ncf2dmxpw6YWPNqMdSfwvQZ8q76yE/4Vn9bh5iFcP4p3juONJlxoxtkWvNCG5XYc7cDhTix0Ya4bMwFMB5AAJgIYD2C0G8NdONCJfR0YaMfzbdjWgs3NeLwJDx/HmqO49xC+WVfZivfid+/j4xrcOID3D+PNY7h4HOebcOYUTp7B8VYstWGxHfPnMNuB6Q6kAxMdGOvAyDkMtWOwDXtasesMtp/CliZsOo7HjuGBw1h9APfU4BvvV3rBbny2B5/sw4fVuF6Ddw7gjcO4cBQ/bsDpRpw4iaPNOHwaCy2Ya8F0K9KKiVaMtmC4BQdOY18zdp/Ejkb8qAGbj+Lxw3j4ANbU4L5tzu59uHNPpRntxJ934dZu/Opt3NiH96vxVg1er8PLB/HSEZw6huMNWPoQi42YO4GZJqQJ400YPYGhRgx+iD0N2HkMzx7BMwfxRB0ercED1Vi9D99+G3ftxld3VbrhDnz+Gv7wOj7ZhQ934/qe7W64F5ffw6v7ca4WL9bhxAc4egiHj2C+HjPbQ0Q9xusxUo8DR7DvEHZ/gOfqsLUWT+3Hhve2u+FerNmD+7bP370LX38dd7xWacd/wRev4E87cOtVfLwTP3sDV9/Elbdw6Z3tdrwXL72LU9U4vh9LNVioxWwt8jeM1WK4FoM12LMfO6vx7Lvb7XgvNr6D9W9h3Zv4/hu4ZyfuehVf24GvvIL/AwasEcETUSmtAAAAAElFTkSuQmCC" result="warpMap" preserveAspectRatio="none" />
+      <feDisplacementMap in="SourceGraphic" in2="warpMap" id="crt-fe-disp" scale="22" xChannelSelector="R" yChannelSelector="G" />
+    </filter>
+  </defs>
+</svg>
+<div id="ui-crt-overlay" class="crt-overlay">
+  <div class="crt-phosphor-grid"></div>
+  <div class="crt-vignette"></div>
+  <div class="crt-bezel"></div>
+  <div class="crt-glare"></div>
+</div>
 <div id="ui-scanlines-overlay" class="scanlines-overlay hidden"></div>
 
 <!-- SPLASH SCREEN / MAIN MENU -->
@@ -443,6 +456,17 @@
         <button class="btn btn-deal" id="btn-toggle-crt" onclick="toggleCrtSetting()" style="padding:4px 8px; font-size:11px; min-width:76px;">CRT: ON</button>
       </div>
 
+      <!-- CRT INTENSITY SLIDER -->
+      <div id="ui-crt-intensity-row" style="display:flex; flex-direction:column; gap:4px; padding-left:26px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px;">
+          <span style="color:#94a3b8;">Warp & Phosphor Intensity:</span>
+          <span id="ui-lbl-crt-intensity" style="font-weight:700; color:var(--gold);">65%</span>
+        </div>
+        <input type="range" id="setting-crt-intensity" min="0" max="100" value="65"
+               oninput="uiSetCrtIntensity(parseFloat(this.value))"
+               style="width:100%; accent-color:var(--gold); cursor:pointer;">
+      </div>
+
       <!-- SCANLINES EFFECT TOGGLE -->
       <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #1e293b; padding-top:8px;">
         <div style="display:flex; align-items:center; gap:8px;">
@@ -453,17 +477,6 @@
           </div>
         </div>
         <button class="btn btn-secondary" id="btn-toggle-scanlines" onclick="toggleScanlinesSetting()" style="padding:4px 8px; font-size:11px; min-width:76px;">SCAN: OFF</button>
-      </div>
-    </div>
-
-    <!-- ACTIVE RUN VOUCHERS PANEL -->
-    <div id="ui-cog-vouchers-container" style="background:#111622; padding:9px 12px; border-radius:8px; border:1px solid #222938; margin: 6px 0;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-        <span style="font-size:12px; font-weight:bold; color:var(--gold);">🎟️ ACTIVE RUN VOUCHERS</span>
-        <span id="ui-cog-vouchers-count" style="font-size:11px; color:#94a3b8;">0 Active</span>
-      </div>
-      <div id="ui-cog-vouchers-list" style="display:flex; flex-direction:column; gap:6px;">
-        <div style="font-size:12px; color:#64748b; font-style:italic;">No vouchers purchased yet this run.</div>
       </div>
     </div>
 
