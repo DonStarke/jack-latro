@@ -317,7 +317,6 @@ Player begins with **5 Joker slots** (expandable to 6 with VIP Lounge Pass).
 | `compound_edge` | **Compound Edge** | $6 | Economy +Chips | Every $\$5$ held | $+20\text{ Chips}$ for each full $\$5$ currently held in purse. |
 | `minimalist` | **Minimalist** | $6 | $\times\text{Mult}$ | Win with 2 cards | Multiplies Mult by $\times 1.75$ if winning with exactly 2 cards. |
 | `rain_man` | **Rain Man** | $8 | $\times\text{Mult}$ + Utility | Running Count $\ge +2$ | Hi-Lo Count ($2\text{--}6: +1$, $7\text{--}9: 0$, $10\text{--}\text{A}: -1$ from $0$). When Count $\ge +2$: Double Down applies $\times 3\text{ Mult}$ and Blackjacks / Exact 21s grant $\times 1.5\text{ Mult}$ & $+\$2\text{ Cash}$. |
-| `the_spotter` | **The Spotter** | $8 | Scaling Chips & Mult | Scoring Hand | Shoe Count = $(\text{Remaining } 10\text{s \& Aces}) - (\text{Remaining } 2\text{--}6\text{s})$. Grants $+15\text{ Chips}$ & $+2\text{ Mult}$ per point of positive Shoe Count. |
 | `street_magician` | **Street Magician** | $6 | Utility | Exact 21 / Charlie Win | Creates a random Deck Tarot card (requires open consumable slot). |
 | `marked_deck` | **Marked Deck** | $6 | Utility | Start of Blind | Creates 1 random Table Cheat card in inventory (requires open consumable slot). |
 | `fortune_teller` | **Fortune Teller** | $5 | Mult & Chips | Scoring Hand | $+15\text{ Chips}$ & $+2\text{ Mult}$ for each Tarot or Table Cheat used during the run. |
@@ -449,3 +448,23 @@ graph TD
 
 ---
 *(End of Specification)*
+
+## 🃏 Starting Decks & Difficulty Progression
+
+### Unique Decks
+1. **Standard Deck**:
+   - **Cards**: 52
+   - **Composition**: Standard 52-card deck across 4 suits (♠, ♥, ♣, ♦) with all ranks (2 through Ace).
+2. **The Revolt**:
+   - **Cards**: 40
+   - **Composition**: Face cards are abolished! Contains 0 Kings, 0 Queens, and 0 Jacks. Retains all 4 Aces and 4 of each number (2 through 10).
+
+### Stake Difficulties
+Every deck features three difficulty tiers:
+- 🥉 **Bronze**: Default base score scaling (50% target scaling). Unlocked by default for all decks.
+- 🥈 **Silver**: +75% score scaling (75% target scaling). Unlocked on a specific deck only after conquering Ante 8 on Bronze for that deck.
+- 🥇 **Gold**: +100% score scaling (100% target scaling). Unlocked on a specific deck only after conquering Ante 8 on Silver for that deck.
+
+### Medals & Unlocks
+- Conquering Ante 8 on a given difficulty awards its permanent medal (🥉 Bronze, 🥈 Silver, 🥇 Gold) next to that difficulty level in Deck Selection.
+- Locked difficulties display a 🔒 locked symbol with greyed-out text and cannot be played until unlocked for that specific deck.

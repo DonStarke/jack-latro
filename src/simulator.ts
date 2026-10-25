@@ -450,10 +450,6 @@ function decideBotAction(
     if (ownsJoker('sweet_16') && pTotal >= 13 && pTotal <= 16 && dUp <= 6) {
       return 'STAND';
     }
-    // Snake Eyes: x2.2 Mult standing on 11-13
-    if (ownsJoker('snake_eyes') && pTotal >= 11 && pTotal <= 13 && dUp <= 6) {
-      return 'STAND';
-    }
     // Deja Vu: x1.5 Mult if matching previous winning total
     if (ownsJoker('deja_vu') && simRun.previousHandTotal && pTotal === simRun.previousHandTotal && pTotal >= 16) {
       return 'STAND';
@@ -519,7 +515,7 @@ function scoreJokerPriorityForBot(joker: JokerInstance, botType: BotType): numbe
   if (joker.id === 'fortune_teller') score += 5;
 
   if (botType === 'expert') {
-    if (['bust_cushion', 'safety_net', 'the_shark', 'blackjack_tycoon', 'card_sharp_joker', 'double_or_nothing', 'deja_vu', 'monochrome', 'rain_man', 'the_spotter', 'crown_jewel', 'the_banker', 'the_bullseye', 'tightrope_walker', 'pocket_rockets'].includes(joker.id)) score += 6;
+    if (['bust_cushion', 'safety_net', 'the_shark', 'blackjack_tycoon', 'card_sharp_joker', 'double_or_nothing', 'deja_vu', 'monochrome', 'rain_man', 'crown_jewel', 'the_banker', 'the_bullseye', 'tightrope_walker', 'pocket_rockets'].includes(joker.id)) score += 6;
     if (['golden_parachute', 'diamond_cutter', 'the_grinder', 'compound_edge', 'side_bet', 'bounty_hunter', 'marked_deck', 'street_magician', 'push_the_limit'].includes(joker.id)) score += 4;
     if (['vip_high_roller', 'ace_up_sleeve', 'push_it_good', 'trips_ahoy', 'spade_slicer', 'crimson_heart', 'club_sandwich', 'slow_and_steady', 'sweet_16', 'card_counter', 'even_steven', 'odd_ball', 'red_velvet', 'dark_knight', 'kaleidoscope', 'momentum', 'blowout'].includes(joker.id)) score += 4;
     return score;
@@ -530,7 +526,7 @@ function scoreJokerPriorityForBot(joker: JokerInstance, botType: BotType): numbe
   } else if (botType === 'highroller') {
     if (['vip_high_roller', 'ace_up_sleeve', 'blackjack_tycoon', 'minimalist', 'double_or_nothing', 'the_shark', 'pocket_rockets', 'trips_ahoy', 'rain_man', 'crown_jewel', 'the_bullseye', 'tightrope_walker', 'side_bet', 'blowout'].includes(joker.id)) score += 8;
   } else if (botType === 'synergy') {
-    if (['bust_cushion', 'daredevil', 'chip_stacker', 'the_shark', 'blackjack_tycoon', 'ace_up_sleeve', 'push_it_good', 'push_the_limit', 'compound_edge', 'hot_hand', 'spade_slicer', 'crimson_heart', 'diamond_cutter', 'club_sandwich', 'monochrome', 'card_sharp_joker', 'slow_and_steady', 'the_spotter', 'rain_man', 'kaleidoscope', 'momentum', 'pocket_rockets', 'trips_ahoy', 'even_steven', 'odd_ball', 'card_counter', 'dark_knight', 'red_velvet', 'tightrope_walker', 'safety_net'].includes(joker.id)) score += 6;
+    if (['bust_cushion', 'daredevil', 'chip_stacker', 'the_shark', 'blackjack_tycoon', 'ace_up_sleeve', 'push_it_good', 'push_the_limit', 'compound_edge', 'hot_hand', 'spade_slicer', 'crimson_heart', 'diamond_cutter', 'club_sandwich', 'monochrome', 'card_sharp_joker', 'slow_and_steady', 'rain_man', 'kaleidoscope', 'momentum', 'pocket_rockets', 'trips_ahoy', 'even_steven', 'odd_ball', 'card_counter', 'dark_knight', 'red_velvet', 'tightrope_walker', 'safety_net'].includes(joker.id)) score += 6;
   }
   return score;
 }

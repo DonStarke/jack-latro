@@ -79,7 +79,7 @@ const ck = (n, v) => results.push((v ? 'ok   ' : 'FAIL ') + n);
   const cardPacks = $('lib-cat-card-packs');
 
   ck('Category choice for Jokers exists', !!cardJokers);
-  ck('Jokers category displays "51 CARDS"', cardJokers && cardJokers.textContent.includes('51 CARDS'));
+  ck('Jokers category displays "49 CARDS"', cardJokers && cardJokers.textContent.includes('49 CARDS'));
   ck('Category choice for Tarots exists', !!cardTarots);
   ck('Tarots category displays "17 CONSUMABLES"', cardTarots && cardTarots.textContent.includes('17 CONSUMABLES'));
   ck('Category choice for Vouchers exists', !!cardVouchers);

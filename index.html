@@ -99,7 +99,7 @@
 
     <!-- MAIN MENU ACTIONS -->
     <div class="splash-actions">
-      <button class="btn btn-splash-play" id="btn-splash-new-game" onclick="uiStartGameFromMenu()">
+      <button class="btn btn-splash-play" id="btn-splash-new-game" onclick="uiOpenDeckSelectModal()">
         <span class="play-icon">▶</span>
         <span class="play-text">NEW GAME</span>
       </button>
@@ -138,6 +138,7 @@
       </div>
 
       <div class="meta-right">
+        <div class="stat-pill stat-deck" id="ui-deck-indicator" title="Active Deck & Difficulty">🃏 52 • 🥉 Bronze</div>
         <div class="stat-pill stat-cash" id="ui-money">$6</div>
         <div class="stat-pill stat-ante" id="ui-ante">Ante 1/8</div>
         <button class="cog-btn music-btn" id="btn-music-toggle" onclick="toggleMusic()" title="Toggle Background Music">🎵</button>
@@ -760,6 +761,7 @@
 <div class="modal-backdrop hidden" id="ui-victory-modal">
   <div class="modal-box victory-box" onclick="event.stopPropagation()">
     <div class="victory-header">
+      <div class="victory-medal-award" id="ui-victory-medal-award"></div>
       <div class="victory-crown">👑</div>
       <div class="victory-badge">VICTORY ACHIEVED</div>
       <h1 class="victory-title">ANTE 8 CONQUERED!</h1>
@@ -808,6 +810,31 @@
           <span>👁️ VIEW TABLE</span>
         </button>
       </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- DECK & DIFFICULTY SELECTION MODAL -->
+<div class="modal-backdrop hidden" id="ui-deck-selection-modal" onclick="uiCloseDeckSelectModal()">
+  <div class="modal-box deck-select-box" onclick="event.stopPropagation()">
+    <div class="deck-select-header">
+      <div>
+        <h2 class="deck-select-title">CHOOSE DECK & DIFFICULTY</h2>
+        <div class="deck-select-subtitle">Select a starting deck and stake difficulty for your run</div>
+      </div>
+      <button class="btn btn-secondary btn-deck-select-close" onclick="uiCloseDeckSelectModal()" title="Close">✕</button>
+    </div>
+
+    <div class="deck-select-grid" id="ui-deck-select-grid">
+      <!-- Deck cards & difficulty levels rendered dynamically -->
+    </div>
+
+    <div class="deck-select-footer">
+      <button class="btn btn-secondary" id="btn-deck-select-back" onclick="uiCloseDeckSelectModal()">← Back</button>
+      <button class="btn btn-splash-play" id="btn-deck-select-start" onclick="uiConfirmDeckSelection()">
+        <span class="play-icon">▶</span> START RUN
+      </button>
     </div>
   </div>
 </div>
@@ -960,7 +987,7 @@
 
     <!-- CATEGORY TABS (visible in category view) -->
     <div class="library-category-tabs hidden" id="ui-lib-category-tabs">
-      <button class="lib-tab-btn" id="lib-tab-jokers" onclick="switchLibraryCategory('jokers')">🃏 Jokers (51)</button>
+      <button class="lib-tab-btn" id="lib-tab-jokers" onclick="switchLibraryCategory('jokers')">🃏 Jokers (49)</button>
       <button class="lib-tab-btn" id="lib-tab-tarots" onclick="switchLibraryCategory('tarots')">🔮 Tarots (10)</button>
       <button class="lib-tab-btn" id="lib-tab-vouchers" onclick="switchLibraryCategory('vouchers')">🎟️ Vouchers (10)</button>
       <button class="lib-tab-btn" id="lib-tab-effects" onclick="switchLibraryCategory('effects')">✨ Card Effects (4)</button>
@@ -973,7 +1000,7 @@
         <div class="lib-cat-card cat-jokers" id="lib-cat-card-jokers" onclick="openLibraryCategory('jokers')">
           <div class="lib-cat-header">
             <span class="lib-cat-icon">🃏</span>
-            <span class="lib-cat-count-badge">51 CARDS</span>
+            <span class="lib-cat-count-badge">49 CARDS</span>
           </div>
           <div class="lib-cat-name">JOKERS</div>
           <div class="lib-cat-desc">Rule-bending passive jokers providing Chips, Multipliers, economic perks, and hand synergies.</div>

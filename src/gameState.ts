@@ -11,6 +11,27 @@ type Suit = '♠' | '♥' | '♣' | '♦' | '★';
 type Rank = '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'J' | 'Q' | 'K' | 'A';
 type Enhancement = 'foil' | 'holo' | 'poly' | 'gold' | null;
 
+type DifficultyId = 'bronze' | 'silver' | 'gold';
+
+interface DifficultyDef {
+  id: DifficultyId;
+  name: string;
+  targetScalePct: number;
+  color: string;
+  medalIcon: string;
+  desc: string;
+}
+
+interface DeckDef {
+  id: string;
+  name: string;
+  description: string;
+  cardCount: number;
+  icon: string;
+  badge: string;
+  createDeck: () => Card[];
+}
+
 interface Card {
   uid: number;
   suit: Suit;
@@ -154,6 +175,8 @@ interface GameState {
   maxConsumables: number;
   baseWinChipBonus: number;
   baseWinMultBonus: number;
+  activeDeckId?: string;
+  activeDifficultyId?: DifficultyId;
 
   deck: Card[];
   shoe: Card[];
@@ -1176,11 +1199,88 @@ if (typeof window !== 'undefined') {
   (window as any).migrateTelemetryStore = migrateTelemetryStore;
   (window as any).CURRENT_TELEMETRY_SCHEMA_VERSION = CURRENT_TELEMETRY_SCHEMA_VERSION;
   (window as any).GAME_VERSION = GAME_VERSION;
+  (window as any).loadDeckProgress = loadDeckProgress;
+  (window as any).saveDeckProgress = saveDeckProgress;
+  (window as any).hasBeatenDifficulty = hasBeatenDifficulty;
+  (window as any).isDifficultyUnlocked = isDifficultyUnlocked;
+  (window as any).recordDeckVictory = recordDeckVictory;
+  (window as any).resetDeckProgress = resetDeckProgress;
+  (window as any).resetRunState = resetRunState;
+}
+
+/* ---------- Deck Progress & Difficulty Persistence ---------- */
+const DECK_PROGRESS_KEY = 'jacklatro_deck_progress';
+
+interface DeckProgressStore {
+  beaten: Record<string, DifficultyId[]>;
+}
+
+let _memoryDeckProgress: DeckProgressStore = { beaten: {} };
+
+function loadDeckProgress(): DeckProgressStore {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const raw = window.localStorage.getItem(DECK_PROGRESS_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed.beaten === 'object') {
+          _memoryDeckProgress = parsed;
+          return parsed;
+        }
+      }
+    }
+  } catch (e) {
+    // Ignore storage errors in test environments
+  }
+  return _memoryDeckProgress;
+}
+
+function saveDeckProgress(store: DeckProgressStore): void {
+  _memoryDeckProgress = store;
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.setItem(DECK_PROGRESS_KEY, JSON.stringify(store));
+    }
+  } catch (e) {
+    // Ignore storage errors in test environments
+  }
+}
+
+function hasBeatenDifficulty(deckId: string, diffId: DifficultyId): boolean {
+  const store = loadDeckProgress();
+  return Array.isArray(store.beaten[deckId]) && store.beaten[deckId].includes(diffId);
+}
+
+function isDifficultyUnlocked(deckId: string, diffId: DifficultyId): boolean {
+  if (diffId === 'bronze') return true;
+  if (diffId === 'silver') return hasBeatenDifficulty(deckId, 'bronze');
+  if (diffId === 'gold') return hasBeatenDifficulty(deckId, 'silver');
+  return false;
+}
+
+function recordDeckVictory(deckId: string, diffId: DifficultyId): void {
+  const store = loadDeckProgress();
+  if (!store.beaten[deckId]) store.beaten[deckId] = [];
+  if (!store.beaten[deckId].includes(diffId)) {
+    store.beaten[deckId].push(diffId);
+    saveDeckProgress(store);
+  }
+}
+
+function resetDeckProgress(): void {
+  _memoryDeckProgress = { beaten: {} };
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.removeItem(DECK_PROGRESS_KEY);
+    }
+  } catch (e) {}
 }
 
 /* ---------- Lifecycle ---------- */
 /** Resets everything that belongs to a single run. The deck is supplied by deckEngine. */
-function resetRunState(freshDeck: Card[]): void {
+function resetRunState(freshDeck: Card[], deckId: string = 'standard', diffId: DifficultyId = 'bronze'): void {
+  _state.activeDeckId = deckId;
+  _state.activeDifficultyId = diffId;
   _state.ante = 1;
   _state.blindIndex = 0;
   _state.money = _balanceConfig.startingMoney ?? STARTING_MONEY;

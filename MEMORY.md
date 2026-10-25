@@ -67,9 +67,9 @@
 * **Endless Mode**: Full progression beyond Ante 8 with scaled blind targets and HUD updates (`Ante X (Endless)`).
 * **Hand Outcome Sound Timing & Mapping**: Moved outcome sound dispatch to execute immediately after cards/dealer are settled, before the scoring animation cascade starts. Mapped outcomes: player win -> uplifting chime, push -> level neutral two-tone marimba ping (even when scoring), bust/loss -> fail/defeat sounds.
 * Catalog Expansion & Rarity System (Stages 1, 2 & Content Expansion to 52 Jokers):
-  * **51 Jokers across 3 Rarities:**
-    * **Rare (10% weight, 10 Jokers):** `The Shark`, `Blackjack Tycoon`, `Minimalist`, `Double or Nothing`, `Card Sharp`, `Deja Vu`, `Rain Man`, `The Spotter`, `Crown Jewel`, `The Banker`.
-    * **Uncommon (30% weight, 17 Jokers):** `Daredevil`, `Chip Stacker`, `Compound Edge`, `Bust Cushion`, `Push It Good`, `Safety Net`, `Hot Hand`, `Snake Eyes`, `Monochrome`, `Pocket Rockets`, `Sweet Sixteen`, `Street Magician`, `Marked Deck`, `The Bullseye`, `Push the Limit`, `Bad Beat Jackpot`, `Tightrope Walker`.
+  * **49 Jokers across 3 Rarities:**
+    * **Rare (10% weight, 10 Jokers):** `The Shark`, `Blackjack Tycoon`, `Minimalist`, `Double or Nothing`, `Card Sharp`, `Deja Vu`, `Rain Man`, `Crown Jewel`, `The Banker`.
+    * **Uncommon (30% weight, 17 Jokers):** `Daredevil`, `Chip Stacker`, `Compound Edge`, `Bust Cushion`, `Push It Good`, `Safety Net`, `Hot Hand`, `Monochrome`, `Pocket Rockets`, `Sweet Sixteen`, `Street Magician`, `Marked Deck`, `The Bullseye`, `Push the Limit`, `Bad Beat Jackpot`, `Tightrope Walker`.
     * **Common (60% weight, 24 Jokers):** `Card Counter`, `Even Steven`, `Odd Ball`, `The Grinder`, `Golden Parachute`, `VIP High Roller`, `Ace Up Sleeve`, `Lucky Sevens`, `Hit Me Baby`, `Red Velvet`, `Dark Knight`, `Spade Slicer`, `Crimson Heart`, `Diamond Cutter`, `Club Sandwich`, `Trips Ahoy`, `Slow & Steady`, `Fortune Teller`, `Blowout`, `Bounty Hunter`, `Small Fry`, `Kaleidoscope`, `Momentum`, `Side Bet`.
   * **10 Tarots:** The Magician, The Empress, The Wheel, The Tower, The Guillotine, Card Forge, Prism Dye, Lucky Charm, Wild Suit (The Fool/Chameleon).
   * **10 Vouchers:** Extra Cushion, Table Leverage, VIP Lounge, High Stakes Table, High Roller Credit, Precision Edge, Clearance Rack, Liquid Assets, Card Sharp License, Overstock Shelves.
@@ -125,7 +125,7 @@
       * `basic`: Standard basic strategy with opportunistic Joker/Tarot purchases.
       * `charlie`: Aggressive 5-card Charlie specialist, hits <= 15, prioritizes low-rank Jokers and Card Shave / Guillotine.
       * `highroller`: High-Roller 21 specialist, aggressive doubling, prioritizes face cards and Card Forge.
-      * `synergy`: Adaptive combo builder, leans into owned Joker synergies (Bust Cushion, Daredevil, Chip Stacker, Sweet 16, Snake Eyes, Deja Vu).
+      * `synergy`: Adaptive combo builder, leans into owned Joker synergies (Bust Cushion, Daredevil, Chip Stacker, Sweet 16, Deja Vu).
       * `expert`: Optimal tournament AI with tempo-first early game bankroll, deck sculpting, XMult positioning, and Clearance Rack rerolls.
   * **Automated Verification**: All 17 test suites (500+ unit and integration checks) passing 100%.
 * **Endless Mode Bot Simulation & Comprehensive Telemetry Expansion (v1.8)**:
@@ -163,3 +163,17 @@
 
 
 
+
+## 🃏 Deck & Difficulty System
+* **Deck Selection Modal**: Accessible when clicking "New Game" from Splash Screen, Defeat Modal, or Victory Modal.
+* **Decks Catalog**:
+  * **Standard Deck** (52 cards): 4 suits, standard ranks 2–A.
+  * **The Revolt** (40 cards): Royal cards overthrown! No Kings, Queens, or Jacks; retains 4 Aces and 4 of each number (2–10).
+* **Difficulty Stakes (Per-Deck Progression)**:
+  * 🥉 **Bronze**: Default 50% target scaling.
+  * 🥈 **Silver**: 75% target scaling. Unlocked only on a deck once Bronze is beaten for that deck.
+  * 🥇 **Gold**: 100% target scaling. Unlocked only on a deck once Silver is beaten for that deck.
+* **Medals & Visuals**:
+  * Ante 8 victory awards permanent Bronze 🥉, Silver 🥈, or Gold 🥇 medal.
+  * Locked difficulties show locked icon 🔒 and greyed-out styling.
+* **Jokers Removed**: `Snake Eyes` and `The Spotter` removed from catalogs, scoring, and UI (total catalog: 49 Jokers).

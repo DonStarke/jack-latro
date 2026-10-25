@@ -158,9 +158,13 @@ function beginBlindState(): { bankerTriggered: boolean; markedDeckCreatedCheats:
 }
 
 /** Full new-run reset: fresh uids + deck, first Blind configured and begun. */
-function startNewRunState(): { bankerTriggered: boolean; markedDeckCreatedCheats: TarotDef[] } {
+function startNewRunState(deckId: string = 'standard', diffId: DifficultyId = 'bronze'): { bankerTriggered: boolean; markedDeckCreatedCheats: TarotDef[] } {
   resetCardUid();
-  resetRunState(createStandardDeck());
+  const deckDef = (typeof getDeckDef === 'function' ? getDeckDef(deckId) : null) || DECK_CATALOG[0];
+  const diffDef = (typeof getDifficultyDef === 'function' ? getDifficultyDef(diffId) : null) || DIFFICULTY_CATALOG[0];
+  patchBalanceConfig({ targetScalePct: diffDef.targetScalePct });
+  const freshDeck = deckDef.createDeck();
+  resetRunState(freshDeck, deckDef.id, diffDef.id);
   configureBlindMetrics();
   return beginBlindState();
 }

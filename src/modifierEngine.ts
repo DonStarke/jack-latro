@@ -28,7 +28,6 @@ const JOKER_CATALOG: ReadonlyArray<JokerDef> = [
   { id: 'compound_edge', name: 'Compound Edge', cost: 6, rarity: 'uncommon', isXMult: false, icon: '📈', archetype: 'chips', desc: '+15 Chips & +1 Mult for every $5 you currently hold (max +150c/+10m).' },
   { id: 'minimalist', name: 'Minimalist', cost: 7, rarity: 'rare', isXMult: true, icon: '⭕', archetype: 'mult', desc: '×1.8 Mult if you Win with exactly 2 cards.' },
   { id: 'hot_hand', name: 'Hot Hand', cost: 6, rarity: 'uncommon', isXMult: false, bonusMult: 0, icon: '🔥', archetype: 'mult', desc: 'Gains +2 Mult per consecutive winning hand (up to +20 Mult max). Resets to 0 on a loss or bust.' },
-  { id: 'snake_eyes', name: 'Snake Eyes', cost: 6, rarity: 'uncommon', isXMult: true, icon: '🎲', archetype: 'mult', desc: '×2.2 Mult if you Win standing on a total of 13 or less.' },
   { id: 'pocket_rockets', name: 'Pocket Rockets', cost: 6, rarity: 'uncommon', isXMult: false, icon: '🚀', archetype: 'mult', desc: '+30 Chips & +8 Mult if starting hand contains an Ace (doubled to +75c/+20m for a Pair of Aces).' },
   { id: 'trips_ahoy', name: 'Trips Ahoy', cost: 5, rarity: 'common', isXMult: false, icon: '⚓', archetype: 'chips', desc: '+60 Chips & +8 Mult if you win with 3+ cards totaling 19-21 (doubled to +120c/+15m for 3-of-a-Kind).' },
   { id: 'spade_slicer', name: 'Spade Slicer', cost: 5, rarity: 'common', isXMult: false, icon: '🗡️', archetype: 'suit', suitTheme: '♠', desc: '+15 Chips & +5 Mult for each ♠ in your hand.' },
@@ -43,7 +42,6 @@ const JOKER_CATALOG: ReadonlyArray<JokerDef> = [
   { id: 'card_sharp_joker', name: 'Card Sharp', cost: 8, rarity: 'rare', isXMult: true, icon: '🪒', archetype: 'mult', desc: '×1.5 Mult if you have already won a hand in this Blind.' },
   { id: 'deja_vu', name: 'Deja Vu', cost: 8, rarity: 'rare', isXMult: true, icon: '🌀', archetype: 'mult', desc: '×1.5 Mult if your final hand total matches your final total from the previous winning hand.' },
   { id: 'rain_man', name: 'Rain Man', cost: 8, rarity: 'rare', isXMult: true, icon: '🧠', archetype: 'mult', desc: 'Hi-Lo Count (2-6: +1, 7-9: 0, 10-A: -1 from 0). When Count ≥ +2: Double Down applies ×3 Mult & Blackjacks/21s grant ×1.5 Mult & +$2.' },
-  { id: 'the_spotter', name: 'The Spotter', cost: 8, rarity: 'rare', isXMult: false, icon: '🔭', archetype: 'chips', desc: 'Shoe Count = (Remaining 10s & Aces) - (Remaining 2-6s). On scoring hands, grants +15 Chips & +2 Mult per point of positive Shoe Count.' },
   { id: 'street_magician', name: 'Street Magician', cost: 6, rarity: 'uncommon', isXMult: false, icon: '🎩', archetype: 'utility', desc: '+25 Chips on scoring hands. Exact 21, Natural BJ, or 5-Card Charlie wins create a random Tarot card (must have room).' },
   { id: 'marked_deck', name: 'Marked Deck', cost: 6, rarity: 'uncommon', isXMult: false, icon: '🎴', archetype: 'utility', desc: 'At the start of each Blind, create 1 random Table Cheat in your inventory (must have room).' },
   { id: 'fortune_teller', name: 'Fortune Teller', cost: 6, rarity: 'uncommon', isXMult: false, icon: '🔮', archetype: 'mult', desc: '+6 Chips & +1 Mult for each Tarot or Table Cheat used this run (max +60c/+10m).' },
@@ -454,9 +452,6 @@ function scoreHand(ctx: ScoreContext): ScoreResult {
         if (hm > 0) { mult += hm; logs.push(`Hot Hand +${hm}m`); triggered = true; }
         break;
       }
-      case 'snake_eyes':
-        if (isWin && pTotal <= 13 && !pBust) { mult = round1(mult * 2.2); logs.push('Snake Eyes ×2.2m'); triggered = true; }
-        break;
       case 'pocket_rockets': {
         if (hand.length >= 2) {
           const a1 = hand[0].rank === 'A';
@@ -551,18 +546,6 @@ function scoreHand(ctx: ScoreContext): ScoreResult {
           mult = round1(mult * 1.5);
           money += 2;
           logs.push(`Rain Man (RC +${rc}) ×1.5m/+$2`);
-          triggered = true;
-        }
-        break;
-      }
-      case 'the_spotter': {
-        const shoeAdv = ctx.shoe ? calculateShoeCount(ctx.shoe) : 0;
-        if (shoeAdv > 0) {
-          const addC = shoeAdv * 15;
-          const addM = shoeAdv * 2;
-          chips += addC;
-          mult += addM;
-          logs.push(`Spotter (Shoe +${shoeAdv}) +${addC}c/+${addM}m`);
           triggered = true;
         }
         break;
@@ -725,7 +708,7 @@ function scoreHand(ctx: ScoreContext): ScoreResult {
     }
     if (triggered) {
       const isSmallFryX = j.id === 'small_fry' && hand.filter(c => ['2', '3', '4', '5'].includes(c.rank)).length >= 3;
-      const isX = (j.isXMult && j.id !== 'small_fry') || isSmallFryX || ['the_shark', 'blackjack_tycoon', 'minimalist', 'snake_eyes', 'monochrome', 'card_sharp_joker', 'deja_vu', 'rain_man', 'crown_jewel', 'bounty_hunter'].includes(j.id);
+      const isX = (j.isXMult && j.id !== 'small_fry') || isSmallFryX || ['the_shark', 'blackjack_tycoon', 'minimalist', 'monochrome', 'card_sharp_joker', 'deja_vu', 'rain_man', 'crown_jewel', 'bounty_hunter'].includes(j.id);
       const dMult = isX ? (prevMult > 0 ? round1(mult / prevMult) : mult) : round1(mult - prevMult);
       steps.push({
         kind: 'joker',

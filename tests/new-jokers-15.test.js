@@ -49,7 +49,7 @@ const ck = (n, v) => {
 
   // 1. CATALOG VERIFICATION
   console.log('\n--- 1. CATALOG VERIFICATION (ALL 15 JOKERS) ---');
-  ck('JOKER_CATALOG has 51 total Jokers', w.JOKER_CATALOG.length === 51);
+  ck('JOKER_CATALOG has 51 total Jokers', w.JOKER_CATALOG.length === 49);
 
   const expectedJokers = [
     { id: 'street_magician', rarity: 'uncommon', cost: 6, isX: false },

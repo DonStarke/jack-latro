@@ -26,6 +26,74 @@ function createStandardDeck(): Card[] {
   return deck;
 }
 
+function createRevoltDeck(): Card[] {
+  const suits: Suit[] = ['♠', '♥', '♣', '♦'];
+  const ranks: Rank[] = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'A'];
+  const deck: Card[] = [];
+  for (const s of suits) {
+    for (const r of ranks) {
+      deck.push({ uid: takeNextCardUid(), suit: s, rank: r, enhancement: null });
+    }
+  }
+  return deck;
+}
+
+const DECK_CATALOG: DeckDef[] = [
+  {
+    id: 'standard',
+    name: 'Standard Deck',
+    description: 'Basic standard 52 card deck. Balanced starting layout with all 4 suits and ranks 2 through Ace.',
+    cardCount: 52,
+    icon: '🃏',
+    badge: '52 Cards',
+    createDeck: createStandardDeck
+  },
+  {
+    id: 'the_revolt',
+    name: 'The Revolt',
+    description: 'The royals have been overthrown! No Kings, Queens, or Jacks. Retains all 4 Aces and 4 of each number (2–10).',
+    cardCount: 40,
+    icon: '⚔️',
+    badge: '40 Cards',
+    createDeck: createRevoltDeck
+  }
+];
+
+const DIFFICULTY_CATALOG: DifficultyDef[] = [
+  {
+    id: 'bronze',
+    name: 'Bronze',
+    targetScalePct: 50,
+    color: '#cd7f32',
+    medalIcon: '🥉',
+    desc: 'Default score scaling (50%)'
+  },
+  {
+    id: 'silver',
+    name: 'Silver',
+    targetScalePct: 75,
+    color: '#cbd5e1',
+    medalIcon: '🥈',
+    desc: 'Score scaling of 75%'
+  },
+  {
+    id: 'gold',
+    name: 'Gold',
+    targetScalePct: 100,
+    color: '#fbbf24',
+    medalIcon: '🥇',
+    desc: 'Score scaling of 100%'
+  }
+];
+
+function getDeckDef(id: string): DeckDef | undefined {
+  return DECK_CATALOG.find(d => d.id === id);
+}
+
+function getDifficultyDef(id: DifficultyId): DifficultyDef | undefined {
+  return DIFFICULTY_CATALOG.find(d => d.id === id);
+}
+
 function shuffle<T>(array: ReadonlyArray<T>): T[] {
   const arr = [...array];
   for (let i = arr.length - 1; i > 0; i--) {
@@ -223,4 +291,10 @@ if (typeof window !== 'undefined') {
   (window as any).getHiLoDelta = getHiLoDelta;
   (window as any).calculateRunningCount = calculateRunningCount;
   (window as any).calculateShoeCount = calculateShoeCount;
+  (window as any).createStandardDeck = createStandardDeck;
+  (window as any).createRevoltDeck = createRevoltDeck;
+  (window as any).DECK_CATALOG = DECK_CATALOG;
+  (window as any).DIFFICULTY_CATALOG = DIFFICULTY_CATALOG;
+  (window as any).getDeckDef = getDeckDef;
+  (window as any).getDifficultyDef = getDifficultyDef;
 }

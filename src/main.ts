@@ -42,12 +42,6 @@ function getJokerFullDesc(j: JokerInstance): string {
     const status = rc >= 2 ? '🔥 ACTIVE (≥+2 for 3x)' : 'Inactive (<+2)';
     return `Hi-Lo Count (2-6: +1, 7-9: 0, 10-A: -1 from 0 this blind). When Count ≥ +2: Double Down applies ×3 Mult & Blackjacks/21s grant ×1.5 Mult & +$2. (Current Count: ${rc >= 0 ? '+' + rc : rc} — ${status})`;
   }
-  if (j.id === 'the_spotter') {
-    const shoeAdv = typeof calculateShoeCount === 'function' ? calculateShoeCount(getState().shoe) : 0;
-    const chips = Math.max(0, shoeAdv * 15);
-    const mult = Math.max(0, shoeAdv * 2);
-    return `Shoe Count = (Remaining 10s & Aces) - (Remaining 2-6s). On scoring hands, grants +15 Chips & +2 Mult per point of positive Shoe Count. (Current Shoe Count: ${shoeAdv >= 0 ? '+' + shoeAdv : shoeAdv} — yielding +${chips}c / +${mult}m)`;
-  }
   if (j.id === 'the_bullseye') {
     return `Permanently gains +2 Mult for the rest of run every time you score an Exact 21. (Currently: +${j.bonusMult || 0} Mult)`;
   }
@@ -130,11 +124,6 @@ function getJokerMiniSubHTML(j: JokerInstance): string {
     const tag = rc >= 2 ? '🔥 ×3m/21' : '(≥+2 for 3x)';
     return `<span style="color:${col};font-weight:900;">RC ${rc >= 0 ? '+' + rc : rc}</span> ${tag}`;
   }
-  if (j.id === 'the_spotter') {
-    const shoeAdv = typeof calculateShoeCount === 'function' ? calculateShoeCount(getState().shoe) : 0;
-    const col = shoeAdv > 0 ? '#10b981' : '#cbd5e1';
-    return `<span style="color:${col};font-weight:900;">Shoe ${shoeAdv >= 0 ? '+' + shoeAdv : shoeAdv}</span> ${shoeAdv > 0 ? `(+${shoeAdv * 15}c/+${shoeAdv * 2}m)` : '(0c/0m)'}`;
-  }
   if (j.id === 'the_bullseye') {
     return `<span style="color:var(--mult);font-weight:900;">+${j.bonusMult || 0}m</span> (+2m/21)`;
   }
@@ -215,7 +204,6 @@ function getJokerMiniSubHTML(j: JokerInstance): string {
   if (j.id === 'dark_knight') return `+15c, +4m / ♠♣`;
   if (j.id === 'minimalist') return `×1.8m 2-Card Win`;
   if (j.id === 'hot_hand') return `<span style="color:var(--mult);font-weight:900;">+${j.bonusMult || 0}m</span> (+2m/Streak)`;
-  if (j.id === 'snake_eyes') return `×2.2m (Win ≤13)`;
   if (j.id === 'pocket_rockets') return `+30c, +8m (Ace) / +75c,+20m (AA)`;
   if (j.id === 'trips_ahoy') return `+60c, +8m (3-card 19-21/3-Kind)`;
   if (j.id === 'spade_slicer') return `+15c, +5m / ♠`;
@@ -1609,52 +1597,41 @@ function updateAllUI() {
   $('ui-money').textContent = '$' + state.money;
   $('ui-ante').textContent = state.ante > 8 ? `Ante ${state.ante} (Endless)` : `Ante ${state.ante}/8`;
   $('ui-shoe-count').textContent = `${state.shoe.length}/${state.deck.length}`;
+  const deckInd = $('ui-deck-indicator');
+  if (deckInd) {
+    const dDef = (typeof getDeckDef === 'function' ? getDeckDef(state.activeDeckId || 'standard') : null) || (typeof DECK_CATALOG !== 'undefined' ? DECK_CATALOG[0] : null);
+    const diffDef = (typeof getDifficultyDef === 'function' ? getDifficultyDef(state.activeDifficultyId || 'bronze') : null) || (typeof DIFFICULTY_CATALOG !== 'undefined' ? DIFFICULTY_CATALOG[0] : null);
+    if (dDef && diffDef) {
+      deckInd.textContent = `${dDef.icon} ${dDef.name} • ${diffDef.medalIcon} ${diffDef.name}`;
+    }
+  }
 
   updateSeenCardsAndRunningCount();
 
   const shoeWidget = $('ui-shoe-widget');
   const counterHud = $('ui-deck-counter-hud');
   const hasRainMan = state.jokers.some(j => j.id === 'rain_man');
-  const hasSpotter = state.jokers.some(j => j.id === 'the_spotter');
   const rc = state.runningCount || 0;
-  const shoeAdv = typeof calculateShoeCount === 'function' ? calculateShoeCount(state.shoe) : 0;
 
   if (shoeWidget) {
     shoeWidget.classList.toggle('has-rain-man', hasRainMan);
     shoeWidget.classList.toggle('is-hot', hasRainMan && rc >= 2);
-    shoeWidget.classList.toggle('has-spotter', hasSpotter);
-    shoeWidget.classList.toggle('has-both-counters', hasRainMan && hasSpotter);
-    shoeWidget.classList.toggle('has-counter-joker', hasRainMan || hasSpotter);
+    shoeWidget.classList.toggle('has-counter-joker', hasRainMan);
   }
 
   if (counterHud) {
-    if (!hasRainMan && !hasSpotter) {
+    if (!hasRainMan) {
       counterHud.innerHTML = '';
       counterHud.classList.add('hidden');
     } else {
       counterHud.classList.remove('hidden');
-      let hudHTML = '';
-      if (hasRainMan) {
-        const hotClass = rc >= 2 ? 'hot-glow' : (rc < 0 ? 'cold-glow' : '');
-        hudHTML += `
-          <div class="deck-count-pill rain-man-pill ${hotClass}" title="Rain Man Hi-Lo Running Count: ${rc >= 0 ? '+' + rc : rc}">
-            <div class="pill-label">🧠 RC</div>
-            <div class="pill-val">${rc >= 0 ? '+' + rc : rc}</div>
-            ${rc >= 2 ? '<div class="pill-tag">HOT!</div>' : ''}
-          </div>
-        `;
-      }
-      if (hasSpotter) {
-        const emClass = shoeAdv > 0 ? 'emerald-glow' : '';
-        hudHTML += `
-          <div class="deck-count-pill spotter-pill ${emClass}" title="The Spotter Shoe Count: ${shoeAdv >= 0 ? '+' + shoeAdv : shoeAdv} (Remaining 10s/Aces minus 2-6s)">
-            <div class="pill-label">🔭 SHOE</div>
-            <div class="pill-val">${shoeAdv >= 0 ? '+' + shoeAdv : shoeAdv}</div>
-            ${shoeAdv > 0 ? `<div class="pill-tag">+${shoeAdv * 15}c</div>` : ''}
-          </div>
-        `;
-      }
-      counterHud.innerHTML = hudHTML;
+      const hotClass = rc >= 2 ? 'hot-glow' : (rc < 0 ? 'cold-glow' : '');
+      counterHud.innerHTML = `
+        <div class="deck-count-pill rain-man-pill ${hotClass}" title="Rain Man Hi-Lo Running Count: ${rc >= 0 ? '+' + rc : rc}">
+          <div class="pill-label">🧠 RC</div>
+          <div class="pill-val">${rc >= 0 ? '+' + rc : rc}</div>
+          ${rc >= 2 ? '<div class="pill-tag">HOT!</div>' : ''}
+      `;
     }
   }
 
@@ -2636,7 +2613,10 @@ function refreshBlindStartUI(): void {
   updateAllUI();
 }
 
-function startNewRun(): void {
+let selectedDeckId: string = 'standard';
+let selectedDifficultyId: DifficultyId = 'bronze';
+
+function startNewRun(deckId: string = 'standard', diffId: DifficultyId = 'bronze'): void {
   cancelTarotTargeting(false);
   cancelAllScoringAnimations();
   stopConfetti();
@@ -2645,7 +2625,9 @@ function startNewRun(): void {
   stopVictoryMusic();
   hideRoundCashBreakdown();
   setPlayfieldLocked(false);
-  startNewRunState();
+  selectedDeckId = deckId;
+  selectedDifficultyId = diffId;
+  startNewRunState(deckId, diffId);
   $('ui-rules-deals-count').textContent = String(getBalanceConfig().startingDeals);
   $('ui-shop-overlay').classList.add('hidden');
   const packOverlay = document.getElementById('ui-pack-overlay');
@@ -4504,6 +4486,9 @@ async function resolveRound(): Promise<void> {
 
     const isAnte8Victory = (state.ante === 8 && state.blindIndex === 2 && !state.endlessMode);
     if (isAnte8Victory) {
+      if (typeof recordDeckVictory === 'function') {
+        recordDeckVictory(state.activeDeckId || 'standard', state.activeDifficultyId || 'bronze');
+      }
       for (const vId of state.vouchersBought) {
         recordVoucherRunWon(vId);
       }
@@ -5193,6 +5178,7 @@ function uiRestartFromDefeat(): void {
   closeTableInspection();
   hideDefeatModal();
   startNewRun();
+  uiOpenDeckSelectModal();
 }
 
 function showVictoryModal(): void {
@@ -5248,6 +5234,7 @@ function uiRestartFromVictory(): void {
   stopVictoryMusic();
   startMusic();
   startNewRun();
+  uiOpenDeckSelectModal();
 }
 
 /* ---------- Table Inspection / Hide Modal Mode ---------- */
@@ -5521,6 +5508,12 @@ function renderRunStats(): void {
 (window as any).hideVictoryModal = hideVictoryModal;
 (window as any).uiContinueIntoEndless = uiContinueIntoEndless;
 (window as any).uiRestartFromVictory = uiRestartFromVictory;
+(window as any).uiOpenDeckSelectModal = uiOpenDeckSelectModal;
+(window as any).uiCloseDeckSelectModal = uiCloseDeckSelectModal;
+(window as any).uiSelectDeck = uiSelectDeck;
+(window as any).uiSelectDifficulty = uiSelectDifficulty;
+(window as any).uiConfirmDeckSelection = uiConfirmDeckSelection;
+(window as any).renderDeckSelectionModal = renderDeckSelectionModal;
 (window as any).uiHideModalToViewTable = uiHideModalToViewTable;
 (window as any).uiRestoreModal = uiRestoreModal;
 (window as any).closeTableInspection = closeTableInspection;
@@ -5629,3 +5622,125 @@ $('ui-table-felt').addEventListener('click', () => {
 
 initDisplaySettings();
 startNewRun();
+
+/* ---------- Deck & Difficulty Selection Modal ---------- */
+
+function uiOpenDeckSelectModal(): void {
+  const splash = $('ui-splash-screen');
+  if (splash) splash.classList.add('hidden');
+  hideDefeatModal();
+  hideVictoryModal();
+  toggleCogModal(false);
+  renderDeckSelectionModal();
+  const modal = $('ui-deck-selection-modal');
+  if (modal) modal.classList.remove('hidden');
+}
+
+function uiCloseDeckSelectModal(): void {
+  const modal = $('ui-deck-selection-modal');
+  if (modal) modal.classList.add('hidden');
+  const s = getState();
+  if (!s.inHand && s.ante === 1 && s.roundScore === 0) {
+    const splash = $('ui-splash-screen');
+    if (splash) splash.classList.remove('hidden');
+  }
+}
+
+function uiSelectDeck(deckId: string): void {
+  selectedDeckId = deckId;
+  if (!isDifficultyUnlocked(deckId, selectedDifficultyId)) {
+    selectedDifficultyId = 'bronze';
+  }
+  renderDeckSelectionModal();
+}
+
+function uiSelectDifficulty(deckId: string, diffId: DifficultyId): void {
+  if (!isDifficultyUnlocked(deckId, diffId)) return;
+  selectedDeckId = deckId;
+  selectedDifficultyId = diffId;
+  renderDeckSelectionModal();
+}
+
+function uiConfirmDeckSelection(): void {
+  const modal = $('ui-deck-selection-modal');
+  if (modal) modal.classList.add('hidden');
+  const splash = $('ui-splash-screen');
+  if (splash) splash.classList.add('hidden');
+  closeLibraryModal();
+  closeTableInspection();
+  toggleCogModal(false);
+  setPlayfieldLocked(false);
+  playCardDealSound();
+  const ctx = getAudioCtx();
+  if (ctx && ctx.state === 'suspended') {
+    ctx.resume();
+  }
+  startMusic();
+  startNewRun(selectedDeckId, selectedDifficultyId);
+}
+
+function renderDeckSelectionModal(): void {
+  const grid = $('ui-deck-select-grid');
+  if (!grid) return;
+
+  const decks = (typeof DECK_CATALOG !== 'undefined' ? DECK_CATALOG : []) as DeckDef[];
+  const difficulties = (typeof DIFFICULTY_CATALOG !== 'undefined' ? DIFFICULTY_CATALOG : []) as DifficultyDef[];
+
+  grid.innerHTML = decks.map(deck => {
+    const isDeckSelected = (selectedDeckId === deck.id);
+
+    const diffRowsHtml = difficulties.map(diff => {
+      const isUnlocked = isDifficultyUnlocked(deck.id, diff.id);
+      const isBeaten = hasBeatenDifficulty(deck.id, diff.id);
+      const isDiffSelected = isDeckSelected && (selectedDifficultyId === diff.id);
+
+      let medalHtml = '';
+      if (isBeaten) {
+        medalHtml = `<span class="diff-medal-badge" title="Ante 8 Conquered on ${diff.name}!">${diff.medalIcon}</span>`;
+      }
+
+      if (!isUnlocked) {
+        const reqDiff = diff.id === 'silver' ? 'Bronze' : 'Silver';
+        return `
+          <div class="diff-level-card locked" title="Beat ${reqDiff} on ${deck.name} to unlock">
+            <div class="diff-level-main">
+              <span class="diff-lock-icon">🔒</span>
+              <span class="diff-name locked">${diff.name}</span>
+            </div>
+            <div class="diff-lock-msg">🔒 Locked (${diff.desc} • Beat ${reqDiff})</div>
+          </div>
+        `;
+      }
+
+      return `
+        <div class="diff-level-card unlocked ${isDiffSelected ? 'selected' : ''}"
+             onclick="uiSelectDifficulty('${deck.id}', '${diff.id}')"
+             title="Select ${diff.name} Difficulty (${diff.desc})">
+          <div class="diff-level-main">
+            ${medalHtml}
+            <span class="diff-name" style="color:${diff.color}; font-weight:800;">${diff.name}</span>
+            ${isDiffSelected ? '<span class="diff-active-check">✓</span>' : ''}
+          </div>
+          <div class="diff-desc">${diff.desc}</div>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div class="deck-select-card ${isDeckSelected ? 'selected' : ''}" onclick="uiSelectDeck('${deck.id}')">
+        <div class="deck-select-card-header">
+          <div class="deck-select-icon-box">${deck.icon}</div>
+          <div class="deck-select-title-group">
+            <div class="deck-select-name">${deck.name}</div>
+            <div class="deck-select-badge">${deck.badge}</div>
+          </div>
+        </div>
+        <div class="deck-select-desc">${deck.description}</div>
+        <div class="deck-select-diff-title">DIFFICULTY LEVELS:</div>
+        <div class="deck-select-diff-list">
+          ${diffRowsHtml}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
