@@ -212,9 +212,9 @@ const ck = (n, v) => {
       doubledDown: false,
       anteHandScaling: false
     });
-    // Base Push: 30c x 1m. Cards: 10 + 8 = 18c. Push the Limit: +80c, +6m, +$2.
-    // Chips = 30 + 18 + 80 = 128c. Mult = 1 + 6 = 7m. Money = +$2.
-    ck('Push the Limit adds +80c and +6m on a tie', res.chips === 128 && res.mult === 7);
+    // Base Push: 30c x 1m. Cards: 10 + 8 = 18c. Push the Limit: +100c, +8m, +$2.
+    // Chips = 30 + 18 + 100 = 148c. Mult = 1 + 8 = 9m. Money = +$2.
+    ck('Push the Limit adds +100c and +8m on a tie', res.chips === 148 && res.mult === 9);
     ck('Push the Limit earns +$2 Cash on a tie', res.moneyGained === 2);
   }
 
@@ -251,8 +251,8 @@ const ck = (n, v) => {
       doubledDown: false,
       anteHandScaling: false
     });
-    // Exact 21: 85c x 3m. Cards: 9 + 7 + 5 = 21c. Tightrope: +80c, +8m.
-    ck('Tightrope Walker triggers on 21 (+80c/+8m)', res21.steps.some(s => s.jokerId === 'tightrope_walker' && s.deltaChips === 80 && s.deltaMult === 8));
+    // Exact 21: 85c x 3m. Cards: 9 + 7 + 5 = 21c. Tightrope: +60c, +7m.
+    ck('Tightrope Walker triggers on 21 (+60c/+7m)', res21.steps.some(s => s.jokerId === 'tightrope_walker' && s.deltaChips === 60 && s.deltaMult === 7));
 
     const res18 = w.scoreHand({
       playerHand: [{ rank: '10', suit: '♠' }, { rank: '8', suit: '♥' }], // 18

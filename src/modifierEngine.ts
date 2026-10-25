@@ -18,14 +18,14 @@ const JOKER_CATALOG: ReadonlyArray<JokerDef> = [
   { id: 'lucky_sevens', name: 'Lucky Sevens', cost: 5, rarity: 'common', isXMult: false, icon: '🎰', archetype: 'mult', desc: 'Each 7 in hand grants +77 Chips & +7 Mult. Standing on 17 or 21 grants an extra +7 Mult.' },
   { id: 'hit_me_baby', name: 'Hit Me Baby', cost: 5, rarity: 'common', isXMult: false, icon: '🥊', archetype: 'mult', desc: '+5 Mult for every card in your hand beyond 2.' },
   { id: 'golden_parachute', name: 'Gold Parachute', cost: 4, rarity: 'common', isXMult: false, icon: '🪂', archetype: 'econ', desc: 'Earn +$3 and gain +40 Chips whenever the Dealer busts.' },
-  { id: 'push_it_good', name: 'Push It Good', cost: 5, rarity: 'uncommon', isXMult: false, icon: '🤝', archetype: 'utility', desc: 'Ties (Pushes) count as Wins and grant +50 Chips & +4 Mult.' },
+  { id: 'push_it_good', name: 'Push It Good', cost: 5, rarity: 'uncommon', isXMult: false, icon: '🤝', archetype: 'utility', desc: 'Ties (Pushes) count as Wins and grant +60 Chips & +6 Mult.' },
   { id: 'blackjack_tycoon', name: 'BJ Tycoon', cost: 8, rarity: 'rare', isXMult: true, icon: '🎩', archetype: 'mult', desc: 'Scoring 21 or Natural BJ applies ×1.6 Mult and grants +$2.' },
   { id: 'the_shark', name: 'The Shark', cost: 8, rarity: 'rare', isXMult: true, icon: '🦈', archetype: 'mult', desc: '×1.35 Mult if your final total beats the Dealer by 3 or more, or if the Dealer busts.' },
   { id: 'safety_net', name: 'Safety Net', cost: 5, rarity: 'uncommon', isXMult: false, icon: '🕸️', archetype: 'utility', desc: 'Busting still scores a salvage of (40 × Ante) Chips × 2 Mult (other Jokers and enhancements do not trigger on a bust).' },
   { id: 'even_steven', name: 'Even Steven', cost: 4, rarity: 'common', isXMult: false, icon: '⚖️', archetype: 'chips', desc: '+15 Chips & +5 Mult for each even-numbered card (2,4,6,8,10) in hand.' },
   { id: 'red_velvet', name: 'Red Velvet', cost: 5, rarity: 'common', isXMult: false, icon: '🌹', archetype: 'suit', suitTheme: '♥', desc: '+35 Chips & +2 Mult for each ♥ or ♦ in your hand.' },
   { id: 'dark_knight', name: 'Dark Knight', cost: 5, rarity: 'common', isXMult: false, icon: '♞', archetype: 'suit', suitTheme: '♠', desc: '+15 Chips & +4 Mult for each ♠ or ♣ in your hand.' },
-  { id: 'compound_edge', name: 'Compound Edge', cost: 6, rarity: 'uncommon', isXMult: false, icon: '📈', archetype: 'chips', desc: '+10 Chips for every $5 you currently hold (max +150 Chips).' },
+  { id: 'compound_edge', name: 'Compound Edge', cost: 6, rarity: 'uncommon', isXMult: false, icon: '📈', archetype: 'chips', desc: '+15 Chips & +1 Mult for every $5 you currently hold (max +150c/+10m).' },
   { id: 'minimalist', name: 'Minimalist', cost: 7, rarity: 'rare', isXMult: true, icon: '⭕', archetype: 'mult', desc: '×1.8 Mult if you Win with exactly 2 cards.' },
   { id: 'hot_hand', name: 'Hot Hand', cost: 6, rarity: 'uncommon', isXMult: false, bonusMult: 0, icon: '🔥', archetype: 'mult', desc: 'Gains +2 Mult per consecutive winning hand (up to +20 Mult max). Resets to 0 on a loss or bust.' },
   { id: 'snake_eyes', name: 'Snake Eyes', cost: 6, rarity: 'uncommon', isXMult: true, icon: '🎲', archetype: 'mult', desc: '×2.2 Mult if you Win standing on a total of 13 or less.' },
@@ -44,16 +44,16 @@ const JOKER_CATALOG: ReadonlyArray<JokerDef> = [
   { id: 'deja_vu', name: 'Deja Vu', cost: 8, rarity: 'rare', isXMult: true, icon: '🌀', archetype: 'mult', desc: '×1.5 Mult if your final hand total matches your final total from the previous winning hand.' },
   { id: 'rain_man', name: 'Rain Man', cost: 8, rarity: 'rare', isXMult: true, icon: '🧠', archetype: 'mult', desc: 'Hi-Lo Count (2-6: +1, 7-9: 0, 10-A: -1 from 0). When Count ≥ +2: Double Down applies ×3 Mult & Blackjacks/21s grant ×1.5 Mult & +$2.' },
   { id: 'the_spotter', name: 'The Spotter', cost: 8, rarity: 'rare', isXMult: false, icon: '🔭', archetype: 'chips', desc: 'Shoe Count = (Remaining 10s & Aces) - (Remaining 2-6s). On scoring hands, grants +15 Chips & +2 Mult per point of positive Shoe Count.' },
-  { id: 'street_magician', name: 'Street Magician', cost: 6, rarity: 'uncommon', isXMult: false, icon: '🎩', archetype: 'utility', desc: 'Exact 21 or 5-Card Charlie wins create a random Tarot card (must have room).' },
+  { id: 'street_magician', name: 'Street Magician', cost: 6, rarity: 'uncommon', isXMult: false, icon: '🎩', archetype: 'utility', desc: '+25 Chips on scoring hands. Exact 21, Natural BJ, or 5-Card Charlie wins create a random Tarot card (must have room).' },
   { id: 'marked_deck', name: 'Marked Deck', cost: 6, rarity: 'uncommon', isXMult: false, icon: '🎴', archetype: 'utility', desc: 'At the start of each Blind, create 1 random Table Cheat in your inventory (must have room).' },
   { id: 'fortune_teller', name: 'Fortune Teller', cost: 6, rarity: 'uncommon', isXMult: false, icon: '🔮', archetype: 'mult', desc: '+6 Chips & +1 Mult for each Tarot or Table Cheat used this run (max +60c/+10m).' },
   { id: 'crown_jewel', name: 'Crown Jewel', cost: 7, rarity: 'rare', isXMult: true, icon: '👑', archetype: 'mult', desc: 'Natural Blackjacks grant +$4 Cash and apply ×2.2 Mult.' },
   { id: 'the_bullseye', name: 'The Bullseye', cost: 6, rarity: 'uncommon', isXMult: false, bonusMult: 0, icon: '🎯', archetype: 'mult', desc: 'Permanently gains +2 Mult for the rest of run every time you score an Exact 21.' },
   { id: 'blowout', name: 'Blowout', cost: 5, rarity: 'common', isXMult: false, icon: '🥊', archetype: 'chips', desc: '+25 Chips & +3 Mult for each point your final total beats the Dealer.' },
   { id: 'bounty_hunter', name: 'Bounty Hunter', cost: 5, rarity: 'common', isXMult: true, icon: '🤠', archetype: 'econ', desc: 'When Dealer busts, earn +$4 Cash and apply ×1.6 Mult (+$8 Cash if Dealer busts on 25+).' },
-  { id: 'push_the_limit', name: 'Push the Limit', cost: 5, rarity: 'uncommon', isXMult: false, icon: '🤝', archetype: 'utility', desc: 'Ties (Pushes) grant +80 Chips, +6 Mult, and +$2 Cash.' },
-  { id: 'bad_beat_jackpot', name: 'Bad Beat Jackpot', cost: 6, rarity: 'uncommon', isXMult: false, bonusMult: 0, icon: '🩹', archetype: 'mult', desc: '+1 Mult permanently (max +10 Mult) and earn +$2 Cash whenever you lose a hand to the Dealer (without busting).' },
-  { id: 'tightrope_walker', name: 'Tightrope Walker', cost: 6, rarity: 'uncommon', isXMult: false, icon: '🎪', archetype: 'chips', desc: '+80 Chips & +8 Mult if you stand on a final hand total of 19, 20, 21, or 22.' },
+  { id: 'push_the_limit', name: 'Push the Limit', cost: 5, rarity: 'uncommon', isXMult: false, icon: '🤝', archetype: 'utility', desc: 'Ties (Pushes) grant +100 Chips, +8 Mult, and +$2 Cash.' },
+  { id: 'bad_beat_jackpot', name: 'Bad Beat Jackpot', cost: 6, rarity: 'uncommon', isXMult: false, bonusMult: 0, icon: '🩹', archetype: 'mult', desc: '+1 Mult permanently (max +10 Mult) and earn +$1 Cash whenever you lose a hand to the Dealer (without busting).' },
+  { id: 'tightrope_walker', name: 'Tightrope Walker', cost: 6, rarity: 'uncommon', isXMult: false, icon: '🎪', archetype: 'chips', desc: '+60 Chips & +7 Mult if you stand on a final hand total of 19, 20, 21, or 22.' },
   { id: 'small_fry', name: 'Small Fry', cost: 4, rarity: 'common', isXMult: true, icon: '🍟', archetype: 'mult', desc: '+15 Chips & +2 Mult for each low card (2-5) in hand. Multiplies Mult by ×1.5 if hand has 3 or more low cards.' },
   { id: 'kaleidoscope', name: 'Kaleidoscope', cost: 5, rarity: 'common', isXMult: false, icon: '🎨', archetype: 'mult', desc: '+40 Chips & +4 Mult if hand has 2 different suits (boosted to +90c/+8m for 3+ suits).' },
   { id: 'momentum', name: 'Momentum', cost: 5, rarity: 'common', isXMult: false, icon: '⚡', archetype: 'mult', desc: '+25 Chips & +3 Mult baseline on a Win, plus +30 Chips & +4 Mult for each prior win in the current Blind (stacks up to +145c/+19m).' },
@@ -296,9 +296,9 @@ function scoreHand(ctx: ScoreContext): ScoreResult {
 
   if (outcomeType === 'PUSH' && owns('push_it_good')) {
     outcomeType = 'WIN';
-    baseChips += 50; baseMult += 4;
+    baseChips += 60; baseMult += 6;
     outcomeLabel = 'PUSH IT GOOD WIN!';
-    logs.push('Push It Good (+50c, +4m)');
+    logs.push('Push It Good (+60c, +6m)');
   }
 
   const isWin = WIN_TIERS.includes(outcomeType);
@@ -449,8 +449,8 @@ function scoreHand(ctx: ScoreContext): ScoreResult {
         break;
       }
       case 'compound_edge': {
-        const sets = Math.min(15, Math.floor(money / 5));
-        if (sets > 0) { chips += sets * 10; logs.push(`Compound +${sets * 10}c`); triggered = true; }
+        const sets = Math.min(10, Math.floor(money / 5));
+        if (sets > 0) { chips += sets * 15; mult += sets * 1; logs.push(`Compound +${sets * 15}c/+${sets}m`); triggered = true; }
         break;
       }
       case 'minimalist':
@@ -623,10 +623,10 @@ function scoreHand(ctx: ScoreContext): ScoreResult {
         break;
       case 'push_the_limit':
         if (rawOutcomeType === 'PUSH' || outcomeType === 'PUSH') {
-          chips += 80;
-          mult += 6;
+          chips += 100;
+          mult += 8;
           money += 2;
-          logs.push('Push the Limit +80c/+6m/+$2');
+          logs.push('Push the Limit +100c/+8m/+$2');
           triggered = true;
         }
         break;
@@ -641,9 +641,9 @@ function scoreHand(ctx: ScoreContext): ScoreResult {
       }
       case 'tightrope_walker':
         if (!pBust && (pTotal === 19 || pTotal === 20 || pTotal === 21 || pTotal === 22)) {
-          chips += 80;
-          mult += 8;
-          logs.push(`Tightrope (${pTotal}) +80c/+8m`);
+          chips += 60;
+          mult += 7;
+          logs.push(`Tightrope (${pTotal}) +60c/+7m`);
           triggered = true;
         }
         break;
@@ -691,8 +691,12 @@ function scoreHand(ctx: ScoreContext): ScoreResult {
         }
         break;
       }
-      case 'the_banker':
       case 'street_magician':
+        chips += 25;
+        logs.push('Street Magician +25c');
+        triggered = true;
+        break;
+      case 'the_banker':
       case 'marked_deck':
         // Handled in blind progression / round resolution
         break;

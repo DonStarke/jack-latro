@@ -52,7 +52,7 @@ function getJokerFullDesc(j: JokerInstance): string {
     return `Permanently gains +2 Mult for the rest of run every time you score an Exact 21. (Currently: +${j.bonusMult || 0} Mult)`;
   }
   if (j.id === 'bad_beat_jackpot') {
-    return `+1 Mult permanently (max +10 Mult) and earn +$2 Cash whenever you lose a hand to the Dealer (without busting). (Currently: +${j.bonusMult || 0} Mult)`;
+    return `+1 Mult permanently (max +10 Mult) and earn +$1 Cash whenever you lose a hand to the Dealer (without busting). (Currently: +${j.bonusMult || 0} Mult)`;
   }
   if (j.id === 'fortune_teller') {
     const used = getState().runStats.tarotsUsed || 0;
@@ -70,7 +70,7 @@ function getJokerFullDesc(j: JokerInstance): string {
     return 'Interest earned at the end of each Blind is increased by +50%. If you end a Blind with $25+, start the next Blind with +1 extra Deal.';
   }
   if (j.id === 'street_magician') {
-    return 'Exact 21 or 5-Card Charlie wins create a random Deck Tarot card (must have room in consumable inventory).';
+    return '+25 Chips on scoring hands. Exact 21, Natural BJ, or 5-Card Charlie wins create a random Deck Tarot card (must have room in consumable inventory).';
   }
   if (j.id === 'marked_deck') {
     return 'At the start of each Blind, create 1 random Table Cheat in your inventory (must have room).';
@@ -85,10 +85,10 @@ function getJokerFullDesc(j: JokerInstance): string {
     return 'When Dealer busts, earn +$4 Cash and apply ×1.6 Mult (+$8 Cash if Dealer busts on 25+).';
   }
   if (j.id === 'push_the_limit') {
-    return 'Ties (Pushes) grant +80 Chips, +6 Mult, and +$2 Cash.';
+    return 'Ties (Pushes) grant +100 Chips, +8 Mult, and +$2 Cash.';
   }
   if (j.id === 'tightrope_walker') {
-    return '+80 Chips & +8 Mult if you stand on a final hand total of 19, 20, 21, or 22.';
+    return '+60 Chips & +7 Mult if you stand on a final hand total of 19, 20, 21, or 22.';
   }
   if (j.id === 'small_fry') {
     return '+15 Chips & +2 Mult for each low card (2-5) in hand. Multiplies Mult by ×1.5 if hand has 3 or more low cards.';
@@ -108,8 +108,8 @@ function getJokerFullDesc(j: JokerInstance): string {
     return `Permanently gains +10 Chips for the rest of run every time you win with a Double Down or Exact 21. (Currently: +${cur} Chips)`;
   }
   if (j.id === 'compound_edge') {
-    const sets = Math.min(15, Math.floor(getState().money / 5));
-    return `+10 Chips for every $5 you currently hold (max +150 Chips). (Currently: +${sets * 10} Chips with $${getState().money})`;
+    const sets = Math.min(10, Math.floor(getState().money / 5));
+    return `+15 Chips & +1 Mult for every $5 you currently hold (max +150c/+10m). (Currently: +${sets * 15}c / +${sets}m with $${getState().money})`;
   }
   if (j.id === 'hot_hand') {
     const cur = j.bonusMult || 0;
@@ -139,7 +139,7 @@ function getJokerMiniSubHTML(j: JokerInstance): string {
     return `<span style="color:var(--mult);font-weight:900;">+${j.bonusMult || 0}m</span> (+2m/21)`;
   }
   if (j.id === 'bad_beat_jackpot') {
-    return `<span style="color:var(--mult);font-weight:900;">+${j.bonusMult || 0}m</span> (+1m/Loss, max 10)`;
+    return `<span style="color:var(--mult);font-weight:900;">+${j.bonusMult || 0}m</span> (+1m/+$1 Loss)`;
   }
   if (j.id === 'fortune_teller') {
     const used = getState().runStats.tarotsUsed || 0;
@@ -157,7 +157,7 @@ function getJokerMiniSubHTML(j: JokerInstance): string {
     return '<span style="color:#eab308;font-weight:900;">+50% Interest</span> (+1 Deal@$25)';
   }
   if (j.id === 'street_magician') {
-    return '<span style="color:#d8b4fe;font-weight:900;">Tarot on 21/5c</span>';
+    return '<span style="color:#d8b4fe;font-weight:900;">+25c</span> (Tarot on 21/5c)';
   }
   if (j.id === 'marked_deck') {
     return '<span style="color:#fb7185;font-weight:900;">Cheat on Blind</span>';
@@ -172,10 +172,10 @@ function getJokerMiniSubHTML(j: JokerInstance): string {
     return '<span style="color:#eab308;font-weight:900;">×1.6m</span> (dBust +$4)';
   }
   if (j.id === 'push_the_limit') {
-    return '<span style="color:#10b981;font-weight:900;">+80c/+6m</span> (+$2 Push)';
+    return '<span style="color:#10b981;font-weight:900;">+100c/+8m</span> (+$2 Push)';
   }
   if (j.id === 'tightrope_walker') {
-    return '<span style="color:#ec4899;font-weight:900;">+80c/+8m</span> (on 19-22)';
+    return '<span style="color:#ec4899;font-weight:900;">+60c/+7m</span> (on 19-22)';
   }
   if (j.id === 'small_fry') {
     return '<span style="color:#f97316;font-weight:900;">+15c/+2m</span> (2-5 lows)';
@@ -195,8 +195,8 @@ function getJokerMiniSubHTML(j: JokerInstance): string {
     return `<span style="color:var(--chips);font-weight:900;">+${cur}c</span> (+10c/Dbl/21)`;
   }
   if (j.id === 'compound_edge') {
-    const sets = Math.min(15, Math.floor(getState().money / 5));
-    return `<span style="color:var(--chips);font-weight:900;">+${sets * 10}c</span> (+10c/$5, max 150)`;
+    const sets = Math.min(10, Math.floor(getState().money / 5));
+    return `<span style="color:var(--chips);font-weight:900;">+${sets * 15}c/+${sets}m</span> ($5 sets)`;
   }
   if (j.id === 'bust_cushion') return `22 = 21! (Bust 23+)`;
   if (j.id === 'card_counter') return `+45c, +2m / low (2-6)`;
@@ -206,7 +206,7 @@ function getJokerMiniSubHTML(j: JokerInstance): string {
   if (j.id === 'lucky_sevens') return `+77c/+7m (7s), +7m`;
   if (j.id === 'hit_me_baby') return `+5m / card > 2`;
   if (j.id === 'golden_parachute') return `+$3, +40c on dBust`;
-  if (j.id === 'push_it_good') return `Push = Win (+50c,+4m)`;
+  if (j.id === 'push_it_good') return `Push = Win (+60c,+6m)`;
   if (j.id === 'blackjack_tycoon') return `×1.6m, +$2 on 21`;
   if (j.id === 'the_shark') return `×1.35m (Win ≥3/dBust)`;
   if (j.id === 'safety_net') return `Bust = (40×Ante)c × 2m`;
@@ -1939,14 +1939,14 @@ function filterSimJokers(filterKey: string): void {
 function renderSimResultsToModal(simData: SimData): void {
   const {
     numRuns, elapsedMs, wins, totalFinalAnte, highestAnteReached,
-    scalingDeaths, totalHandsWon, totalHandsPlayed,
+    scalingDeaths, coldShoeDeaths, totalHandsWon, totalHandsPlayed,
     anteClearedCounts, jokerStats, voucherStats, consumableStats, endlessStats, maxEndlessAnte
   } = simData;
 
   const winRate = ((wins / numRuns) * 100).toFixed(1);
   const avgAnte = (totalFinalAnte / numRuns).toFixed(2);
   const handWinPct = ((totalHandsWon / Math.max(1, totalHandsPlayed)) * 100).toFixed(1);
-  const totalDeaths = Math.max(1, numRuns - wins);
+  const totalDeaths = Math.max(1, scalingDeaths + (coldShoeDeaths || 0));
   const scalingDeathPct = Math.round((scalingDeaths / totalDeaths) * 100);
   const coldShoeDeathPct = 100 - scalingDeathPct;
   const baseWinPctVal = (wins / numRuns) * 100;
@@ -3903,8 +3903,8 @@ async function resolveRound(): Promise<void> {
       if (cur < 10) {
         patchJoker('bad_beat_jackpot', { bonusMult: cur + 1 });
       }
-      addMoney(2);
-      recordMoneyEarned('inHandScoring', 2);
+      addMoney(1);
+      recordMoneyEarned('inHandScoring', 1);
       const bbIdx = state.jokers.findIndex(j => j.id === 'bad_beat_jackpot');
       if (bbIdx >= 0) popJokerCard(bbIdx);
       updateAllUI();
@@ -3912,7 +3912,7 @@ async function resolveRound(): Promise<void> {
   }
 
   // Street Magician tarot creation
-  if (res.isWin && (res.outcomeType === 'EXACT21' || res.outcomeType === 'CHARLIE')) {
+  if (res.isWin && (res.outcomeType === 'NATURAL' || res.outcomeType === 'EXACT21' || res.outcomeType === 'CHARLIE')) {
     const sm = state.jokers.find(j => j.id === 'street_magician');
     if (sm && state.consumables.length < state.maxConsumables) {
       const tarot = DECK_TAROT_CATALOG[Math.floor(Math.random() * DECK_TAROT_CATALOG.length)];

@@ -519,8 +519,8 @@ function scoreJokerPriorityForBot(joker: JokerInstance, botType: BotType): numbe
   if (joker.id === 'fortune_teller') score += 5;
 
   if (botType === 'expert') {
-    if (['bust_cushion', 'the_shark', 'blackjack_tycoon', 'card_sharp_joker', 'double_or_nothing', 'deja_vu', 'monochrome', 'rain_man', 'the_spotter', 'crown_jewel', 'the_banker', 'the_bullseye', 'marked_deck', 'street_magician', 'tightrope_walker', 'pocket_rockets'].includes(joker.id)) score += 6;
-    if (['golden_parachute', 'diamond_cutter', 'the_grinder', 'compound_edge', 'side_bet', 'bounty_hunter'].includes(joker.id)) score += 4;
+    if (['bust_cushion', 'safety_net', 'the_shark', 'blackjack_tycoon', 'card_sharp_joker', 'double_or_nothing', 'deja_vu', 'monochrome', 'rain_man', 'the_spotter', 'crown_jewel', 'the_banker', 'the_bullseye', 'tightrope_walker', 'pocket_rockets'].includes(joker.id)) score += 6;
+    if (['golden_parachute', 'diamond_cutter', 'the_grinder', 'compound_edge', 'side_bet', 'bounty_hunter', 'marked_deck', 'street_magician', 'push_the_limit'].includes(joker.id)) score += 4;
     if (['vip_high_roller', 'ace_up_sleeve', 'push_it_good', 'trips_ahoy', 'spade_slicer', 'crimson_heart', 'club_sandwich', 'slow_and_steady', 'sweet_16', 'card_counter', 'even_steven', 'odd_ball', 'red_velvet', 'dark_knight', 'kaleidoscope', 'momentum', 'blowout'].includes(joker.id)) score += 4;
     return score;
   }
@@ -530,7 +530,7 @@ function scoreJokerPriorityForBot(joker: JokerInstance, botType: BotType): numbe
   } else if (botType === 'highroller') {
     if (['vip_high_roller', 'ace_up_sleeve', 'blackjack_tycoon', 'minimalist', 'double_or_nothing', 'the_shark', 'pocket_rockets', 'trips_ahoy', 'rain_man', 'crown_jewel', 'the_bullseye', 'tightrope_walker', 'side_bet', 'blowout'].includes(joker.id)) score += 8;
   } else if (botType === 'synergy') {
-    if (['bust_cushion', 'daredevil', 'chip_stacker', 'the_shark', 'blackjack_tycoon', 'ace_up_sleeve', 'push_it_good', 'compound_edge', 'hot_hand', 'spade_slicer', 'crimson_heart', 'diamond_cutter', 'club_sandwich', 'monochrome', 'card_sharp_joker', 'slow_and_steady', 'the_spotter', 'rain_man', 'kaleidoscope', 'momentum', 'pocket_rockets', 'trips_ahoy', 'even_steven', 'odd_ball', 'card_counter', 'dark_knight', 'red_velvet', 'tightrope_walker', 'safety_net'].includes(joker.id)) score += 6;
+    if (['bust_cushion', 'daredevil', 'chip_stacker', 'the_shark', 'blackjack_tycoon', 'ace_up_sleeve', 'push_it_good', 'push_the_limit', 'compound_edge', 'hot_hand', 'spade_slicer', 'crimson_heart', 'diamond_cutter', 'club_sandwich', 'monochrome', 'card_sharp_joker', 'slow_and_steady', 'the_spotter', 'rain_man', 'kaleidoscope', 'momentum', 'pocket_rockets', 'trips_ahoy', 'even_steven', 'odd_ball', 'card_counter', 'dark_knight', 'red_velvet', 'tightrope_walker', 'safety_net'].includes(joker.id)) score += 6;
   }
   return score;
 }
@@ -546,7 +546,13 @@ function scoreTarotPriorityForBot(tarot: TarotDef, botType: BotType, simRun: Sim
     return (botType === 'charlie') ? 3 : (hasNonAce ? 11 : 2);
   }
   if (tarot.id === 'card_shave') {
-    return (botType === 'charlie') ? 12 : 5;
+    if (botType === 'charlie') return 12;
+    const hasLowSynergy = simRun.jokers.some(j =>
+      ['card_counter', 'small_fry', 'even_steven', 'odd_ball', 'hit_me_baby', 'bust_cushion', 'safety_net'].includes(j.id)
+    );
+    if (hasLowSynergy) return 9;
+    const hasMid = simRun.deck.some(c => ['6', '7', '8', '9'].includes(c.rank));
+    return hasMid ? 6 : 2;
   }
   if (tarot.id === 'polychrome_dice') return 13;
   if (tarot.id === 'lucky_charm') return 10;
@@ -692,7 +698,7 @@ function simulateShopVisit(
   const capCash = maxInterest * interestPer;
 
   // Staged bankroll targets: prioritize filling joker slots before hoarding interest
-  const interestReserve = (simRun.jokers.length < simRun.maxJokers) ? 0 : (botType === 'expert' ? 15 : 5);
+  const interestReserve = (simRun.jokers.length < simRun.maxJokers) ? 0 : 5;
 
   // 1. Vouchers (1 per Ante)
   if (simRun.voucherAnte !== simRun.ante) {
@@ -826,7 +832,7 @@ function simulateShopVisit(
   while (rerollsDone < maxRerolls) {
     const jokersNeeded = simRun.maxJokers - simRun.jokers.length;
     const canAfford = simRun.money >= interestReserve + rerollCost + 3;
-    const wantsReroll = jokersNeeded > 0 || (botType === 'expert' && simRun.ante >= 3 && simRun.money >= interestReserve + 6);
+    const wantsReroll = jokersNeeded > 0 || (botType === 'expert' && simRun.ante >= 4 && simRun.money >= interestReserve + 12);
     if (!canAfford || !wantsReroll) break;
 
     simRun.money -= rerollCost;
@@ -1137,16 +1143,18 @@ function runBatchSimulationForBot(numRuns: number, botType: BotType, cfg: SimCon
             for (const j of simRun.jokers) {
               if (j.id === 'bad_beat_jackpot') {
                 j.bonusMult = Math.min(10, (j.bonusMult || 0) + 1);
-                simRun.money += 2;
+                simRun.money += 1;
               }
             }
           }
 
           // Street Magician tracking
-          if (res.isWin && (res.outcomeType === 'EXACT21' || res.outcomeType === 'CHARLIE')) {
+          if (res.isWin && (res.outcomeType === 'NATURAL' || res.outcomeType === 'EXACT21' || res.outcomeType === 'CHARLIE')) {
             if (simRun.jokers.some(j => j.id === 'street_magician') && simRun.consumables.length < simRun.maxConsumables) {
               const t = DECK_TAROT_CATALOG[Math.floor(Math.random() * DECK_TAROT_CATALOG.length)];
-              simRun.consumables.push({ ...t, consumableType: 'tarot' });
+              simRun.usedTarots.add(t.id);
+              if (consumableStats[t.id]) consumableStats[t.id].timesUsed++;
+              applySimTarotEffect(t, simRun, botType, consumableStats);
             }
           }
 
@@ -1300,7 +1308,7 @@ function formatBotReportSection(simData: SimData): string {
   const winRate = ((wins / numRuns) * 100).toFixed(2);
   const avgAnte = (totalFinalAnte / numRuns).toFixed(2);
   const handWinPct = ((totalHandsWon / Math.max(1, totalHandsPlayed)) * 100).toFixed(2);
-  const totalDeaths = Math.max(1, numRuns - wins);
+  const totalDeaths = Math.max(1, scalingDeaths + coldShoeDeaths);
   const scalingDeathPct = ((scalingDeaths / totalDeaths) * 100).toFixed(1);
   const coldShoeDeathPct = ((coldShoeDeaths / totalDeaths) * 100).toFixed(1);
 

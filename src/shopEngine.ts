@@ -8,7 +8,7 @@
 ========================================================== */
 
 /* ---------- Constants ---------- */
-const ANTE_TARGETS: ReadonlyArray<number> = [300, 600, 1200, 2400, 4500, 8500, 15000, 25000];
+const ANTE_TARGETS: ReadonlyArray<number> = [300, 600, 1380, 2750, 4500, 8500, 15000, 25000];
 /** Target multiplier per Blind (Small, Big, Boss). */
 const BLIND_TARGET_MULTS: ReadonlyArray<number> = [1.0, 1.45, 2.0];
 /** Cash reward per Blind (Small, Big, Boss). */
