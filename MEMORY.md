@@ -12,12 +12,27 @@
 
 ## 📈 Current Mechanical Systems Balance
 * Active Hand Tiers (Chips x Mult, before card/joker bonuses): 5-Card Charlie (5+ cards, not bust) 160 x 5; Natural Blackjack 120 x 4; Exact 21 (win) 75 x 3; Win 40 x 2; Push 25 x 1; Loss/Bust 0. Dealer natural vs player natural = Push. Double Down = final mult x2.
-* Rebalanced Outlier Jokers (Telemetry-Driven):
-  * Daredevil ($6): +1 Mult permanently on safe Hit on 15+ (down from +1 on 14 / +2 on 16).
-  * Chip Stacker ($5): +10 Chips permanently on Double Down or Exact 21 win (down from +30).
-  * Compound Edge ($6): +10 Chips for every $5 held, capped at +150 Chips (down from uncapped +20 per $5).
-  * Push It Good ($5): Ties count as Wins and grant +50 Chips & +4 Mult; removed passive unconditional +30 Chips on all hands.
-  * Safety Net ($5): Busting scores a salvage of 40 Chips × 2 Mult. Crucially, other Jokers, card enhancements, and Double Down are disabled on a bust to prevent 1-hand blind clears on busts.
+* Rebalanced Outlier Jokers (Telemetry-Driven & Composition Overhaul):
+  * **Runaway Carries Nerfed:**
+    * `Fortune Teller` ($6, moved to Uncommon): +6 Chips & +1 Mult per Tarot/Cheat used, capped at +60 Chips / +10 Mult max (down from uncapped +15c/+2m).
+    * `Bad Beat Jackpot` ($6): +1 Mult permanently capped at +10 Mult max and +$2 Cash on non-bust loss (down from uncapped mult and +$4 cash).
+    * `Card Sharp` ($8): ×1.5 Mult on 2nd+ win in blind (down from ×1.75).
+    * `BJ Tycoon` ($8): ×1.6 Mult on 21 or Natural BJ (down from ×2.0).
+    * `The Shark` ($8): ×1.35 Mult on margin ≥ 3 or dealer bust (down from ×1.5).
+  * **Underpowered Jokers Revived:**
+    * `Tightrope Walker` ($6): Now triggers on 19, 20, 21, or 22 with +80 Chips & +8 Mult.
+    * `Momentum` ($5): +25 Chips & +3 Mult baseline on a Win, plus +30 Chips & +4 Mult for each prior win in blind (stacks up to +145c/+19m).
+    * `Safety Net` ($5): Bust salvage scales with Ante: `(40 × Ante) Chips × 2 Mult`.
+    * `Kaleidoscope` ($5): Triggers on 2 different suits (+40c/+4m) and scales to +90c/+8m for 3+ suits.
+    * `Pocket Rockets` ($6): Triggers on starting hand containing an Ace (+30c/+8m), doubled to +75c/+20m for Pair of Aces.
+    * `Trips Ahoy` ($5): Triggers if winning with 3+ cards totaling 19-21 (+60c/+8m), doubled to +120c/+15m for 3-of-a-Kind.
+    * `Side Bet` ($5): Starting Pair earns +$5 Cash & +50 Chips (+$10/+$100 for color pair); starting Suited cards earn +$2 Cash & +25 Chips.
+    * `Card Counter` ($4): +45 Chips & +2 Mult per low card (2-6).
+    * `Even Steven` ($4): +15 Chips & +5 Mult per even card.
+    * `Odd Ball` ($4): +20 Chips & +4 Mult per odd card.
+    * `Red Velvet` ($5): +35 Chips & +2 Mult per ♥ or ♦.
+    * `Dark Knight` ($5): +15 Chips & +4 Mult per ♠ or ♣.
+    * `Blowout` ($5): +25 Chips & +3 Mult per margin point over dealer.
 * Passive Systems:
   * Blind structure: 8 Antes x 3 Blinds + Endless Mode. Targets `[300, 600, 1200, 2400, 4500, 8500, 15000, 25000]` x (1.0 / 1.45 / 2.0 for Small/Big/Boss). Boss rotates by ante.
   * Economy: start $6; blind reward $4/$5/$6 (Small/Big/Boss); +$1 per unused deal (capped at 6); interest $1 per $5 held, max $5; reroll starts $2; Gold card +$3 on score; Gold Parachute +$3 on dealer bust; BJ Tycoon +$2.
