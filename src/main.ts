@@ -1912,6 +1912,30 @@ function switchSimTab(tabId: string): void {
   });
 }
 
+function filterSimJokers(filterKey: string): void {
+  const pills = document.querySelectorAll('.joker-filter-pill');
+  pills.forEach(p => {
+    if (p.getAttribute('data-filter') === filterKey) {
+      p.classList.add('active');
+    } else {
+      p.classList.remove('active');
+    }
+  });
+
+  const tbody = document.getElementById('sim-jokers-tbody');
+  if (!tbody) return;
+  const rows = tbody.querySelectorAll('tr');
+  rows.forEach(r => {
+    const verdict = r.getAttribute('data-verdict');
+    if (filterKey === 'all' || verdict === filterKey) {
+      r.style.display = '';
+    } else {
+      r.style.display = 'none';
+    }
+  });
+}
+(window as any).filterSimJokers = filterSimJokers;
+
 function renderSimResultsToModal(simData: SimData): void {
   const {
     numRuns, elapsedMs, wins, totalFinalAnte, highestAnteReached,
@@ -1926,6 +1950,7 @@ function renderSimResultsToModal(simData: SimData): void {
   const scalingDeathPct = Math.round((scalingDeaths / totalDeaths) * 100);
   const coldShoeDeathPct = 100 - scalingDeathPct;
   const baseWinPctVal = (wins / numRuns) * 100;
+  const baseAvgAnteVal = totalFinalAnte / numRuns;
 
   // 1. Funnel HTML (1..maxEndlessAnte)
   const funnelHtml = [];
@@ -1944,41 +1969,88 @@ function renderSimResultsToModal(simData: SimData): void {
     `);
   }
 
-  // 2. Jokers Table HTML
+  // 2. Jokers Table HTML (Balance Hub)
   const sortedJokers = Object.values(jokerStats)
-    .filter(j => j.picks > 0 || j.offered > 0)
+    .filter(j => (j.runsEverOwned || 0) > 0 || j.picks > 0 || j.offered > 0)
     .sort((a, b) => {
-      const wrA = a.picks > 0 ? a.wins / a.picks : -1;
-      const wrB = b.picks > 0 ? b.wins / b.picks : -1;
+      const runsA = a.runsEverOwned > 0 ? a.runsEverOwned : (a.bought > 0 ? a.bought : a.picks);
+      const runsB = b.runsEverOwned > 0 ? b.runsEverOwned : (b.bought > 0 ? b.bought : b.picks);
+      const wrA = runsA > 0 ? (a.runsEverOwned > 0 ? a.everOwnedWins : a.wins) / runsA : -1;
+      const wrB = runsB > 0 ? (b.runsEverOwned > 0 ? b.everOwnedWins : b.wins) / runsB : -1;
       return wrB - wrA;
     });
 
+  let buffCount = 0;
+  let carryCount = 0;
+  let bridgeCount = 0;
+  let econCount = 0;
+  let balancedCount = 0;
+
+  sortedJokers.forEach(j => {
+    const v = (window as any).getJokerBalanceVerdict ? (window as any).getJokerBalanceVerdict(j, baseWinPctVal, baseAvgAnteVal) : getJokerBalanceVerdict(j, baseWinPctVal, baseAvgAnteVal);
+    if (v.status === 'buff') buffCount++;
+    else if (v.status === 'carry') carryCount++;
+    else if (v.status === 'bridge') bridgeCount++;
+    else if (v.status === 'econ') econCount++;
+    else if (v.status === 'balanced') balancedCount++;
+  });
+
   const topJokersHtml = sortedJokers.length > 0 ? sortedJokers.map(j => {
-    const wPct = j.picks > 0 ? ((j.wins / j.picks) * 100).toFixed(1) : '0.0';
-    const rawWin = j.picks > 0 ? (j.wins / j.picks) * 100 : 0;
-    const liftVal = j.picks > 0 ? (rawWin - baseWinPctVal).toFixed(1) : '0.0';
-    const liftNum = Number(liftVal);
-    const liftBadgeClass = liftNum > 0 ? 'lift-pos' : (liftNum < 0 ? 'lift-neg' : 'lift-neutral');
-    const liftStr = (liftNum >= 0 ? '+' : '') + liftVal + '%';
-    const avgA = j.picks > 0 ? (j.anteSum / j.picks).toFixed(1) : '-';
+    const runs = j.runsEverOwned > 0 ? j.runsEverOwned : (j.bought > 0 ? j.bought : j.picks);
+    const pickWins = j.runsEverOwned > 0 ? j.everOwnedWins : j.wins;
+    const pickWinPct = runs > 0 ? ((pickWins / runs) * 100).toFixed(1) : '0.0';
+    const rawPickWin = runs > 0 ? (pickWins / runs) * 100 : 0;
+    const pickLiftVal = runs > 0 ? (rawPickWin - baseWinPctVal).toFixed(1) : '0.0';
+    const pickLiftNum = Number(pickLiftVal);
+    const pickLiftBadgeClass = pickLiftNum > 0 ? 'lift-pos' : (pickLiftNum < 0 ? 'lift-neg' : 'lift-neutral');
+    const pickLiftStr = (pickLiftNum >= 0 ? '+' : '') + pickLiftVal + '%';
+
+    const rawAnteSum = j.runsEverOwned > 0 ? j.everOwnedAnteSum : j.anteSum;
+    const jAvgAnte = runs > 0 ? rawAnteSum / runs : 0;
+    const anteLiftVal = runs > 0 ? (jAvgAnte - baseAvgAnteVal).toFixed(2) : '0.00';
+    const anteLiftNum = Number(anteLiftVal);
+    const anteLiftBadgeClass = anteLiftNum > 0 ? 'lift-pos' : (anteLiftNum < 0 ? 'lift-neg' : 'lift-neutral');
+    const anteLiftStr = (anteLiftNum >= 0 ? '+' : '') + anteLiftVal;
+
+    const retentionPct = runs > 0 ? Math.round((j.picks / runs) * 100) : 0;
+    const verdict = (window as any).getJokerBalanceVerdict ? (window as any).getJokerBalanceVerdict(j, baseWinPctVal, baseAvgAnteVal) : getJokerBalanceVerdict(j, baseWinPctVal, baseAvgAnteVal);
+
     let extra = '';
-    if (j.id === 'daredevil') extra = ` <span style="color:var(--mult);font-size:10px;">(Avg +${(j.scalingSum / Math.max(1, j.picks)).toFixed(1)}m)</span>`;
-    if (j.id === 'chip_stacker') extra = ` <span style="color:var(--chips);font-size:10px;">(Avg +${(j.scalingSum / Math.max(1, j.picks)).toFixed(1)}c)</span>`;
-    if (j.id === 'hot_hand') extra = ` <span style="color:var(--mult);font-size:10px;">(Avg +${(j.scalingSum / Math.max(1, j.picks)).toFixed(1)}m)</span>`;
+    if (j.id === 'daredevil' && j.picks > 0) extra = ` <span style="color:var(--mult);font-size:10px;">(Avg +${(j.scalingSum / Math.max(1, j.picks)).toFixed(1)}m)</span>`;
+    if (j.id === 'chip_stacker' && j.picks > 0) extra = ` <span style="color:var(--chips);font-size:10px;">(Avg +${(j.scalingSum / Math.max(1, j.picks)).toFixed(1)}c)</span>`;
+    if (j.id === 'hot_hand' && j.picks > 0) extra = ` <span style="color:var(--mult);font-size:10px;">(Avg +${(j.scalingSum / Math.max(1, j.picks)).toFixed(1)}m)</span>`;
+    if (j.id === 'the_bullseye' && j.picks > 0) extra = ` <span style="color:var(--mult);font-size:10px;">(Avg +${(j.scalingSum / Math.max(1, j.picks)).toFixed(1)}m)</span>`;
+    if (j.id === 'bad_beat_jackpot' && j.picks > 0) extra = ` <span style="color:var(--mult);font-size:10px;">(Avg +${(j.scalingSum / Math.max(1, j.picks)).toFixed(1)}m)</span>`;
+
     const rBadge = `<span class="rarity-badge rarity-${j.rarity || 'common'}" style="font-size:9px; padding:1px 4px; margin-left:4px;">${(j.rarity || 'common').toUpperCase()}</span>`;
+    const archBadge = j.archetype ? `<span style="font-size:9px; padding:1px 4px; margin-left:2px; background:#1e293b; color:#94a3b8; border-radius:3px;">${j.archetype.toUpperCase()}</span>` : '';
+    const icon = j.icon ? `<span style="margin-right:4px;">${j.icon}</span>` : '';
+
     return `
-      <tr>
-        <td><strong>${j.name}</strong> ${rBadge}${extra}</td>
+      <tr data-verdict="${verdict.status}">
+        <td>${icon}<strong>${j.name}</strong> ${rBadge}${archBadge}${extra}</td>
         <td>$${j.cost}</td>
-        <td>${j.offered}</td>
-        <td>${j.bought}</td>
-        <td>${j.picks}</td>
-        <td style="color:var(--green); font-weight:bold;">${wPct}%</td>
-        <td><span class="lift-badge ${liftBadgeClass}">${liftStr}</span></td>
-        <td>Ante ${avgA}</td>
+        <td>
+          <strong style="color:var(--green); font-weight:bold;">${pickWinPct}%</strong>
+          <span class="lift-badge ${pickLiftBadgeClass}">${pickLiftStr}</span>
+          <span style="font-size:10px; color:#64748b; margin-left:3px;">(${runs} runs)</span>
+        </td>
+        <td>
+          Ante ${jAvgAnte.toFixed(1)}
+          <span class="lift-badge ${anteLiftBadgeClass}">${anteLiftStr}</span>
+        </td>
+        <td>
+          <span>${retentionPct}%</span>
+          <span style="font-size:10px; color:#64748b; margin-left:3px;">(${j.picks}/${runs})</span>
+        </td>
+        <td>
+          <span class="verdict-badge ${verdict.badgeClass}" title="${verdict.tooltip}">
+            ${verdict.label}
+          </span>
+        </td>
       </tr>
     `;
-  }).join('') : `<tr><td colspan="8" style="text-align:center; color:#94a3b8;">No Jokers purchased (No-Jokers Baseline active)</td></tr>`;
+  }).join('') : `<tr><td colspan="6" style="text-align:center; color:#94a3b8;">No Jokers purchased (No-Jokers Baseline active)</td></tr>`;
 
   // 3. Tarots & Cheats Table HTML
   const sortedConsumables = Object.values(consumableStats || {})
@@ -2151,28 +2223,51 @@ function renderSimResultsToModal(simData: SimData): void {
       </div>
     </div>
 
-    <!-- TAB 2: JOKERS LEADERBOARD -->
+    <!-- TAB 2: JOKERS LEADERBOARD & BALANCE HUB -->
     <div class="sim-tab-pane ${activeSimTab === 'jokers' ? '' : 'hidden'}" data-pane="jokers">
       <div style="background:#0b0e14; padding:10px; border-radius:8px; border:1px solid #283246;">
-        <div style="font-size:11px; font-weight:bold; color:var(--gold); margin-bottom:6px;">JOKER PERFORMANCE LEADERBOARD (SORTED BY WIN RATE)</div>
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+          <div>
+            <div style="font-size:11px; font-weight:bold; color:var(--gold);">JOKER BALANCE LEADERBOARD</div>
+            <div style="font-size:10px; color:#94a3b8; margin-top:2px;">
+              Baseline Win Rate: <strong style="color:#f1f5f9;">${winRate}%</strong> | Baseline Avg Ante: <strong style="color:#f1f5f9;">Ante ${avgAnte}</strong>
+            </div>
+          </div>
+          <!-- Filter Pills -->
+          <div style="display:flex; gap:5px; flex-wrap:wrap;">
+            <button class="joker-filter-pill active" data-filter="all" onclick="filterSimJokers('all')">All (${sortedJokers.length})</button>
+            <button class="joker-filter-pill" data-filter="buff" onclick="filterSimJokers('buff')">⚠️ Needs Buff (${buffCount})</button>
+            <button class="joker-filter-pill" data-filter="carry" onclick="filterSimJokers('carry')">⭐ Carries (${carryCount})</button>
+            <button class="joker-filter-pill" data-filter="bridge" onclick="filterSimJokers('bridge')">🛡️ Bridges (${bridgeCount})</button>
+            <button class="joker-filter-pill" data-filter="econ" onclick="filterSimJokers('econ')">💰 Econ (${econCount})</button>
+            <button class="joker-filter-pill" data-filter="balanced" onclick="filterSimJokers('balanced')">⚖️ Balanced (${balancedCount})</button>
+          </div>
+        </div>
+
         <div class="sim-table-wrap">
           <table class="rules-table">
             <thead>
               <tr>
                 <th>Joker</th>
                 <th>Cost</th>
-                <th>Offered</th>
-                <th>Bought</th>
-                <th>Held End</th>
-                <th>Run Win %</th>
-                <th>Win Lift</th>
-                <th>Avg Ante</th>
+                <th>Pick Win % (Lift)</th>
+                <th>Avg Ante (Lift)</th>
+                <th>Kept to End</th>
+                <th>Balance Verdict</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody id="sim-jokers-tbody">
               ${topJokersHtml}
             </tbody>
           </table>
+        </div>
+
+        <div style="font-size:10px; color:#64748b; margin-top:8px; border-top:1px solid #1e293b; padding-top:6px; line-height:1.4;">
+          💡 <strong>How to Read for Balancing:</strong>
+          <strong>Pick Lift</strong> measures win rate when acquired at any point in the run (eliminating survivorship bias from selling early bridge Jokers).
+          <strong>Ante Lift</strong> measures extra Antes survived.
+          <strong>Kept to End</strong> indicates whether this is an endgame finisher or an early bridge.
+          <strong>⚠️ Needs Buff</strong> highlights cards that actively reduce win rate and fail to provide survival depth.
         </div>
       </div>
     </div>

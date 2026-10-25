@@ -40,6 +40,7 @@ interface SimRun {
   usedTarots: Set<string>;
   usedCheats: Set<string>;
   voucherAnteBought: Record<string, number>;
+  everOwnedJokers: Set<string>;
 }
 
 interface BlindStat {
@@ -75,12 +76,96 @@ interface JokerStat {
   name: string;
   cost: number;
   rarity: JokerRarity;
+  archetype?: string;
+  icon?: string;
   offered: number;
   bought: number;
   picks: number;
   wins: number;
   anteSum: number;
   scalingSum: number;
+  runsEverOwned: number;
+  everOwnedWins: number;
+  everOwnedAnteSum: number;
+}
+
+interface JokerBalanceVerdict {
+  status: 'carry' | 'bridge' | 'econ' | 'buff' | 'balanced' | 'low_data';
+  label: string;
+  badgeClass: string;
+  tooltip: string;
+}
+
+function getJokerBalanceVerdict(
+  j: JokerStat,
+  baseWinPct: number,
+  baseAvgAnte: number
+): JokerBalanceVerdict {
+  const runs = j.runsEverOwned > 0 ? j.runsEverOwned : (j.bought > 0 ? j.bought : j.picks);
+  if (runs < 3) {
+    return {
+      status: 'low_data',
+      label: '🔍 Low Sample',
+      badgeClass: 'verdict-low',
+      tooltip: 'Fewer than 3 runs recorded. Run more simulations to evaluate.'
+    };
+  }
+
+  const pickWins = j.runsEverOwned > 0 ? j.everOwnedWins : j.wins;
+  const pickWinPct = (pickWins / runs) * 100;
+  const pickLift = pickWinPct - baseWinPct;
+  const rawAnteSum = j.runsEverOwned > 0 ? j.everOwnedAnteSum : j.anteSum;
+  const avgAnte = rawAnteSum / runs;
+  const anteLift = avgAnte - baseAvgAnte;
+  const retentionPct = Math.round((j.picks / runs) * 100);
+
+  // 1. Economic engines
+  if (j.archetype === 'econ') {
+    return {
+      status: 'econ',
+      label: '💰 Econ Engine',
+      badgeClass: 'verdict-econ',
+      tooltip: 'Generates cash and interest to fund vouchers and deck upgrades.'
+    };
+  }
+
+  // 2. High-performance endgame carries
+  if (pickLift >= 4.0 || (pickLift >= 1.5 && retentionPct >= 60)) {
+    return {
+      status: 'carry',
+      label: '⭐ Late Carry',
+      badgeClass: 'verdict-carry',
+      tooltip: `High win lift (+${pickLift.toFixed(1)}%) and frequently held into endgame (${retentionPct}%).`
+    };
+  }
+
+  // 3. Early bridges (good survival/ante lift, sold off before endgame)
+  if (anteLift >= 0.35 && retentionPct < 55) {
+    return {
+      status: 'bridge',
+      label: '🛡️ Early Bridge',
+      badgeClass: 'verdict-bridge',
+      tooltip: `Extends survival (+${anteLift.toFixed(1)} antes) before being sold for late-game carries.`
+    };
+  }
+
+  // 4. Genuine underperformers (hurts win rate and doesn't even buy ante depth)
+  if ((pickLift <= -3.5 && anteLift <= -0.15) || (j.rarity === 'rare' && pickLift <= -2.5) || (j.cost >= 7 && pickLift <= -3.0)) {
+    return {
+      status: 'buff',
+      label: '⚠️ Needs Buff',
+      badgeClass: 'verdict-buff',
+      tooltip: `Underperforming: ${pickLift.toFixed(1)}% win lift and ${anteLift >= 0 ? '+' : ''}${anteLift.toFixed(1)} ante delta.`
+    };
+  }
+
+  // 5. Normal balanced range
+  return {
+    status: 'balanced',
+    label: '⚖️ Balanced',
+    badgeClass: 'verdict-balanced',
+    tooltip: `Performing within expected balance range (${pickLift >= 0 ? '+' : ''}${pickLift.toFixed(1)}% lift).`
+  };
 }
 
 interface VoucherStat {
@@ -295,6 +380,7 @@ function applySimTarotEffect(
       const pool = JOKER_CATALOG.filter(j => !owned.includes(j.id));
       const rolled = pool.length > 0 ? shuffle(pool)[0] : shuffle(JOKER_CATALOG)[0];
       simRun.jokers.push({ ...rolled, bonusMult: 0, bonusChips: 0 });
+      simRun.everOwnedJokers.add(rolled.id);
       simRun.jokers.sort((a, b) => (a.isXMult ? 1 : 0) - (b.isXMult ? 1 : 0));
       if (consumableStats && consumableStats[tarot.id]) {
         consumableStats[tarot.id].specialImpactSum += 1;
@@ -564,6 +650,7 @@ function evaluateAndPickPackOption(
     } else {
       simRun.jokers.push({ ...j, bonusMult: 0, bonusChips: 0 });
     }
+    simRun.everOwnedJokers.add(j.id);
     if (jokerStats[j.id]) jokerStats[j.id].bought++;
     // Keep XMult at the end so it multiplies after additive bonuses
     simRun.jokers.sort((a, b) => (a.isXMult ? 1 : 0) - (b.isXMult ? 1 : 0));
@@ -649,6 +736,7 @@ function simulateShopVisit(
             simRun.money -= card.cost;
             card.bought = true;
             simRun.jokers.push({ ...card, bonusMult: 0, bonusChips: 0 });
+            simRun.everOwnedJokers.add(card.id);
             if (jokerStats[card.id]) jokerStats[card.id].bought++;
             simRun.jokers.sort((a, b) => (a.isXMult ? 1 : 0) - (b.isXMult ? 1 : 0));
           }
@@ -664,6 +752,7 @@ function simulateShopVisit(
             const sellVal = getJokerSellValue(simRun.jokers[weakestIdx]);
             simRun.money += sellVal - card.cost;
             simRun.jokers[weakestIdx] = { ...card, bonusMult: 0, bonusChips: 0 };
+            simRun.everOwnedJokers.add(card.id);
             card.bought = true;
             if (jokerStats[card.id]) jokerStats[card.id].bought++;
             simRun.jokers.sort((a, b) => (a.isXMult ? 1 : 0) - (b.isXMult ? 1 : 0));
@@ -798,7 +887,9 @@ function runBatchSimulationForBot(numRuns: number, botType: BotType, cfg: SimCon
   JOKER_CATALOG.forEach(j => {
     jokerStats[j.id] = {
       id: j.id, name: j.name, cost: j.cost, rarity: j.rarity,
-      offered: 0, bought: 0, picks: 0, wins: 0, anteSum: 0, scalingSum: 0
+      archetype: j.archetype, icon: j.icon,
+      offered: 0, bought: 0, picks: 0, wins: 0, anteSum: 0, scalingSum: 0,
+      runsEverOwned: 0, everOwnedWins: 0, everOwnedAnteSum: 0
     };
   });
 
@@ -851,7 +942,8 @@ function runBatchSimulationForBot(numRuns: number, botType: BotType, cfg: SimCon
       consumables: [],
       usedTarots: new Set<string>(),
       usedCheats: new Set<string>(),
-      voucherAnteBought: {}
+      voucherAnteBought: {},
+      everOwnedJokers: new Set<string>()
     };
 
     let runFailed = false;
@@ -1121,7 +1213,7 @@ function runBatchSimulationForBot(numRuns: number, botType: BotType, cfg: SimCon
 
     totalFinalAnte += finalAnte;
 
-    // End-of-run item attribution
+    // End-of-run item attribution (Held-End)
     for (const j of simRun.jokers) {
       if (jokerStats[j.id]) {
         jokerStats[j.id].picks++;
@@ -1132,6 +1224,15 @@ function runBatchSimulationForBot(numRuns: number, botType: BotType, cfg: SimCon
         if (j.id === 'hot_hand') jokerStats[j.id].scalingSum += (j.bonusMult || 0);
         if (j.id === 'the_bullseye') jokerStats[j.id].scalingSum += (j.bonusMult || 0);
         if (j.id === 'bad_beat_jackpot') jokerStats[j.id].scalingSum += (j.bonusMult || 0);
+      }
+    }
+
+    // Ever-owned Joker attribution (removes survivorship bias from selling early bridge jokers)
+    for (const jId of simRun.everOwnedJokers) {
+      if (jokerStats[jId]) {
+        jokerStats[jId].runsEverOwned++;
+        jokerStats[jId].everOwnedAnteSum += finalAnte;
+        if (campaignWon) jokerStats[jId].everOwnedWins++;
       }
     }
     for (const vId of simRun.vouchers) {
@@ -1263,41 +1364,60 @@ function formatBotReportSection(simData: SimData): string {
     );
   }
   lines.push('--------------------------------------------------------------------------------');
-  lines.push(`JOKER PERFORMANCE LEADERBOARD (Sorted by End-of-Run Win Rate)`);
-  lines.push(`${pad('Joker Name', 18)} | ${pad('Rarity', 8)} | ${padL('Cost', 4)} | ${padL('Offered', 7)} | ${padL('Bought', 6)} | ${padL('EndHeld', 7)} | ${padL('RunWin%', 8)} | ${padL('Lift%', 7)} | ${padL('AvgAnte', 7)} | ${pad('Avg Scaling Bonus', 18)}`);
-  lines.push('-'.repeat(117));
+  lines.push(`JOKER BALANCE LEADERBOARD (Pick Win Rate & Progression Lift)`);
+  lines.push(`${pad('Joker Name', 18)} | ${pad('Rarity', 8)} | ${padL('Cost', 4)} | ${padL('Runs', 5)} | ${padL('PickWin%', 8)} | ${padL('Lift%', 7)} | ${padL('AvgAnte', 7)} | ${padL('AnteLift', 8)} | ${padL('KeptEnd', 7)} | ${pad('Balance Verdict', 16)}`);
+  lines.push('-'.repeat(108));
+
+  const baseWinPctVal = (wins / numRuns) * 100;
+  const baseAvgAnteVal = totalFinalAnte / numRuns;
 
   const sortedJokers = Object.values(jokerStats)
-    .filter(j => j.picks > 0 || j.offered > 0)
+    .filter(j => j.runsEverOwned > 0 || j.picks > 0 || j.offered > 0)
     .sort((a, b) => {
-      const wrA = a.picks > 0 ? a.wins / a.picks : -1;
-      const wrB = b.picks > 0 ? b.wins / b.picks : -1;
+      const runsA = a.runsEverOwned > 0 ? a.runsEverOwned : (a.bought > 0 ? a.bought : a.picks);
+      const runsB = b.runsEverOwned > 0 ? b.runsEverOwned : (b.bought > 0 ? b.bought : b.picks);
+      const wrA = runsA > 0 ? (a.runsEverOwned > 0 ? a.everOwnedWins : a.wins) / runsA : -1;
+      const wrB = runsB > 0 ? (b.runsEverOwned > 0 ? b.everOwnedWins : b.wins) / runsB : -1;
       return wrB - wrA;
     });
 
-  const baseWinPctVal = (wins / numRuns) * 100;
-
   for (const j of sortedJokers) {
-    const winPct = j.picks > 0 ? ((j.wins / j.picks) * 100).toFixed(1) + '%' : '0.0%';
-    const rawWinPct = j.picks > 0 ? (j.wins / j.picks) * 100 : 0;
-    const liftPct = j.picks > 0 ? (rawWinPct - baseWinPctVal).toFixed(1) : '0.0';
+    const runs = j.runsEverOwned > 0 ? j.runsEverOwned : (j.bought > 0 ? j.bought : j.picks);
+    const pickWins = j.runsEverOwned > 0 ? j.everOwnedWins : j.wins;
+    const pickWinPct = runs > 0 ? ((pickWins / runs) * 100).toFixed(1) + '%' : '0.0%';
+    const rawPickWin = runs > 0 ? (pickWins / runs) * 100 : 0;
+    const liftPct = runs > 0 ? (rawPickWin - baseWinPctVal).toFixed(1) : '0.0';
     const liftStr = (Number(liftPct) >= 0 ? '+' : '') + liftPct + '%';
-    const avgA = j.picks > 0 ? (j.anteSum / j.picks).toFixed(2) : '-';
-    let scaleNote = '-';
-    if (j.id === 'daredevil' && j.picks > 0) {
-      scaleNote = `+${(j.scalingSum / j.picks).toFixed(1)} Mult`;
-    } else if (j.id === 'chip_stacker' && j.picks > 0) {
-      scaleNote = `+${(j.scalingSum / j.picks).toFixed(1)} Chips`;
-    } else if (j.id === 'hot_hand' && j.picks > 0) {
-      scaleNote = `+${(j.scalingSum / j.picks).toFixed(1)} Mult`;
-    } else if (j.id === 'the_bullseye' && j.picks > 0) {
-      scaleNote = `+${(j.scalingSum / j.picks).toFixed(1)} Mult`;
-    } else if (j.id === 'bad_beat_jackpot' && j.picks > 0) {
-      scaleNote = `+${(j.scalingSum / j.picks).toFixed(1)} Mult`;
-    }
+
+    const rawAnteSum = j.runsEverOwned > 0 ? j.everOwnedAnteSum : j.anteSum;
+    const jAvgAnte = runs > 0 ? rawAnteSum / runs : 0;
+    const anteLiftVal = runs > 0 ? (jAvgAnte - baseAvgAnteVal).toFixed(2) : '0.00';
+    const anteLiftStr = (Number(anteLiftVal) >= 0 ? '+' : '') + anteLiftVal;
+
+    const retentionPct = runs > 0 ? Math.round((j.picks / runs) * 100) + '%' : '0%';
+    const verdict = getJokerBalanceVerdict(j, baseWinPctVal, baseAvgAnteVal);
+
     lines.push(
-      `${pad(j.name, 18)} | ${pad(j.rarity.toUpperCase(), 8)} | ${padL('$' + j.cost, 4)} | ${padL(j.offered, 7)} | ${padL(j.bought, 6)} | ${padL(j.picks, 7)} | ${padL(winPct, 8)} | ${padL(liftStr, 7)} | ${padL(avgA, 7)} | ${pad(scaleNote, 18)}`
+      `${pad(j.name, 18)} | ${pad(j.rarity.toUpperCase(), 8)} | ${padL('$' + j.cost, 4)} | ${padL(runs, 5)} | ${padL(pickWinPct, 8)} | ${padL(liftStr, 7)} | ${padL('Ante ' + jAvgAnte.toFixed(1), 7)} | ${padL(anteLiftStr, 8)} | ${padL(retentionPct, 7)} | ${pad(verdict.label, 16)}`
     );
+  }
+
+  const flaggedBuffs = sortedJokers.filter(j => {
+    const v = getJokerBalanceVerdict(j, baseWinPctVal, baseAvgAnteVal);
+    return v.status === 'buff';
+  });
+  if (flaggedBuffs.length > 0) {
+    lines.push('--------------------------------------------------------------------------------');
+    lines.push(`⚠️ JOKERS FLAGGED FOR POTENTIAL BUFF (Negative Lift & Low Ante Survival):`);
+    for (const j of flaggedBuffs) {
+      const runs = j.runsEverOwned > 0 ? j.runsEverOwned : (j.bought > 0 ? j.bought : j.picks);
+      const pickWins = j.runsEverOwned > 0 ? j.everOwnedWins : j.wins;
+      const wr = runs > 0 ? ((pickWins / runs) * 100).toFixed(1) : '0.0';
+      const lift = runs > 0 ? (((pickWins / runs) * 100) - baseWinPctVal).toFixed(1) : '0.0';
+      const rawAnte = j.runsEverOwned > 0 ? j.everOwnedAnteSum : j.anteSum;
+      const a = runs > 0 ? (rawAnte / runs).toFixed(1) : '0.0';
+      lines.push(`  • ${pad(j.name, 18)} (${j.rarity.toUpperCase()} $${j.cost}): ${wr}% WinRate (${lift}% lift), Avg Ante ${a} (Tested in ${runs} runs)`);
+    }
   }
 
   if (consumableStats && Object.keys(consumableStats).length > 0) {
@@ -1443,4 +1563,5 @@ if (typeof window !== 'undefined') {
   (window as any).buildSingleBotReport = buildSingleBotReport;
   (window as any).runBotSuite = runBotSuite;
   (window as any).decideBotAction = decideBotAction;
+  (window as any).getJokerBalanceVerdict = getJokerBalanceVerdict;
 }
