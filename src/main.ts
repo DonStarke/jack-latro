@@ -79,7 +79,7 @@ function getJokerFullDesc(j: JokerInstance): string {
     return 'Natural Blackjacks grant +$4 Cash and apply ×2.2 Mult.';
   }
   if (j.id === 'blowout') {
-    return '+20 Chips & +2 Mult for each point your final total beats the Dealer.';
+    return '+25 Chips & +3 Mult for each point your final total beats the Dealer.';
   }
   if (j.id === 'bounty_hunter') {
     return 'When Dealer busts, earn +$4 Cash and apply ×1.6 Mult (+$8 Cash if Dealer busts on 25+).';
@@ -88,16 +88,16 @@ function getJokerFullDesc(j: JokerInstance): string {
     return 'Ties (Pushes) grant +80 Chips, +6 Mult, and +$2 Cash.';
   }
   if (j.id === 'tightrope_walker') {
-    return '+75 Chips & +8 Mult if you stand on a final hand total of 20, 21, or 22.';
+    return '+80 Chips & +8 Mult if you stand on a final hand total of 19, 20, 21, or 22.';
   }
   if (j.id === 'small_fry') {
     return '+15 Chips & +2 Mult for each low card (2-5) in hand. Multiplies Mult by ×1.5 if hand has 3 or more low cards.';
   }
   if (j.id === 'kaleidoscope') {
-    return '+80 Chips & +6 Mult if your scoring hand contains cards of 3 or more different suits.';
+    return '+40 Chips & +4 Mult if hand has 2 different suits (boosted to +90c/+8m for 3+ suits).';
   }
   if (j.id === 'side_bet') {
-    return 'If your starting 2 cards are a Pair, earn +$4 Cash & +40 Chips (+$8 Cash & +80 Chips if same color).';
+    return 'Starting Pair grants +$5 Cash & +50 Chips (+10/$100 if same color). Starting Suited cards grant +$2 Cash & +25 Chips.';
   }
   if (j.id === 'daredevil') {
     const cur = j.bonusMult || 0;
@@ -119,7 +119,8 @@ function getJokerFullDesc(j: JokerInstance): string {
     const prev = getState().previousHandTotal;
     return `×1.5 Mult if your final hand total matches your final total from the previous winning hand. (${prev ? `Target: ${prev}` : 'No previous winning hand yet'})`;
   }
-  return j.desc;
+  const cat = typeof JOKER_CATALOG !== 'undefined' ? JOKER_CATALOG.find(c => c.id === j.id) : null;
+  return cat ? cat.desc : j.desc;
 }
 
 function getJokerMiniSubHTML(j: JokerInstance): string {
@@ -232,7 +233,8 @@ function getJokerMiniSubHTML(j: JokerInstance): string {
     const prev = getState().previousHandTotal;
     return `×1.5m (${prev ? `Match ${prev}` : 'Match Prev Win'})`;
   }
-  return j.desc;
+  const cat = typeof JOKER_CATALOG !== 'undefined' ? JOKER_CATALOG.find(c => c.id === j.id) : null;
+  return cat ? cat.desc : j.desc;
 }
 
 /* ---------- Outcome headline ---------- */
