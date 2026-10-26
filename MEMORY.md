@@ -177,3 +177,4 @@
   * Ante 8 victory awards permanent Bronze 🥉, Silver 🥈, or Gold 🥇 medal.
   * Locked difficulties show locked icon 🔒 and greyed-out styling.
 * **Jokers Removed**: `Snake Eyes` and `The Spotter` removed from catalogs, scoring, and UI (total catalog: 49 Jokers).
+* **Mobile-Optimized Run Information ("ℹ️")**: Removed overflowing deck title pill from the top HUD header to preserve mobile screen real estate. Transformed the voucher button into an Information button ("ℹ️") that opens a comprehensive Run Info Modal displaying Current Deck, Stake Difficulty, Active Vouchers, and Run Metrics.

@@ -221,10 +221,22 @@ function ck(name, condition) {
   ck('Active difficulty in gameState is "bronze"', w.getState().activeDifficultyId === 'bronze');
   ck('The Revolt starting deck has exactly 40 cards', w.getState().deck.length === 40);
 
-  // Check top HUD indicator
-  const hudDeckInd = $('ui-deck-indicator');
-  ck('HUD deck indicator exists in header', !!hudDeckInd);
-  ck('HUD deck indicator displays deck and difficulty', hudDeckInd.textContent.includes('Revolt') && hudDeckInd.textContent.includes('Bronze'));
+  // Verify top HUD clean on mobile: ui-deck-indicator removed to avoid horizontal overflow
+  ck('Top HUD header does NOT have overflowing deck indicator', !$('ui-deck-indicator'));
+
+  // Info button in HUD
+  const infoBtn = $('btn-vouchers-hud');
+  ck('HUD info button exists in header', !!infoBtn);
+  ck('HUD info button displays ℹ️ symbol', infoBtn.textContent.includes('ℹ'));
+
+  // Open Run Info modal and verify deck and difficulty are displayed
+  w.openRunInfoModal();
+  const infoModal = $('ui-vouchers-modal');
+  ck('Run info modal is opened', !isHidden(infoModal));
+  ck('Run info modal displays active deck (The Revolt)', $('ui-run-info-deck-diff').textContent.includes('The Revolt'));
+  ck('Run info modal displays active difficulty (Bronze) with medal 🥉', $('ui-run-info-deck-diff').textContent.includes('Bronze') && $('ui-run-info-deck-diff').textContent.includes('🥉'));
+  w.toggleVouchersModal(false);
+  ck('Closing info modal hides it', isHidden(infoModal));
 
   // 6. DEFEAT & VICTORY NEW GAME FLOW
   console.log('\n--- 6. RESTART / NEW GAME NAVIGATION ---');

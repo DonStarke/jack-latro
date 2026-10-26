@@ -1597,14 +1597,6 @@ function updateAllUI() {
   $('ui-money').textContent = '$' + state.money;
   $('ui-ante').textContent = state.ante > 8 ? `Ante ${state.ante} (Endless)` : `Ante ${state.ante}/8`;
   $('ui-shoe-count').textContent = `${state.shoe.length}/${state.deck.length}`;
-  const deckInd = $('ui-deck-indicator');
-  if (deckInd) {
-    const dDef = (typeof getDeckDef === 'function' ? getDeckDef(state.activeDeckId || 'standard') : null) || (typeof DECK_CATALOG !== 'undefined' ? DECK_CATALOG[0] : null);
-    const diffDef = (typeof getDifficultyDef === 'function' ? getDifficultyDef(state.activeDifficultyId || 'bronze') : null) || (typeof DIFFICULTY_CATALOG !== 'undefined' ? DIFFICULTY_CATALOG[0] : null);
-    if (dDef && diffDef) {
-      deckInd.textContent = `${dDef.icon} ${dDef.name} • ${diffDef.medalIcon} ${diffDef.name}`;
-    }
-  }
 
   updateSeenCardsAndRunningCount();
 
@@ -1787,6 +1779,8 @@ function renderActiveVouchers(): void {
   const cogCountEl = document.getElementById('ui-cog-vouchers-count');
   const popupContainer = document.getElementById('ui-vouchers-modal-list');
   const popupCountEl = document.getElementById('ui-vouchers-modal-count');
+  const deckDiffContainer = document.getElementById('ui-run-info-deck-diff');
+  const metricsContainer = document.getElementById('ui-run-info-metrics');
 
   const s = getState();
   const vouchers = s.vouchersBought || [];
@@ -1796,6 +1790,60 @@ function renderActiveVouchers(): void {
   }
   if (popupCountEl) {
     popupCountEl.textContent = `${vouchers.length} Active`;
+  }
+
+  // Render Current Deck & Difficulty in Run Info Modal
+  if (deckDiffContainer) {
+    const dDef = (typeof getDeckDef === 'function' ? getDeckDef(s.activeDeckId || 'standard') : null) || (typeof DECK_CATALOG !== 'undefined' ? DECK_CATALOG[0] : null);
+    const diffDef = (typeof getDifficultyDef === 'function' ? getDifficultyDef(s.activeDifficultyId || 'bronze') : null) || (typeof DIFFICULTY_CATALOG !== 'undefined' ? DIFFICULTY_CATALOG[0] : null);
+    if (dDef && diffDef) {
+      deckDiffContainer.innerHTML = `
+        <div class="run-info-card">
+          <div class="run-info-section-title">🃏 STARTING DECK & RULES</div>
+          <div class="run-info-deck-row">
+            <div class="run-info-icon-box">${dDef.icon}</div>
+            <div class="run-info-meta">
+              <div class="run-info-title-row">
+                <span class="run-info-name">${dDef.name}</span>
+                <span class="run-info-badge">${dDef.badge}</span>
+              </div>
+              <div class="run-info-desc">${dDef.description}</div>
+            </div>
+          </div>
+          <div class="run-info-section-title" style="margin-top:10px;">👑 STAKE DIFFICULTY</div>
+          <div class="run-info-diff-row">
+            <div class="run-info-diff-medal">${diffDef.medalIcon}</div>
+            <div class="run-info-meta">
+              <div class="run-info-title-row">
+                <span class="run-info-name" style="color:${diffDef.color};">${diffDef.name} Difficulty</span>
+                <span class="run-info-badge badge-gold">${diffDef.targetScalePct}% Scaling</span>
+              </div>
+              <div class="run-info-desc">${diffDef.desc}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  // Render Run Metrics & Future Information in Run Info Modal
+  if (metricsContainer) {
+    metricsContainer.innerHTML = `
+      <div class="run-info-metrics-panel">
+        <div class="run-info-metric-item">
+          <div class="metric-label">CURRENT ANTE</div>
+          <div class="metric-val gold-txt">${s.ante > 8 ? `Ante ${s.ante} (Endless)` : `Ante ${s.ante}/8`}</div>
+        </div>
+        <div class="run-info-metric-item">
+          <div class="metric-label">DEAL CAPACITY</div>
+          <div class="metric-val blue-txt">${s.maxHands} Deals</div>
+        </div>
+        <div class="run-info-metric-item">
+          <div class="metric-label">JOKER SLOTS</div>
+          <div class="metric-val yellow-txt">${s.jokers.length}/${s.maxJokers}</div>
+        </div>
+      </div>
+    `;
   }
 
   const emptyHtml = `<div style="font-size:12px; color:#64748b; font-style:italic; padding:12px 0; text-align:center;">No vouchers purchased yet this run.</div>`;
@@ -1831,6 +1879,10 @@ function toggleVouchersModal(show: boolean): void {
 }
 
 function openRunVouchersModal(): void {
+  toggleVouchersModal(true);
+}
+
+function openRunInfoModal(): void {
   toggleVouchersModal(true);
 }
 
@@ -5598,6 +5650,7 @@ function renderRunStats(): void {
 (window as any).hideRoundCashBreakdown = hideRoundCashBreakdown;
 (window as any).renderActiveVouchers = renderActiveVouchers;
 (window as any).openRunVouchersModal = openRunVouchersModal;
+(window as any).openRunInfoModal = openRunInfoModal;
 (window as any).toggleVouchersModal = toggleVouchersModal;
 (window as any).uiConfirmResetStats = uiConfirmResetStats;
 (window as any).uiCancelResetStats = uiCancelResetStats;

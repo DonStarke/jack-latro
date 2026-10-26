@@ -138,11 +138,10 @@
       </div>
 
       <div class="meta-right">
-        <div class="stat-pill stat-deck" id="ui-deck-indicator" title="Active Deck & Difficulty">🃏 52 • 🥉 Bronze</div>
         <div class="stat-pill stat-cash" id="ui-money">$6</div>
         <div class="stat-pill stat-ante" id="ui-ante">Ante 1/8</div>
         <button class="cog-btn music-btn" id="btn-music-toggle" onclick="toggleMusic()" title="Toggle Background Music">🎵</button>
-        <button class="cog-btn" id="btn-vouchers-hud" onclick="openRunVouchersModal()" title="View Active Run Vouchers">🎟️</button>
+        <button class="cog-btn info-btn" id="btn-vouchers-hud" onclick="openRunInfoModal()" title="View Current Run Info (Deck, Difficulty, Vouchers)">ℹ️</button>
         <button class="cog-btn" onclick="toggleCogModal(true)" title="Menu, Rules & Simulator">⚙️</button>
       </div>
     </div>
@@ -340,22 +339,39 @@
   </div>
 </div>
 
-<!-- DEDICATED RUN VOUCHERS MODAL -->
+<!-- DEDICATED RUN INFORMATION & VOUCHERS MODAL -->
 <div class="modal-backdrop hidden" id="ui-vouchers-modal" onclick="toggleVouchersModal(false)">
-  <div class="modal-box" onclick="event.stopPropagation()" style="max-width: 440px;">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid #1e293b;">
+  <div class="modal-box run-info-modal-box" onclick="event.stopPropagation()" style="max-width: 460px; width: 94%;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid #1e293b;">
       <div style="display:flex; align-items:center; gap:8px;">
-        <span style="font-size:22px;">🎟️</span>
+        <span style="font-size:20px;">ℹ️</span>
         <div>
-          <h3 style="color:var(--gold); margin:0; font-size:16px; letter-spacing:0.5px;">ACTIVE RUN VOUCHERS</h3>
-          <div id="ui-vouchers-modal-count" style="font-size:11px; color:#94a3b8;">0 Active</div>
+          <h3 style="color:var(--gold); margin:0; font-size:16px; letter-spacing:0.5px;">CURRENT RUN INFO</h3>
+          <div style="font-size:11px; color:#94a3b8;">Deck, Difficulty & Upgrades</div>
         </div>
       </div>
       <button class="btn btn-secondary" onclick="toggleVouchersModal(false)">Close</button>
     </div>
 
-    <div id="ui-vouchers-modal-list" style="display:flex; flex-direction:column; gap:8px; max-height:60vh; overflow-y:auto; padding-right:2px;">
-      <div style="font-size:12px; color:#64748b; font-style:italic; padding:12px 0; text-align:center;">No vouchers purchased yet this run.</div>
+    <div style="display:flex; flex-direction:column; gap:12px; max-height:72vh; overflow-y:auto; padding-right:2px;">
+      <!-- DECK & DIFFICULTY SECTION -->
+      <div id="ui-run-info-deck-diff"></div>
+
+      <!-- ACTIVE RUN VOUCHERS SECTION -->
+      <div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <div style="font-size:12px; font-weight:800; color:#e2e8f0; display:flex; align-items:center; gap:5px;">
+            <span>🎟️</span> ACTIVE VOUCHERS
+          </div>
+          <div id="ui-vouchers-modal-count" style="font-size:11px; color:#94a3b8; font-weight:bold;">0 Active</div>
+        </div>
+        <div id="ui-vouchers-modal-list" style="display:flex; flex-direction:column; gap:8px;">
+          <div style="font-size:12px; color:#64748b; font-style:italic; padding:12px 0; text-align:center;">No vouchers purchased yet this run.</div>
+        </div>
+      </div>
+
+      <!-- RUN METRICS / FUTURE INFO SECTION -->
+      <div id="ui-run-info-metrics"></div>
     </div>
   </div>
 </div>
