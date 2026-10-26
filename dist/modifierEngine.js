@@ -1,0 +1,843 @@
+"use strict";
+/* ==========================================================
+   modifierEngine.ts - JOKERS, TAROTS, VOUCHERS, BOSSES & SCORING
+   Catalog data + the ONE pure scoring function used by both the
+   live game and the simulator. It never touches gameState or the
+   DOM: callers pass a ScoreContext and apply the returned result.
+   Depends on (global): deckEngine.ts (types, classifyHand, tiers)
+========================================================== */
+/* ---------- Catalogs ---------- */
+const JOKER_CATALOG = [
+    { id: 'bust_cushion', name: 'Bust Cushion', cost: 6, rarity: 'uncommon', isXMult: false, icon: '🛡️', archetype: 'utility', desc: 'Rubber Table: You only bust on 23+ (a total of 22 is treated as a valid 21!).' },
+    { id: 'daredevil', name: 'Daredevil', cost: 6, rarity: 'uncommon', isXMult: false, bonusMult: 0, icon: '⚡', archetype: 'mult', desc: 'Permanently gains +1 Mult on safe Hit on 15+ for the rest of run.' },
+    { id: 'chip_stacker', name: 'Chip Stacker', cost: 6, rarity: 'uncommon', isXMult: false, bonusChips: 0, icon: '💰', archetype: 'chips', desc: 'Permanently gains +10 Chips for the rest of run every time you win with a Double Down or Exact 21.' },
+    { id: 'card_counter', name: 'Card Counter', cost: 4, rarity: 'common', isXMult: false, icon: '🧮', archetype: 'chips', desc: '+45 Chips & +2 Mult for each low card (2-6) in your hand.' },
+    { id: 'vip_high_roller', name: 'VIP High Roller', cost: 5, rarity: 'common', isXMult: false, icon: '👑', archetype: 'mult', desc: '+10 Chips & +5 Mult for each Face Card (J, Q, K) in your hand.' },
+    { id: 'ace_up_sleeve', name: 'Ace Up Sleeve', cost: 5, rarity: 'common', isXMult: false, icon: '🎴', archetype: 'chips', desc: '+50 Chips & +5 Mult if your hand contains an Ace.' },
+    { id: 'sweet_16', name: 'Sweet Sixteen', cost: 5, rarity: 'uncommon', isXMult: false, icon: '🎂', archetype: 'mult', desc: 'Standing on 16 or less grants +50 Chips & +15 Mult on a Win or Push.' },
+    { id: 'lucky_sevens', name: 'Lucky Sevens', cost: 5, rarity: 'common', isXMult: false, icon: '🎰', archetype: 'mult', desc: 'Each 7 in hand grants +77 Chips & +7 Mult. Standing on 17 or 21 grants an extra +7 Mult.' },
+    { id: 'hit_me_baby', name: 'Hit Me Baby', cost: 5, rarity: 'common', isXMult: false, icon: '🥊', archetype: 'mult', desc: '+5 Mult for every card in your hand beyond 2.' },
+    { id: 'golden_parachute', name: 'Gold Parachute', cost: 4, rarity: 'common', isXMult: false, icon: '🪂', archetype: 'econ', desc: 'Earn +$3 and gain +40 Chips whenever the Dealer busts.' },
+    { id: 'push_it_good', name: 'Push It Good', cost: 5, rarity: 'uncommon', isXMult: false, icon: '🤝', archetype: 'utility', desc: 'Ties (Pushes) count as Wins and grant +60 Chips & +6 Mult.' },
+    { id: 'blackjack_tycoon', name: 'BJ Tycoon', cost: 8, rarity: 'rare', isXMult: true, icon: '🎩', archetype: 'mult', desc: 'Scoring 21 or Natural BJ applies ×1.6 Mult and grants +$2.' },
+    { id: 'the_shark', name: 'The Shark', cost: 8, rarity: 'rare', isXMult: true, icon: '🦈', archetype: 'mult', desc: '×1.35 Mult if your final total beats the Dealer by 3 or more, or if the Dealer busts.' },
+    { id: 'safety_net', name: 'Safety Net', cost: 5, rarity: 'uncommon', isXMult: false, icon: '🕸️', archetype: 'utility', desc: 'Busting still scores a salvage of (40 × Ante) Chips × 2 Mult (other Jokers and enhancements do not trigger on a bust).' },
+    { id: 'even_steven', name: 'Even Steven', cost: 4, rarity: 'common', isXMult: false, icon: '⚖️', archetype: 'chips', desc: '+15 Chips & +5 Mult for each even-numbered card (2,4,6,8,10) in hand.' },
+    { id: 'red_velvet', name: 'Red Velvet', cost: 5, rarity: 'common', isXMult: false, icon: '🌹', archetype: 'suit', suitTheme: '♥', desc: '+35 Chips & +2 Mult for each ♥ or ♦ in your hand.' },
+    { id: 'dark_knight', name: 'Dark Knight', cost: 5, rarity: 'common', isXMult: false, icon: '♞', archetype: 'suit', suitTheme: '♠', desc: '+15 Chips & +4 Mult for each ♠ or ♣ in your hand.' },
+    { id: 'compound_edge', name: 'Compound Edge', cost: 6, rarity: 'uncommon', isXMult: false, icon: '📈', archetype: 'chips', desc: '+15 Chips & +1 Mult for every $5 you currently hold (max +150c/+10m).' },
+    { id: 'minimalist', name: 'Minimalist', cost: 7, rarity: 'rare', isXMult: true, icon: '⭕', archetype: 'mult', desc: '×1.8 Mult if you Win with exactly 2 cards.' },
+    { id: 'hot_hand', name: 'Hot Hand', cost: 6, rarity: 'uncommon', isXMult: false, bonusMult: 0, icon: '🔥', archetype: 'mult', desc: 'Gains +2 Mult per consecutive winning hand (up to +20 Mult max). Resets to 0 on a loss or bust.' },
+    { id: 'pocket_rockets', name: 'Pocket Rockets', cost: 6, rarity: 'uncommon', isXMult: false, icon: '🚀', archetype: 'mult', desc: '+30 Chips & +8 Mult if starting hand contains an Ace (doubled to +75c/+20m for a Pair of Aces).' },
+    { id: 'trips_ahoy', name: 'Trips Ahoy', cost: 5, rarity: 'common', isXMult: false, icon: '⚓', archetype: 'chips', desc: '+60 Chips & +8 Mult if you win with 3+ cards totaling 19-21 (doubled to +120c/+15m for 3-of-a-Kind).' },
+    { id: 'spade_slicer', name: 'Spade Slicer', cost: 5, rarity: 'common', isXMult: false, icon: '🗡️', archetype: 'suit', suitTheme: '♠', desc: '+15 Chips & +5 Mult for each ♠ in your hand.' },
+    { id: 'crimson_heart', name: 'Crimson Heart', cost: 5, rarity: 'common', isXMult: false, icon: '❤️', archetype: 'suit', suitTheme: '♥', desc: '+40 Chips & +2 Mult for each ♥ in your hand.' },
+    { id: 'diamond_cutter', name: 'Diamond Cutter', cost: 5, rarity: 'common', isXMult: false, icon: '💎', archetype: 'suit', suitTheme: '♦', desc: '+30 Chips and earn +$1 for each ♦ in your hand on a Win.' },
+    { id: 'club_sandwich', name: 'Club Sandwich', cost: 5, rarity: 'common', isXMult: false, icon: '🥪', archetype: 'suit', suitTheme: '♣', desc: '+6 Mult for each ♣ in your hand on a Win.' },
+    { id: 'monochrome', name: 'Monochrome', cost: 6, rarity: 'uncommon', isXMult: true, icon: '🏁', archetype: 'mult', desc: '×1.6 Mult if all cards in your hand share the same suit (minimum 3 cards).' },
+    { id: 'odd_ball', name: 'Odd Ball', cost: 4, rarity: 'common', isXMult: false, icon: '🎱', archetype: 'chips', desc: '+20 Chips & +4 Mult for each odd-numbered card (3, 5, 7, 9) in hand.' },
+    { id: 'the_grinder', name: 'The Grinder', cost: 4, rarity: 'common', isXMult: false, icon: '⚙️', archetype: 'econ', desc: 'Earn +$1 and +15 Chips for every safe Hit in the round.' },
+    { id: 'double_or_nothing', name: 'Double or Nothing', cost: 8, rarity: 'rare', isXMult: true, icon: '💥', archetype: 'mult', desc: 'Doubling Down multiplies Mult by ×3 instead of ×2.' },
+    { id: 'slow_and_steady', name: 'Slow & Steady', cost: 5, rarity: 'common', isXMult: false, icon: '🐢', archetype: 'chips', desc: '+20 Chips for each Deal remaining in the current Blind when you Win.' },
+    { id: 'card_sharp_joker', name: 'Card Sharp', cost: 8, rarity: 'rare', isXMult: true, icon: '🪒', archetype: 'mult', desc: '×1.5 Mult if you have already won a hand in this Blind.' },
+    { id: 'deja_vu', name: 'Deja Vu', cost: 8, rarity: 'rare', isXMult: true, icon: '🌀', archetype: 'mult', desc: '×1.5 Mult if your final hand total matches your final total from the previous winning hand.' },
+    { id: 'rain_man', name: 'Rain Man', cost: 8, rarity: 'rare', isXMult: true, icon: '🧠', archetype: 'mult', desc: 'Hi-Lo Count (2-6: +1, 7-9: 0, 10-A: -1 from 0). When Count ≥ +2: Double Down applies ×3 Mult & Blackjacks/21s grant ×1.5 Mult & +$2.' },
+    { id: 'street_magician', name: 'Street Magician', cost: 6, rarity: 'uncommon', isXMult: false, icon: '🎩', archetype: 'utility', desc: '+25 Chips on scoring hands. Exact 21, Natural BJ, or 5-Card Charlie wins create a random Tarot card (must have room).' },
+    { id: 'marked_deck', name: 'Marked Deck', cost: 6, rarity: 'uncommon', isXMult: false, icon: '🎴', archetype: 'utility', desc: 'At the start of each Blind, create 1 random Table Cheat in your inventory (must have room).' },
+    { id: 'fortune_teller', name: 'Fortune Teller', cost: 6, rarity: 'uncommon', isXMult: false, icon: '🔮', archetype: 'mult', desc: '+6 Chips & +1 Mult for each Tarot or Table Cheat used this run (max +60c/+10m).' },
+    { id: 'crown_jewel', name: 'Crown Jewel', cost: 7, rarity: 'rare', isXMult: true, icon: '👑', archetype: 'mult', desc: 'Natural Blackjacks grant +$4 Cash and apply ×2.2 Mult.' },
+    { id: 'the_bullseye', name: 'The Bullseye', cost: 6, rarity: 'uncommon', isXMult: false, bonusMult: 0, icon: '🎯', archetype: 'mult', desc: 'Permanently gains +2 Mult for the rest of run every time you score an Exact 21.' },
+    { id: 'blowout', name: 'Blowout', cost: 5, rarity: 'common', isXMult: false, icon: '🥊', archetype: 'chips', desc: '+25 Chips & +3 Mult for each point your final total beats the Dealer.' },
+    { id: 'bounty_hunter', name: 'Bounty Hunter', cost: 5, rarity: 'common', isXMult: true, icon: '🤠', archetype: 'econ', desc: 'When Dealer busts, earn +$4 Cash and apply ×1.6 Mult (+$8 Cash if Dealer busts on 25+).' },
+    { id: 'push_the_limit', name: 'Push the Limit', cost: 5, rarity: 'uncommon', isXMult: false, icon: '🤝', archetype: 'utility', desc: 'Ties (Pushes) grant +100 Chips, +8 Mult, and +$2 Cash.' },
+    { id: 'bad_beat_jackpot', name: 'Bad Beat Jackpot', cost: 6, rarity: 'uncommon', isXMult: false, bonusMult: 0, icon: '🩹', archetype: 'mult', desc: '+1 Mult permanently (max +10 Mult) and earn +$1 Cash whenever you lose a hand to the Dealer (without busting).' },
+    { id: 'tightrope_walker', name: 'Tightrope Walker', cost: 6, rarity: 'uncommon', isXMult: false, icon: '🎪', archetype: 'chips', desc: '+60 Chips & +7 Mult if you stand on a final hand total of 19, 20, 21, or 22.' },
+    { id: 'small_fry', name: 'Small Fry', cost: 4, rarity: 'common', isXMult: true, icon: '🍟', archetype: 'mult', desc: '+15 Chips & +2 Mult for each low card (2-5) in hand. Multiplies Mult by ×1.5 if hand has 3 or more low cards.' },
+    { id: 'kaleidoscope', name: 'Kaleidoscope', cost: 5, rarity: 'common', isXMult: false, icon: '🎨', archetype: 'mult', desc: '+40 Chips & +4 Mult if hand has 2 different suits (boosted to +90c/+8m for 3+ suits).' },
+    { id: 'momentum', name: 'Momentum', cost: 5, rarity: 'common', isXMult: false, icon: '⚡', archetype: 'mult', desc: '+25 Chips & +3 Mult baseline on a Win, plus +30 Chips & +4 Mult for each prior win in the current Blind (stacks up to +145c/+19m).' },
+    { id: 'the_banker', name: 'The Banker', cost: 7, rarity: 'rare', isXMult: false, icon: '🏦', archetype: 'econ', desc: 'Interest earned at the end of each Blind is increased by +50%. If you end a Blind with $25+, start the next Blind with +1 extra Deal.' },
+    { id: 'side_bet', name: 'Side Bet', cost: 5, rarity: 'common', isXMult: false, icon: '🎰', archetype: 'econ', desc: 'Starting Pair grants +$5 Cash & +50 Chips (+10/$100 if same color). Starting Suited cards grant +$2 Cash & +25 Chips.' }
+];
+const DECK_TAROT_CATALOG = [
+    { id: 'midas_touch', name: 'Midas Touch', cost: 3, consumableType: 'tarot', desc: 'Enhance a single card to Gold (+$3 when scored).' },
+    { id: 'polychrome_dice', name: 'Polychrome Dice', cost: 4, consumableType: 'tarot', desc: 'Enhance up to 2 selected cards to Polychrome (×1.5 Mult).' },
+    { id: 'the_guillotine', name: 'The Guillotine', cost: 4, consumableType: 'tarot', desc: 'Permanently destroy up to 2 selected cards from your deck.' },
+    { id: 'card_forge', name: 'Card Forge', cost: 3, consumableType: 'tarot', desc: 'Increase the rank of up to 2 selected cards by 1.' },
+    { id: 'card_shave', name: 'Card Shave', cost: 3, consumableType: 'tarot', desc: 'Reduce the rank of up to 2 selected cards by 1.' },
+    { id: 'wild_suit', name: 'Prism Dye', cost: 3, consumableType: 'tarot', desc: 'Enhance up to 2 selected cards to Foil (+30 Chips permanently).' },
+    { id: 'lucky_charm', name: 'Lucky Charm', cost: 4, consumableType: 'tarot', desc: 'Enhance up to 2 selected cards to Holo (+4 Mult permanently).' },
+    { id: 'the_lovers', name: 'The Lovers', cost: 3, consumableType: 'tarot', desc: 'Change a selected card\'s suit to a Wild Suit (★) that counts as any suit.' },
+    { id: 'the_sun', name: 'The Sun', cost: 3, consumableType: 'tarot', desc: 'Convert up to 3 selected cards to Hearts (♥).' },
+    { id: 'the_star', name: 'The Star', cost: 3, consumableType: 'tarot', desc: 'Convert up to 3 selected cards to Diamonds (♦).' },
+    { id: 'the_moon', name: 'The Moon', cost: 3, consumableType: 'tarot', desc: 'Convert up to 3 selected cards to Clubs (♣).' },
+    { id: 'the_world', name: 'The World', cost: 3, consumableType: 'tarot', desc: 'Convert up to 3 selected cards to Spades (♠).' },
+    { id: 'judgement', name: 'Judgement', cost: 4, consumableType: 'tarot', desc: 'Create a random Joker (must have room in Joker slots).' },
+    { id: 'nostradamus', name: 'Nostradamus', cost: 4, consumableType: 'tarot', desc: 'Creates the last Tarot used (excluding Nostradamus).' }
+];
+const CHEAT_CATALOG = [
+    { id: 'x_ray', name: 'X-Ray Specs', cost: 3, consumableType: 'cheat', desc: 'Reveal Dealer hole card and gain +75 Chips this hand.' },
+    { id: 'loaded_ace', name: 'Loaded Ace', cost: 4, consumableType: 'cheat', desc: 'Draw a Foil Ace of Spades directly into your hand.' },
+    { id: 'double_vision', name: 'Double Vision', cost: 3, consumableType: 'cheat', desc: 'Apply Double Down (×2 Mult) to your active hand without forcing a Stand.' }
+];
+const TAROT_CATALOG = [
+    ...CHEAT_CATALOG,
+    ...DECK_TAROT_CATALOG
+];
+function isCheatConsumable(id) {
+    return CHEAT_CATALOG.some(c => c.id === id);
+}
+function getTarotMaxCards(tarotId) {
+    if (['the_sun', 'the_star', 'the_moon', 'the_world'].includes(tarotId)) {
+        return 3;
+    }
+    if ([
+        'card_forge',
+        'card_shave',
+        'the_guillotine',
+        'polychrome_dice',
+        'wild_suit',
+        'prism_dye',
+        'lucky_charm'
+    ].includes(tarotId)) {
+        return 2;
+    }
+    if (['midas_touch', 'the_lovers'].includes(tarotId)) {
+        return 1;
+    }
+    return 0;
+}
+function isTarotCardTargeted(tarotId) {
+    return getTarotMaxCards(tarotId) > 0;
+}
+function isCardEligibleForTarot(tarotId, card) {
+    if (tarotId === 'card_shave') {
+        return card.rank !== '2';
+    }
+    if (tarotId === 'card_forge') {
+        return card.rank !== 'A';
+    }
+    return true;
+}
+const VOUCHER_CATALOG = [
+    { id: 'blank_voucher', name: 'Blank Voucher', cost: 10, desc: 'Does nothing? (Unlocks VIP Lounge Pass in future shops).' },
+    { id: 'joker_slot', name: 'VIP Lounge Pass', cost: 10, desc: '+1 Max Joker Slot permanently.' },
+    { id: 'extra_hand', name: 'Extra Cushion', cost: 10, desc: '+1 Max Deal per Blind permanently.' },
+    { id: 'extra_hand_2', name: 'Extra Cushion 2', cost: 10, desc: '+1 Max Deal per Blind permanently (stacks with Extra Cushion).' },
+    { id: 'clearance_sale', name: 'Clearance Rack', cost: 10, desc: 'Shop rerolls start at $2 permanently.' },
+    { id: 'clearance_sale_2', name: 'Clearance Rack 2', cost: 10, desc: 'Shop rerolls start at $1 permanently.' },
+    { id: 'overstock', name: 'Overstock Shelves', cost: 10, desc: 'Shop offers +1 Booster Pack slot permanently (2 packs instead of 1).' },
+    { id: 'overstock_2', name: 'Overstock Shelves 2', cost: 10, desc: 'Shop offers +1 Booster Pack slot permanently (3 packs instead of 2).' },
+    { id: 'deep_pockets', name: 'High Roller', cost: 10, desc: 'Raises interest cap to $10 (earn interest up to $50).' },
+    { id: 'deep_pockets_2', name: 'High Roller 2', cost: 10, desc: 'Raises interest cap to $20 (earn interest up to $100).' }
+];
+const BOSS_BLINDS = [
+    { id: 'the_house', name: 'The House', desc: 'Ties (Pushes) go to the Dealer unless you have Push It Good.' },
+    { id: 'the_pit_boss', name: 'The Pit Boss', desc: 'Face cards (J, Q, K) contribute half chips (5 chips) when scored.' },
+    { id: 'the_cooler', name: 'The Cooler', desc: 'Start this Blind with -1 Deal.' },
+    { id: 'the_anchor', name: 'The Anchor', desc: 'Double Down is disabled during this Blind.' }
+];
+const CARD_EFFECTS_CATALOG = [
+    {
+        id: 'foil',
+        name: 'Foil',
+        enhancement: 'foil',
+        badge: 'FOIL',
+        icon: '✨',
+        bonusText: '+30 Chips',
+        desc: 'Adds +30 Chips permanently to this card when scored in your final hand.',
+        color: '#38bdf8',
+        tarotSource: 'Prism Dye Tarot & Booster Packs'
+    },
+    {
+        id: 'holo',
+        name: 'Holographic',
+        enhancement: 'holo',
+        badge: 'HOLO',
+        icon: '🌈',
+        bonusText: '+4 Mult',
+        desc: 'Adds +4 Mult permanently to this card when scored in your final hand.',
+        color: '#f87171',
+        tarotSource: 'Lucky Charm Tarot & Booster Packs'
+    },
+    {
+        id: 'poly',
+        name: 'Polychrome',
+        enhancement: 'poly',
+        badge: 'POLY',
+        icon: '🔮',
+        bonusText: '×1.5 Mult',
+        desc: 'Multiplies your total hand Mult by ×1.5 permanently when scored in your final hand.',
+        color: '#c084fc',
+        tarotSource: 'Polychrome Dice Tarot & Booster Packs'
+    },
+    {
+        id: 'gold',
+        name: 'Gold',
+        enhancement: 'gold',
+        badge: 'GOLD',
+        icon: '💰',
+        bonusText: '+$3 Cash',
+        desc: 'Earns +$3 bonus cash permanently whenever a scoring hand is won with this card.',
+        color: '#eab308',
+        tarotSource: 'Midas Touch Tarot & Booster Packs'
+    }
+];
+const WIN_TIERS = ['CHARLIE', 'NATURAL', 'EXACT21', 'WIN'];
+function round1(x) {
+    return Math.round(x * 10) / 10;
+}
+function scoreHand(ctx) {
+    const owns = (id) => ctx.jokers.some(j => j.id === id);
+    const cls = classifyHand(ctx.playerHand, ctx.dealerHand, owns('bust_cushion'), ctx.bossBlind, owns('push_it_good'));
+    const { pTotal, dTotal, pBust, dBust } = cls;
+    const rawOutcomeType = cls.outcomeType;
+    let outcomeType = cls.outcomeType;
+    let outcomeLabel = cls.outcomeLabel;
+    let baseChips = cls.baseChips;
+    let baseMult = cls.baseMult;
+    const logs = [];
+    const steps = [];
+    if (cls.cushioned)
+        logs.push('Bust Cushion (22➔21!)');
+    let isScoring = rawOutcomeType !== 'BUST' && rawOutcomeType !== 'LOSS';
+    let safetyNetSaved = false;
+    if (outcomeType === 'BUST' && owns('safety_net')) {
+        isScoring = true;
+        baseChips = 40 * Math.max(1, ctx.ante);
+        baseMult = 2;
+        outcomeLabel = 'SAVED BY SAFETY NET!';
+        logs.push(`Safety Net (${baseChips}×2 Salvage)`);
+        safetyNetSaved = true;
+    }
+    if (outcomeType === 'PUSH' && owns('push_it_good')) {
+        outcomeType = 'WIN';
+        baseChips += 60;
+        baseMult += 6;
+        outcomeLabel = 'PUSH IT GOOD WIN!';
+        logs.push('Push It Good (+60c, +6m)');
+    }
+    const isWin = WIN_TIERS.includes(outcomeType);
+    let chipStackerNewBonus = null;
+    const stacker = ctx.jokers.find(j => j.id === 'chip_stacker');
+    if (isWin && stacker) {
+        let stackerGain = 0;
+        const isExact21 = outcomeType === 'EXACT21' || pTotal === 21;
+        if (ctx.doubledDown)
+            stackerGain += 10;
+        if (isExact21)
+            stackerGain += 10;
+        if (stackerGain > 0) {
+            chipStackerNewBonus = (stacker.bonusChips || 0) + stackerGain;
+            logs.push(`Chip Stacker Scaled (+${stackerGain}c ➔ +${chipStackerNewBonus}c)`);
+        }
+    }
+    const result = {
+        rawOutcomeType, outcomeType, outcomeLabel, isScoring, isWin,
+        pTotal, dTotal, pBust, dBust, cushioned: cls.cushioned, safetyNetSaved,
+        steps, logs, chips: 0, mult: 0, handScore: 0, moneyGained: 0, chipStackerNewBonus
+    };
+    if (!isScoring)
+        return result;
+    if (ctx.anteHandScaling && ctx.ante > 1) {
+        const f = 1 + (ctx.ante - 1) * 0.15;
+        baseChips = Math.round(baseChips * f);
+        baseMult = round1(baseMult * f);
+    }
+    let chips = Math.round(baseChips + ctx.baseWinChipBonus + ctx.tempBonusChips);
+    let mult = round1(baseMult + ctx.baseWinMultBonus);
+    let money = ctx.money;
+    steps.push({ kind: 'base', chips, mult, deltaChips: chips, deltaMult: mult, sourceName: outcomeLabel });
+    // Cards, left to right
+    ctx.playerHand.forEach((c, i) => {
+        const prevChips = chips;
+        const prevMult = mult;
+        const prevMoney = money;
+        const cVal = getCardChipValue(c, ctx.bossBlind);
+        chips += cVal;
+        let popLabel = `+${cVal}c`;
+        let isX = false;
+        // On a bust saved by Safety Net, card enhancements do not trigger
+        if (!safetyNetSaved) {
+            if (c.enhancement === 'foil') {
+                chips += 30;
+                popLabel = `+${cVal + 30}c`;
+                logs.push(`${c.rank}${c.suit} +30c`);
+            }
+            if (c.enhancement === 'holo') {
+                mult = round1(mult + 4);
+                popLabel += ' +4m';
+                logs.push(`${c.rank}${c.suit} +4m`);
+            }
+            if (c.enhancement === 'poly') {
+                mult = round1(mult * 1.5);
+                isX = true;
+                popLabel += ' ×1.5m';
+                logs.push(`${c.rank}${c.suit} ×1.5m`);
+            }
+            if (c.enhancement === 'gold') {
+                money += 3;
+                popLabel += ' +$3';
+                logs.push(`${c.rank}${c.suit} +$3`);
+            }
+        }
+        steps.push({
+            kind: 'card',
+            cardIndex: i,
+            chips: Math.round(chips),
+            mult: round1(mult),
+            popLabel,
+            deltaChips: Math.round(chips - prevChips),
+            deltaMult: isX ? 1.5 : round1(mult - prevMult),
+            isXMult: isX,
+            deltaMoney: money - prevMoney,
+            sourceName: `${c.rank}${c.suit}`
+        });
+    });
+    // Jokers, left to right (if saved by Safety Net, other jokers do NOT trigger on a bust!)
+    const hand = ctx.playerHand;
+    ctx.jokers.forEach((j, jIdx) => {
+        if (safetyNetSaved) {
+            return;
+        }
+        let triggered = false;
+        const prevChips = chips;
+        const prevMult = mult;
+        const prevMoney = money;
+        switch (j.id) {
+            case 'daredevil': {
+                const bm = j.bonusMult || 0;
+                if (bm > 0) {
+                    mult += bm;
+                    logs.push(`Daredevil +${bm}m`);
+                    triggered = true;
+                }
+                break;
+            }
+            case 'chip_stacker': {
+                const bc = chipStackerNewBonus !== null ? chipStackerNewBonus : (j.bonusChips || 0);
+                if (bc > 0) {
+                    chips += bc;
+                    logs.push(`Chip Stacker +${bc}c`);
+                    triggered = true;
+                }
+                break;
+            }
+            case 'card_counter': {
+                const lows = hand.filter(c => ['2', '3', '4', '5', '6'].includes(c.rank)).length;
+                if (lows > 0) {
+                    chips += lows * 45;
+                    mult += lows * 2;
+                    logs.push(`Counter +${lows * 45}c/+${lows * 2}m`);
+                    triggered = true;
+                }
+                break;
+            }
+            case 'vip_high_roller': {
+                const faces = hand.filter(c => FACE_RANKS.includes(c.rank)).length;
+                if (faces > 0) {
+                    mult += faces * 5;
+                    chips += faces * 10;
+                    logs.push(`VIP +${faces * 10}c/+${faces * 5}m`);
+                    triggered = true;
+                }
+                break;
+            }
+            case 'ace_up_sleeve':
+                if (hand.some(c => c.rank === 'A')) {
+                    chips += 50;
+                    mult += 5;
+                    logs.push('Ace Sleeve +50c/+5m');
+                    triggered = true;
+                }
+                break;
+            case 'sweet_16':
+                if (pTotal <= 16 && !pBust && (isWin || outcomeType === 'PUSH')) {
+                    chips += 50;
+                    mult += 15;
+                    logs.push('Sweet 16 +50c/+15m');
+                    triggered = true;
+                }
+                break;
+            case 'lucky_sevens': {
+                const sevens = hand.filter(c => c.rank === '7').length;
+                if (sevens > 0) {
+                    chips += sevens * 77;
+                    mult += sevens * 7;
+                    logs.push(`7s +${sevens * 77}c/+${sevens * 7}m`);
+                    triggered = true;
+                }
+                if (pTotal === 17 || pTotal === 21) {
+                    mult += 7;
+                    logs.push('Lucky Total +7m');
+                    triggered = true;
+                }
+                break;
+            }
+            case 'hit_me_baby': {
+                const extra = Math.max(0, hand.length - 2);
+                if (extra > 0) {
+                    mult += extra * 5;
+                    logs.push(`Hit Me +${extra * 5}m`);
+                    triggered = true;
+                }
+                break;
+            }
+            case 'golden_parachute':
+                if (dBust) {
+                    money += 3;
+                    chips += 40;
+                    logs.push('Parachute +40c/+$3');
+                    triggered = true;
+                }
+                break;
+            case 'push_it_good':
+                // Tie bonus is applied in base scoring on PUSH hands
+                break;
+            case 'blackjack_tycoon':
+                if (pTotal === 21) {
+                    mult = round1(mult * 1.6);
+                    money += 2;
+                    logs.push('Tycoon ×1.6m/+$2');
+                    triggered = true;
+                }
+                break;
+            case 'the_shark':
+                if (!pBust && (dBust || (pTotal - dTotal >= 3))) {
+                    mult = round1(mult * 1.35);
+                    logs.push('Shark ×1.35m');
+                    triggered = true;
+                }
+                break;
+            case 'even_steven': {
+                const evens = hand.filter(c => ['2', '4', '6', '8', '10'].includes(c.rank)).length;
+                if (evens > 0) {
+                    mult += evens * 5;
+                    chips += evens * 15;
+                    logs.push(`Even +${evens * 15}c/+${evens * 5}m`);
+                    triggered = true;
+                }
+                break;
+            }
+            case 'red_velvet': {
+                const reds = hand.filter(c => c.suit === '♥' || c.suit === '♦' || c.suit === '★').length;
+                if (reds > 0) {
+                    chips += reds * 35;
+                    mult += reds * 2;
+                    logs.push(`Red +${reds * 35}c/+${reds * 2}m`);
+                    triggered = true;
+                }
+                break;
+            }
+            case 'dark_knight': {
+                const blacks = hand.filter(c => c.suit === '♠' || c.suit === '♣' || c.suit === '★').length;
+                if (blacks > 0) {
+                    mult += blacks * 4;
+                    chips += blacks * 15;
+                    logs.push(`Dark +${blacks * 15}c/+${blacks * 4}m`);
+                    triggered = true;
+                }
+                break;
+            }
+            case 'compound_edge': {
+                const sets = Math.min(10, Math.floor(money / 5));
+                if (sets > 0) {
+                    chips += sets * 15;
+                    mult += sets * 1;
+                    logs.push(`Compound +${sets * 15}c/+${sets}m`);
+                    triggered = true;
+                }
+                break;
+            }
+            case 'minimalist':
+                if (isWin && hand.length === 2) {
+                    mult = round1(mult * 1.8);
+                    logs.push('Minimalist ×1.8m');
+                    triggered = true;
+                }
+                break;
+            case 'hot_hand': {
+                const hm = j.bonusMult || 0;
+                if (hm > 0) {
+                    mult += hm;
+                    logs.push(`Hot Hand +${hm}m`);
+                    triggered = true;
+                }
+                break;
+            }
+            case 'pocket_rockets': {
+                if (hand.length >= 2) {
+                    const a1 = hand[0].rank === 'A';
+                    const a2 = hand[1].rank === 'A';
+                    if (a1 && a2) {
+                        chips += 75;
+                        mult += 20;
+                        logs.push('Pocket Rockets (AA) +75c/+20m');
+                        triggered = true;
+                    }
+                    else if (a1 || a2) {
+                        chips += 30;
+                        mult += 8;
+                        logs.push('Pocket Rockets (Ace) +30c/+8m');
+                        triggered = true;
+                    }
+                }
+                break;
+            }
+            case 'trips_ahoy': {
+                const counts = {};
+                hand.forEach(c => { counts[c.rank] = (counts[c.rank] || 0) + 1; });
+                const hasTrips = Object.values(counts).some(cnt => cnt >= 3);
+                const has3Card19to21 = isWin && hand.length >= 3 && pTotal >= 19 && pTotal <= 21;
+                if (hasTrips) {
+                    chips += 120;
+                    mult += 15;
+                    logs.push('Trips Ahoy (3-Kind) +120c/+15m');
+                    triggered = true;
+                }
+                else if (has3Card19to21) {
+                    chips += 60;
+                    mult += 8;
+                    logs.push(`Trips Ahoy (${pTotal}) +60c/+8m`);
+                    triggered = true;
+                }
+                break;
+            }
+            case 'spade_slicer': {
+                const spades = hand.filter(c => c.suit === '♠' || c.suit === '★').length;
+                if (spades > 0) {
+                    chips += spades * 15;
+                    mult += spades * 5;
+                    logs.push(`Spades +${spades * 15}c/+${spades * 5}m`);
+                    triggered = true;
+                }
+                break;
+            }
+            case 'crimson_heart': {
+                const hearts = hand.filter(c => c.suit === '♥' || c.suit === '★').length;
+                if (hearts > 0) {
+                    chips += hearts * 40;
+                    mult += hearts * 2;
+                    logs.push(`Hearts +${hearts * 40}c/+${hearts * 2}m`);
+                    triggered = true;
+                }
+                break;
+            }
+            case 'diamond_cutter': {
+                if (isWin) {
+                    const diamonds = hand.filter(c => c.suit === '♦' || c.suit === '★').length;
+                    if (diamonds > 0) {
+                        chips += diamonds * 30;
+                        money += diamonds;
+                        logs.push(`Diamonds +${diamonds * 30}c/+$${diamonds}`);
+                        triggered = true;
+                    }
+                }
+                break;
+            }
+            case 'club_sandwich': {
+                if (isWin) {
+                    const clubs = hand.filter(c => c.suit === '♣' || c.suit === '★').length;
+                    if (clubs > 0) {
+                        mult += clubs * 6;
+                        logs.push(`Clubs +${clubs * 6}m`);
+                        triggered = true;
+                    }
+                }
+                break;
+            }
+            case 'monochrome':
+                if (hand.length >= 3) {
+                    const baseSuits = ['♠', '♥', '♣', '♦'];
+                    const isMono = baseSuits.some(bs => hand.every(c => c.suit === bs || c.suit === '★'));
+                    if (isMono) {
+                        mult = round1(mult * 1.6);
+                        logs.push('Monochrome ×1.6m');
+                        triggered = true;
+                    }
+                }
+                break;
+            case 'odd_ball': {
+                const odds = hand.filter(c => ['3', '5', '7', '9'].includes(c.rank)).length;
+                if (odds > 0) {
+                    chips += odds * 15;
+                    mult += odds * 3;
+                    logs.push(`Odd +${odds * 15}c/+${odds * 3}m`);
+                    triggered = true;
+                }
+                break;
+            }
+            case 'the_grinder':
+                if (!pBust && hand.length > 2) {
+                    const hits = hand.length - 2;
+                    chips += hits * 15;
+                    money += hits;
+                    logs.push(`Grinder +${hits * 15}c/+$${hits}`);
+                    triggered = true;
+                }
+                break;
+            case 'double_or_nothing':
+                // Handled in Double Down resolution below
+                break;
+            case 'slow_and_steady': {
+                const left = ctx.handsLeft || 0;
+                if (isWin && left > 0) {
+                    chips += left * 20;
+                    logs.push(`Slow & Steady +${left * 20}c`);
+                    triggered = true;
+                }
+                break;
+            }
+            case 'card_sharp_joker':
+                if ((ctx.handsWonInBlind || 0) > 0) {
+                    mult = round1(mult * 1.5);
+                    logs.push('Card Sharp ×1.5m');
+                    triggered = true;
+                }
+                break;
+            case 'deja_vu':
+                if (!pBust && ctx.previousHandTotal && ctx.previousHandTotal === pTotal) {
+                    mult = round1(mult * 1.5);
+                    logs.push(`Deja Vu (${pTotal}) ×1.5m`);
+                    triggered = true;
+                }
+                break;
+            case 'rain_man': {
+                const rc = ctx.runningCount || 0;
+                if (rc >= 2 && (outcomeType === 'NATURAL' || outcomeType === 'EXACT21' || pTotal === 21)) {
+                    mult = round1(mult * 1.5);
+                    money += 2;
+                    logs.push(`Rain Man (RC +${rc}) ×1.5m/+$2`);
+                    triggered = true;
+                }
+                break;
+            }
+            case 'fortune_teller': {
+                const used = ctx.tarotsUsed || 0;
+                if (used > 0) {
+                    const addC = Math.min(60, used * 6);
+                    const addM = Math.min(10, used * 1);
+                    chips += addC;
+                    mult += addM;
+                    logs.push(`Fortune Teller (${used}) +${addC}c/+${addM}m`);
+                    triggered = true;
+                }
+                break;
+            }
+            case 'crown_jewel':
+                if (outcomeType === 'NATURAL') {
+                    mult = round1(mult * 2.2);
+                    money += 4;
+                    logs.push('Crown Jewel ×2.2m/+$4');
+                    triggered = true;
+                }
+                break;
+            case 'the_bullseye': {
+                const bm = j.bonusMult || 0;
+                if (bm > 0) {
+                    mult += bm;
+                    logs.push(`The Bullseye +${bm}m`);
+                    triggered = true;
+                }
+                break;
+            }
+            case 'blowout':
+                if (isWin && !pBust && !dBust && pTotal > dTotal) {
+                    const margin = pTotal - dTotal;
+                    chips += margin * 25;
+                    mult += margin * 3;
+                    logs.push(`Blowout (+${margin}) +${margin * 25}c/+${margin * 3}m`);
+                    triggered = true;
+                }
+                break;
+            case 'bounty_hunter':
+                if (dBust && !pBust) {
+                    mult = round1(mult * 1.6);
+                    const cash = dTotal >= 25 ? 8 : 4;
+                    money += cash;
+                    logs.push(`Bounty Hunter ×1.6m/+${cash}`);
+                    triggered = true;
+                }
+                break;
+            case 'push_the_limit':
+                if (rawOutcomeType === 'PUSH' || outcomeType === 'PUSH') {
+                    chips += 100;
+                    mult += 8;
+                    money += 2;
+                    logs.push('Push the Limit +100c/+8m/+$2');
+                    triggered = true;
+                }
+                break;
+            case 'bad_beat_jackpot': {
+                const bm = j.bonusMult || 0;
+                if (bm > 0) {
+                    mult += bm;
+                    logs.push(`Bad Beat Jackpot +${bm}m`);
+                    triggered = true;
+                }
+                break;
+            }
+            case 'tightrope_walker':
+                if (!pBust && (pTotal === 19 || pTotal === 20 || pTotal === 21 || pTotal === 22)) {
+                    chips += 60;
+                    mult += 7;
+                    logs.push(`Tightrope (${pTotal}) +60c/+7m`);
+                    triggered = true;
+                }
+                break;
+            case 'small_fry': {
+                const lows = hand.filter(c => ['2', '3', '4', '5'].includes(c.rank)).length;
+                if (lows > 0) {
+                    chips += lows * 15;
+                    mult += lows * 2;
+                    if (lows >= 3) {
+                        mult = round1(mult * 1.5);
+                        logs.push(`Small Fry (${lows}) +${lows * 15}c/+${lows * 2}m ×1.5m`);
+                    }
+                    else {
+                        logs.push(`Small Fry (${lows}) +${lows * 15}c/+${lows * 2}m`);
+                    }
+                    triggered = true;
+                }
+                break;
+            }
+            case 'kaleidoscope': {
+                const baseSuits = new Set(hand.filter(c => c.suit !== '★').map(c => c.suit));
+                const wildCount = hand.filter(c => c.suit === '★').length;
+                const distinctCount = baseSuits.size + wildCount;
+                if (distinctCount >= 3) {
+                    chips += 90;
+                    mult += 8;
+                    logs.push(`Kaleidoscope (${distinctCount} suits) +90c/+8m`);
+                    triggered = true;
+                }
+                else if (distinctCount >= 2) {
+                    chips += 40;
+                    mult += 4;
+                    logs.push(`Kaleidoscope (${distinctCount} suits) +40c/+4m`);
+                    triggered = true;
+                }
+                break;
+            }
+            case 'momentum': {
+                if (isWin) {
+                    const priorWins = Math.min(4, ctx.handsWonInBlind || 0);
+                    const addC = 25 + priorWins * 30;
+                    const addM = 3 + priorWins * 4;
+                    chips += addC;
+                    mult += addM;
+                    logs.push(`Momentum (${priorWins} prior wins) +${addC}c/+${addM}m`);
+                    triggered = true;
+                }
+                break;
+            }
+            case 'street_magician':
+                chips += 25;
+                logs.push('Street Magician +25c');
+                triggered = true;
+                break;
+            case 'the_banker':
+            case 'marked_deck':
+                // Handled in blind progression / round resolution
+                break;
+            case 'side_bet': {
+                if (hand.length >= 2) {
+                    if (hand[0].rank === hand[1].rank) {
+                        const c1 = hand[0];
+                        const c2 = hand[1];
+                        const isRed1 = c1.suit === '♥' || c1.suit === '♦' || c1.suit === '★';
+                        const isRed2 = c2.suit === '♥' || c2.suit === '♦' || c2.suit === '★';
+                        const isBlack1 = c1.suit === '♠' || c1.suit === '♣' || c1.suit === '★';
+                        const isBlack2 = c2.suit === '♠' || c2.suit === '♣' || c2.suit === '★';
+                        const isSameColor = (isRed1 && isRed2) || (isBlack1 && isBlack2);
+                        if (isSameColor) {
+                            chips += 100;
+                            money += 10;
+                            logs.push(`Side Bet (Color Pair ${c1.rank}) +100c/+$10`);
+                        }
+                        else {
+                            chips += 50;
+                            money += 5;
+                            logs.push(`Side Bet (Pair ${c1.rank}) +50c/+$5`);
+                        }
+                        triggered = true;
+                    }
+                    else if (hand[0].suit === hand[1].suit || hand[0].suit === '★' || hand[1].suit === '★') {
+                        chips += 25;
+                        money += 2;
+                        logs.push(`Side Bet (Suited ${hand[0].suit}) +25c/+$2`);
+                        triggered = true;
+                    }
+                }
+                break;
+            }
+        }
+        if (triggered) {
+            const isSmallFryX = j.id === 'small_fry' && hand.filter(c => ['2', '3', '4', '5'].includes(c.rank)).length >= 3;
+            const isX = (j.isXMult && j.id !== 'small_fry') || isSmallFryX || ['the_shark', 'blackjack_tycoon', 'minimalist', 'monochrome', 'card_sharp_joker', 'deja_vu', 'rain_man', 'crown_jewel', 'bounty_hunter'].includes(j.id);
+            const dMult = isX ? (prevMult > 0 ? round1(mult / prevMult) : mult) : round1(mult - prevMult);
+            steps.push({
+                kind: 'joker',
+                jokerId: j.id,
+                jokerIndex: jIdx,
+                chips: Math.round(chips),
+                mult: round1(mult),
+                deltaChips: Math.round(chips - prevChips),
+                deltaMult: dMult,
+                isXMult: isX,
+                deltaMoney: money - prevMoney,
+                sourceName: j.name
+            });
+        }
+    });
+    if (ctx.doubledDown && !safetyNetSaved) {
+        const hasDoN = owns('double_or_nothing');
+        const hasRainMan = owns('rain_man') && (ctx.runningCount || 0) >= 2;
+        let dblMult = 2;
+        let label = 'Double Down ×2m';
+        if (hasDoN && hasRainMan) {
+            dblMult = 4;
+            label = 'DoN + Rain Man ×4m';
+        }
+        else if (hasDoN) {
+            dblMult = 3;
+            label = 'Double or Nothing ×3m';
+        }
+        else if (hasRainMan) {
+            dblMult = 3;
+            label = 'Rain Man Double ×3m';
+        }
+        mult = round1(mult * dblMult);
+        logs.push(label);
+        const donIdx = hasDoN ? ctx.jokers.findIndex(j => j.id === 'double_or_nothing') : undefined;
+        const rmIdx = hasRainMan ? ctx.jokers.findIndex(j => j.id === 'rain_man') : undefined;
+        const jId = (hasDoN && hasRainMan) ? 'rain_man' : (hasDoN ? 'double_or_nothing' : (hasRainMan ? 'rain_man' : undefined));
+        const jIdx = (hasDoN && hasRainMan) ? rmIdx : (hasDoN ? donIdx : (hasRainMan ? rmIdx : undefined));
+        steps.push({
+            kind: 'double',
+            chips: Math.round(chips),
+            mult: round1(mult),
+            deltaMult: dblMult,
+            isXMult: true,
+            sourceName: label,
+            jokerId: jId,
+            jokerIndex: jIdx !== undefined && jIdx >= 0 ? jIdx : undefined
+        });
+    }
+    result.chips = Math.round(chips);
+    result.mult = round1(mult);
+    result.handScore = Math.round(chips * mult);
+    result.moneyGained = money - ctx.money;
+    return result;
+}
+if (typeof window !== 'undefined') {
+    window.JOKER_CATALOG = JOKER_CATALOG;
+    window.TAROT_CATALOG = TAROT_CATALOG;
+    window.DECK_TAROT_CATALOG = DECK_TAROT_CATALOG;
+    window.CHEAT_CATALOG = CHEAT_CATALOG;
+    window.VOUCHER_CATALOG = VOUCHER_CATALOG;
+    window.BOSS_BLINDS = BOSS_BLINDS;
+    window.isTarotCardTargeted = isTarotCardTargeted;
+    window.getTarotMaxCards = getTarotMaxCards;
+    window.isCardEligibleForTarot = isCardEligibleForTarot;
+    window.isCheatConsumable = isCheatConsumable;
+}
